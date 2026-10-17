@@ -804,7 +804,8 @@ const UI = (() => {
         h('div', { class: 'set-row' }, pic('ui/abacus', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Формат чисел'), fmt)),
         toggle('Меньше эффектов', 'ui/battery', 'lowfx', 'Для слабых телефонов и экономии батареи'),
         h('p', { class: 'small center' }, 'Версия ' + C.version + ' · ' + Platform.label() + (Platform.kind() === 'web' ? ' · сохранение в этом браузере' : ' · сохранение в облаке'))),
-      actions: [{ label: 'Начать заново', alt: true, onClick: () => { resetConfirm(); } }]
+      actions: (window.Online && Online.isAdmin() ? [{ label: 'Админ-панель', onClick: () => { Game.save(); setTimeout(() => { location.href = 'admin/'; }, 200); } }] : [])
+        .concat([{ label: 'Начать заново', alt: true, onClick: () => { resetConfirm(); } }])
     });
   }
 

@@ -1913,3 +1913,26 @@ body.in-game .modal-wrap { z-index: 30; }
 .tops .top-seg .seg-btn { flex: 1 1 0; min-width: 0; padding: 6px 4px; font-size: 12.5px; line-height: 1.15; white-space: normal; text-align: center; }
 .top-score { white-space: nowrap; }
 .top-crown { top: -14px; }
+
+/* ===== 0.14 почта, бан ===== */
+.mail-list { display: flex; flex-direction: column; gap: 6px; }
+.mail-row { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px 8px 8px; border: 2px solid var(--ink); border-radius: 14px; background: var(--plum); color: #FFF6E8; text-align: left; font: inherit; cursor: pointer; }
+.mail-row.new { background: #5B2E86; box-shadow: 0 0 0 2px var(--gold) inset; }
+.mail-ico { flex: 0 0 40px; width: 40px; height: 40px; }
+.mail-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.mail-info b { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 15px; }
+.mail-info small { color: var(--muted); font-size: 12px; }
+.mail-dot { flex: 0 0 12px; width: 12px; height: 12px; border-radius: 50%; background: #FF5A5A; border: 2px solid var(--ink); }
+.letter { text-align: center; }
+.letter-text { white-space: pre-wrap; text-align: left; line-height: 1.45; color: #FFF6E8; margin: 4px 2px 12px; }
+.letter-gift { padding: 10px; border: 2px dashed var(--gold); border-radius: 14px; background: rgba(255, 210, 63, .08); }
+.letter-gift.done { opacity: .6; border-color: var(--muted); }
+.letter-gift small { color: #FFE48A; font-weight: 800; }
+.mail-gift { margin: 6px 0 0; }
+.letter-date { display: block; margin-top: 10px; color: var(--muted); }
+.ann-text { white-space: pre-wrap; line-height: 1.45; }
+.ban-screen { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 24px; background: rgba(20, 8, 36, .92); }
+.ban-box { max-width: 340px; padding: 26px 22px; border: 3px solid var(--ink); border-radius: 22px; background: var(--plum); text-align: center; color: #FFF6E8; box-shadow: 0 0 0 3px var(--gold) inset; }
+.ban-ico { display: block; width: 72px; height: 72px; margin: 0 auto; }
+.ban-box h2 { margin: 8px 0; color: #FFE48A; }
+.ban-box small { color: var(--muted); }

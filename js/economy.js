@@ -263,9 +263,13 @@ const Econ = (() => {
   }
 
   const basePerHour = () => derive().perHour;
-  const perHour = () => derive().perHour * fxMul('income') * (potion('gold') ? 1.5 : 1);
+  // общий бонус дохода, включается из админ-панели (например x2 на выходные)
+  let gmul = 1;
+  const setGlobalMul = (m) => { gmul = m > 0 && m <= 10 ? m : 1; };
+  const globalMul = () => gmul;
+  const perHour = () => derive().perHour * fxMul('income') * (potion('gold') ? 1.5 : 1) * gmul;
   const tapValue = () => ((1 + s.scoop + rank() + sk('t1')) * Math.pow(1.25, sk('t5')) + derive().perHour * (C.tapIncomeShare + 0.0001 * sk('t3'))) * fxMul('tap')
-    * (potion('power') ? 2 : 1) * (potion('dragon') ? 5 : 1) * (1 + petB('tap'));
+    * (potion('power') ? 2 : 1) * (potion('dragon') ? 5 : 1) * (1 + petB('tap')) * gmul;
   const hoursOfIncome = (h, min) => Math.max(min || 0, basePerHour() * h);
 
   function earn(amount, countForQuest) {
@@ -611,7 +615,7 @@ const Econ = (() => {
     orderReward, serveVisitor, storiesUnlocked, friendLevel, friendProgress, visitorGift, bestFriends,
     itemState, buyItem, equip, liquidColor, potColorValue, setCauldronName,
     avatarOwned, buyAvatar, setAvatar, setName, titlesUnlocked, setTitle, titleName,
-    countDay, statTick, addCrystals: (n) => { s.cr += n; },
+    countDay, statTick, addCrystals: (n) => { s.cr += n; }, setGlobalMul, globalMul,
     findVisitor, storyAtOf, grant, today,
     skill: sk, skillSpent, skillPoints, xpToNext, addXp, learnSkill, resetSkills, recipeAttempts,
     wasCrit: () => lastCrit, potion,
