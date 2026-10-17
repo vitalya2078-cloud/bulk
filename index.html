@@ -105,28 +105,49 @@
   <script>
     (function () {
       var url = location.search + location.hash;
-      if (url.indexOf('tgWebAppData') >= 0) document.write('<script src="https://telegram.org/js/telegram-web-app.js"><\/script>');
-      if (url.indexOf('vk_app_id') >= 0) {
-        // 1) Сразу говорим ВК «игра запускается» - иначе заставка ВК висит, пока не загрузится модуль.
-        try {
-          var A = window.AndroidBridge, I = window.webkit && window.webkit.messageHandlers;
-          if (A && A.VKWebAppInit) A.VKWebAppInit('{}');
-          else if (I && I.VKWebAppInit) I.VKWebAppInit.postMessage({});
-          else if (window.parent !== window) window.parent.postMessage({ handler: 'VKWebAppInit', params: {}, type: 'vk-connect' }, '*');
-        } catch (e) {}
-        // 2) Модуль ВК грузим в фоне, не задерживая игру; не ответил первый сайт - пробуем второй.
-        window.__vkBridge = new Promise(function (done) {
-          var urls = ['https://unpkg.com/@vkontakte/vk-bridge@2/dist/browser.min.js', 'https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2/dist/browser.min.js'];
-          (function next(i) {
-            if (window.vkBridge || i >= urls.length) { done(window.vkBridge || null); return; }
-            var s = document.createElement('script'); s.async = true; s.src = urls[i];
-            var t = setTimeout(function () { s.onload = s.onerror = null; next(i + 1); }, 3000);
-            s.onload = function () { clearTimeout(t); done(window.vkBridge || null); };
-            s.onerror = function () { clearTimeout(t); next(i + 1); };
-            document.head.appendChild(s);
-          })(0);
-        });
+      if (url.indexOf('tgWebAppData') >= 0) {
+        document.write('<script src="https://telegram.org/js/telegram-web-app.js"><\/script>');
       }
+      if (url.indexOf('vk_app_id') < 0) return;
+
+      // Загружаем официальный VK Bridge до остальных игровых скриптов.
+      // Инициализация выполняется сразу после загрузки библиотеки.
+      window.__vkInitPromise = new Promise(function (resolve) {
+        var urls = [
+          'https://unpkg.com/@vkontakte/vk-bridge@2/dist/browser.min.js',
+          'https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2/dist/browser.min.js'
+        ];
+        var index = 0;
+        function next() {
+          if (window.vkBridge && typeof window.vkBridge.send === 'function') {
+            window.vkBridge.send('VKWebAppInit').then(resolve).catch(function () { resolve(null); });
+            return;
+          }
+          if (index >= urls.length) { resolve(null); return; }
+          var script = document.createElement('script');
+          var timer;
+          script.async = true;
+          script.src = urls[index++];
+          function finish(ok) {
+            clearTimeout(timer);
+            script.onload = script.onerror = null;
+            if (ok && window.vkBridge && typeof window.vkBridge.send === 'function') {
+              window.vkBridge.send('VKWebAppInit').then(resolve).catch(function () { resolve(null); });
+            } else {
+              script.remove();
+              next();
+            }
+          }
+          script.onload = function () { finish(true); };
+          script.onerror = function () { finish(false); };
+          timer = setTimeout(function () { finish(false); }, 5000);
+          document.head.appendChild(script);
+        }
+        next();
+      });
+      window.__vkBridge = window.__vkInitPromise.then(function () {
+        return window.vkBridge || null;
+      });
     })();
   </script>
 
