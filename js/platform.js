@@ -74,7 +74,10 @@ const Platform = (() => {
           if (d && d.type === 'VKWebAppUpdateConfig' && d.data) applyInsets(d.data.insets || d.data.safe_area_insets);
         });
       } catch (e) { /* старый bridge */ }
-      try { await withTimeout(vkCall('VKWebAppInit'), 3000); } catch (e) { console.warn(e); }
+      try {
+        if (window.__vkInitPromise) await withTimeout(window.__vkInitPromise, 3000);
+        else await withTimeout(vkCall('VKWebAppInit'), 3000);
+      } catch (e) { console.warn(e); }
       try { const c = await withTimeout(vkCall('VKWebAppGetConfig'), 2000); if (c) applyInsets(c.insets || c.safe_area_insets); } catch (e) { /* нет в вебе */ }
       // свайп «назад» в iOS не должен закрывать игру во время тапов
       vkCall('VKWebAppSetSwipeSettings', { history: false }).catch(() => {});
