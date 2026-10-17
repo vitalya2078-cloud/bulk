@@ -1,23 +1,66 @@
 // Одна обёртка для ВКонтакте, Telegram и обычного браузера.
 // Остальной код вызывает Platform.*, не думая, где запущена игра.
 const Platform = (() => {
-  const vk = window.vkBridge || null;
+  // Модуль ВК (vk-bridge) грузится в фоне (index.html); если сайт с модулем не ответил -
+  // работаем через свой маленький мост (miniBridge), он умеет то же самое для нужных нам вызовов.
+  let vk = window.vkBridge || null;
   const tg = (window.Telegram && window.Telegram.WebApp) || null;
   const qs = new URLSearchParams(location.search);
 
   let kind = 'web';
   try {
     if (tg && tg.initData) kind = 'tg';
-    else if (vk && (typeof vk.isEmbedded === 'function' ? vk.isEmbedded() : qs.has('vk_app_id'))) kind = 'vk';
+    else if (qs.has('vk_app_id') && qs.has('vk_user_id')) kind = 'vk';
   } catch (e) { /* ignore */ }
 
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const withTimeout = (p, ms) => Promise.race([p, wait(ms).then(() => { throw new Error('timeout'); })]);
-  const vkCall = (m, p) => vk.send(m, p || {});
+  const vkCall = (m, p) => (vk || (vk = miniBridge())).send(m, p || {});
+
+  // Свой мост к ВК: Android - window.AndroidBridge, iOS - webkit.messageHandlers, сайт - postMessage родителю.
+  // Ответы приходят событием VKWebAppEvent (приложения) или message (сайт).
+  function miniBridge() {
+    const A = window.AndroidBridge, I = window.webkit && window.webkit.messageHandlers;
+    let id = 0;
+    const pending = {}, subs = [];
+    const onEvent = (d) => {
+      if (!d || !d.type) return;
+      subs.forEach((f) => { try { f({ detail: d }); } catch (e) { /* ignore */ } });
+      const rid = d.data && d.data.request_id;
+      if (rid != null && pending[rid]) {
+        const w = pending[rid]; delete pending[rid];
+        if (/Failed$/.test(d.type)) w.rej(d.data); else w.res(d.data);
+      }
+    };
+    window.addEventListener('VKWebAppEvent', (e) => onEvent(e.detail));
+    window.addEventListener('message', (e) => {
+      const d = e.data;
+      if (!d || typeof d !== 'object') return;
+      if (d.data && d.data.type) onEvent(d.data); else if (typeof d.type === 'string' && d.type.indexOf('VKWebApp') === 0) onEvent(d);
+    });
+    return {
+      isEmbedded: () => true,
+      subscribe: (f) => { subs.push(f); },
+      send: (m, p) => new Promise((res, rej) => {
+        const rid = ++id;
+        const params = Object.assign({}, p || {}, { request_id: rid });
+        pending[rid] = { res, rej };
+        setTimeout(() => { if (pending[rid]) { delete pending[rid]; rej(new Error('timeout ' + m)); } }, 10000);
+        try {
+          if (A && typeof A[m] === 'function') A[m](JSON.stringify(params));
+          else if (I && I[m]) I[m].postMessage(params);
+          else if (window.parent !== window) window.parent.postMessage({ handler: m, params, type: 'vk-connect' }, '*');
+          else { delete pending[rid]; rej(new Error('no bridge')); }
+        } catch (e) { delete pending[rid]; rej(e); }
+      })
+    };
+  }
 
   // ---------- запуск ----------
   async function init() {
     if (kind === 'vk') {
+      // ждём настоящий модуль ВК (грузится в фоне), но не дольше 4 секунд
+      if (!vk) vk = window.vkBridge || await Promise.race([window.__vkBridge || Promise.resolve(null), wait(4000).then(() => null)]) || window.vkBridge || miniBridge();
       // вырезы экрана и панели ВК: приходят в событии VKWebAppUpdateConfig (insets)
       const st = document.documentElement.style;
       const applyInsets = (ins) => {
