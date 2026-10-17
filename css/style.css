@@ -1889,3 +1889,27 @@ body.in-game .tabs, body.in-game .topbar, body.in-game .wallet { visibility: hid
 .res-score b { font-size: 34px; color: #FFF; }
 .game-result .reward-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 10px 0; }
 body.in-game .modal-wrap { z-index: 30; }
+
+/* ===== 0.13 топ алхимиков ===== */
+.tops .top-seg { justify-content: center; }
+.top-list { display: flex; flex-direction: column; gap: 6px; }
+.top-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 6px; border: 2px solid var(--ink); border-radius: 14px; background: var(--plum); }
+.top-row.me { background: #5B2E86; box-shadow: 0 0 0 2px var(--gold) inset; }
+.top-place { position: relative; flex: 0 0 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: var(--muted); font-size: 14px; }
+.top-place.m1, .top-place.m2, .top-place.m3 { border: 2px solid var(--ink); color: var(--ink); }
+.top-place.m1 { background: #FFD23F; }
+.top-place.m2 { background: #D9E1EE; }
+.top-place.m3 { background: #E09A5A; }
+.top-crown { position: absolute; width: 26px; height: 26px; top: -17px; left: 4px; }
+.top-ava { flex: 0 0 38px; width: 38px; height: 38px; border-radius: 50%; overflow: hidden; border: 2px solid var(--ink); background: #2A1A40; }
+.top-ava .pic { width: 100%; height: 100%; object-fit: cover; display: block; }
+.top-name { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 800; color: #FFF6E8; }
+.top-score { color: #FFE48A; font-size: 15px; text-shadow: 0 1px 0 var(--ink); }
+.top-mine { margin-top: 10px; }
+.top-mine:empty { display: none; }
+.top-empty { text-align: center; color: var(--muted); padding: 18px 6px; }
+.top-empty p { margin: 0 0 4px; color: #FFF6E8; }
+.tops .top-seg { margin: 2px 0 8px; padding: 0; overflow: visible; }
+.tops .top-seg .seg-btn { flex: 1 1 0; min-width: 0; padding: 6px 4px; font-size: 12.5px; line-height: 1.15; white-space: normal; text-align: center; }
+.top-score { white-space: nowrap; }
+.top-crown { top: -14px; }

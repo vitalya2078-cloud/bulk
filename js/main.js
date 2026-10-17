@@ -274,6 +274,7 @@
   if (typeof Scene !== 'undefined') Scene.items().forEach((it) => critical.add(it.img));
   if (typeof Pets !== 'undefined' && Pets.inRoom) Pets.inRoom().forEach((id) => { for (let i = 0; i < 16; i++) critical.add('pets/' + id + '/' + String(i).padStart(2, '0')); });
   const critUrls = [...critical].map(IMG).concat([...document.images].map((im) => im.getAttribute('src')).filter((u) => u && u.startsWith('assets/')));
+  if (typeof Tops !== 'undefined') Tops.start();
   Loader.boot(critUrls, [...preload].filter((n) => !critical.has(n)).map(IMG));
   requestAnimationFrame(frame);
 })();

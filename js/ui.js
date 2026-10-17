@@ -644,6 +644,7 @@ const UI = (() => {
         p2.append(h('div', { class: 'mastery' }, pic('ui/trophy', 'mastery-ico'),
           h('div', null, h('small', null, 'Твоё мастерство'), h('b', null, Fmt.num(Econ.mastery())))));
         p2.append(h('p', { class: 'note center' }, 'Растёт вместе с эссенцией и уровнями карточек.'));
+        p2.append(h('button', { class: 'btn', type: 'button', onclick: () => { Sound.tap(); Tops.open(0); } }, 'Топ алхимиков'));
         if (Platform.hasLeaderboard()) {
           p2.append(h('button', { class: 'btn alt', type: 'button', onclick: async () => {
             if (!(await Platform.leaderboard(Econ.mastery()))) toast('Рейтинг сейчас недоступен');

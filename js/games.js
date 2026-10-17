@@ -57,8 +57,9 @@ const Games = (() => {
     const tickets = h('div', { class: 'games-tickets' }, pic('games/ticket', 'ticket-ico'),
       h('span', null, left ? 'Игр с полной наградой сегодня: ' : 'Полные награды на сегодня собраны. Играть можно дальше - ради рекорда.', left ? h('b', null, String(left)) : null));
     const actions = [];
+    actions.push({ label: 'Топ «Полки зелий»', alt: true, onClick: () => { setTimeout(() => Tops.open(1), 0); } });
     if (!left && (m.ad || 0) < G.adFull && Platform.adsAvailable()) {
-      actions.push({ label: 'Ещё игра с наградой (реклама)', onClick: async () => {
+      actions.unshift({ label: 'Ещё игра с наградой (реклама)', onClick: async () => {
         const ok = await Platform.rewardedAd();
         if (ok) { st().ad = (st().ad || 0) + 1; save(); UI.toast('+1 игра с полной наградой'); setTimeout(open, 0); }
         else UI.toast('Реклама сейчас недоступна');
@@ -433,6 +434,7 @@ const Games = (() => {
       const best = m.best.match3 || 0;
       const record = G2.score > best;
       if (record) m.best.match3 = G2.score;
+      if (window.Tops) Tops.submitGame('match3', G2.score);
       const full = fullLeft() > 0;
       let ess = 0, ingr = [], cr = 0;
       if (full) {
