@@ -6,11 +6,11 @@
 
 const CONFIG = {
   name: 'Бульк',
-  version: '0.18.2',
+  version: '0.18.3',
   saveKey: 'bulk_save_v1',
 
   // ВКонтакте: ID мини-приложения (для ссылки-приглашения на стене)
-  vkAppId: 0,
+  vkAppId: 54828995,
   // Telegram: имя бота и короткое имя мини-приложения из @BotFather.
   // Ссылка-приглашение: https://t.me/<бот>?startapp=ref_<id> (Main App) или /<приложение> если задано
   tgBotUsername: 'bulkgamemagikbot',
