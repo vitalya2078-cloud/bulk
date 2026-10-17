@@ -26,6 +26,18 @@ const Platform = (() => {
         if (tg.setHeaderColor) tg.setHeaderColor('#24163A');
         if (tg.setBackgroundColor) tg.setBackgroundColor('#24163A');
         if (tg.disableVerticalSwipes) tg.disableVerticalSwipes(); // чтобы тапы не сворачивали окно
+        // Полноэкранный режим: игра заходит под строку состояния и кнопки «Закрыть» / «⋮».
+        // Telegram сообщает, сколько места сверху и снизу занято, - отступаем на столько же.
+        const applySafe = () => {
+          const s = tg.safeAreaInset || {}, c = tg.contentSafeAreaInset || {};
+          const top = (s.top || 0) + (c.top || 0), bottom = (s.bottom || 0) + (c.bottom || 0);
+          const st = document.documentElement.style;
+          if (top) st.setProperty('--safe-top', top + 'px'); else st.removeProperty('--safe-top');
+          if (bottom) st.setProperty('--safe-bottom', bottom + 'px'); else st.removeProperty('--safe-bottom');
+        };
+        applySafe();
+        ['safeAreaChanged', 'contentSafeAreaChanged', 'fullscreenChanged', 'viewportChanged'].forEach((ev) => { try { tg.onEvent(ev, applySafe); } catch (e) { /* старый Telegram */ } });
+        setTimeout(applySafe, 300); setTimeout(applySafe, 1200);
       } catch (e) { console.warn(e); }
     }
   }
