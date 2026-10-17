@@ -66,23 +66,40 @@ const Coven = (() => {
   // ---------- вход ----------
   async function open() {
     if (!Online.on()) { UI.toast('Ковены работают во ВКонтакте и Telegram'); return; }
-    const wait = h('p', { class: 'top-empty' }, 'Открываю...');
-    UI.modal({ title: 'Ковены', body: wait });
+    UI.modal({ title: 'Ковены', sheet: true, cls: 'fixed-h cv-modal', body: h('div', { class: 'cv-wrap' }, h('p', { class: 'top-empty' }, 'Открываю...')) });
     await refresh();
     UI.closeModal();
     if (my && my.coven) home(); else browse();
   }
 
-  // ---------- список ковенов (если ты не в ковене) ----------
-  function browse(q) {
+  // ---------- без ковена: «Найти ковен» или «Создать свой» в одном окне ----------
+  let ltab = 'find';
+  function browse(startTab) {
+    if (startTab) ltab = startTab;
+    const seg = h('div', { class: 'seg cv-seg' });
+    const box = h('div', { class: 'cv-box' });
+    function draw() {
+      seg.replaceChildren(...[['find', 'Найти ковен'], ['create', 'Создать свой']].map(([id, l]) => h('button', {
+        class: 'seg-btn' + (ltab === id ? ' on' : ''), type: 'button', onclick: () => { if (ltab !== id) { Sound.tap(); ltab = id; draw(); } }
+      }, l)));
+      if (ltab === 'find') find(box); else createForm(box);
+    }
+    UI.modal({ title: 'Ковены', sheet: true, cls: 'fixed-h cv-modal', body: h('div', { class: 'cv-wrap' }, seg, box), onOpen: draw });
+  }
+
+  function find(box) {
     const list = h('div', { class: 'cv-list' }, h('p', { class: 'top-empty' }, 'Ищу ковены...'));
-    const search = h('input', { class: 'cv-input', type: 'search', placeholder: 'Название ковена', value: q || '' });
+    const search = h('input', { class: 'cv-input', type: 'search', placeholder: 'Название или #ID ковена', enterkeyhint: 'search' });
     let t = 0;
     search.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => load(search.value), 400); });
     async function load(qq) {
       let rows;
-      try { rows = await call('coven_list', { p_q: qq || '' }); } catch (e) { list.replaceChildren(h('p', { class: 'top-empty' }, errText(e))); return; }
-      if (!rows || !rows.length) { list.replaceChildren(h('p', { class: 'top-empty' }, qq ? 'Ничего не нашлось' : 'Ковенов пока нет. Создай первый!')); return; }
+      try { rows = await call('coven_list', { p_q: (qq || '').trim() }); } catch (e) { list.replaceChildren(h('p', { class: 'top-empty' }, errText(e))); return; }
+      if (!rows || !rows.length) {
+        list.replaceChildren(h('div', { class: 'top-empty' }, h('p', null, qq ? 'Ничего не нашлось' : 'Ковенов пока нет.'),
+          h('button', { class: 'btn', type: 'button', onclick: () => { Sound.tap(); ltab = 'create'; UI.closeModal(); setTimeout(() => browse(), 0); } }, 'Создать свой')));
+        return;
+      }
       const mine = new Set((my && my.requests) || []);
       list.replaceChildren(...rows.map((c) => {
         const requested = c.requested || mine.has(c.id);
@@ -99,34 +116,29 @@ const Coven = (() => {
         });
         return h('div', { class: 'cv-row' }, emblem(c, 50),
           h('div', { class: 'cv-info' },
-            h('b', null, c.name),
+            h('b', null, c.name, h('span', { class: 'cv-id' }, '#' + c.id)),
             h('small', null, 'Ур. ' + c.level + ' · ' + c.members + '/' + MAX + ' · ' + (c.open ? 'открытый' : 'по заявкам')),
             c.motto ? h('i', null, c.motto) : null),
           btn);
       }));
     }
-    UI.modal({
-      title: 'Ковены', cls: 'cv-modal',
-      body: h('div', null,
-        h('div', { class: 'cv-hero' }, pic('ui/coven', 'cv-hero-ico'),
-          h('p', null, 'Вступай в ковен: вместе быстрее растёт уровень, а каждый уровень даёт всем +2% к доходу. В ковене есть свой чат.')),
-        search, list),
-      actions: [{ label: 'Создать ковен · ' + COST, onClick: () => { setTimeout(create, 0); } }],
-      onOpen: () => load(q)
-    });
+    box.replaceChildren(
+      h('div', { class: 'cv-hero' }, pic('ui/coven', 'cv-hero-ico'),
+        h('p', null, 'Вступай в ковен: вместе быстрее растёт уровень, а каждый уровень даёт всем +2% к доходу. Общие задания, босс выходных и свой чат.')),
+      search, list);
+    load('');
   }
 
-  // ---------- создание ----------
-  function create(prefill) {
-    const st = Object.assign({ name: '', emblem: 'e01', color: 'purple', motto: '', open: true }, prefill || {});
-    const name = h('input', { class: 'cv-input', maxlength: '20', placeholder: 'Название, 3-20 букв', value: st.name });
-    const motto = h('input', { class: 'cv-input', maxlength: '80', placeholder: 'Девиз (можно пусто)', value: st.motto });
+  // форма ковена: название (только при создании), девиз, символ, цвет, вступление
+  function form(st, withName) {
+    const name = h('input', { class: 'cv-input', maxlength: '20', placeholder: 'Название, 3-20 букв', value: st.name || '' });
+    const motto = h('input', { class: 'cv-input', maxlength: '80', placeholder: 'Девиз (можно пусто)', value: st.motto || '' });
     const preview = h('div', { class: 'cv-preview' });
     const embs = h('div', { class: 'cv-embs' });
     const cols = h('div', { class: 'cv-cols' });
     const mode = h('div', { class: 'seg small-seg' });
     function draw() {
-      preview.replaceChildren(emblem(st, 84), h('b', null, name.value.trim() || 'Мой ковен'));
+      preview.replaceChildren(emblem(st, 84), h('b', null, (withName ? name.value.trim() : st.name) || 'Мой ковен'));
       embs.replaceChildren(...EMBLEMS.map((e) => h('button', { class: 'cv-emb' + (st.emblem === e ? ' on' : ''), type: 'button', onclick: () => { st.emblem = e; Sound.tap(); draw(); } }, pic('coven/emblems/' + e))));
       cols.replaceChildren(...Object.keys(COLORS).map((k) => h('button', { class: 'cv-col' + (st.color === k ? ' on' : ''), type: 'button', style: 'background:' + COLORS[k], 'aria-label': k, onclick: () => { st.color = k; Sound.tap(); draw(); } })));
       mode.replaceChildren(...[[true, 'Открытый'], [false, 'По заявкам']].map(([v, l]) => h('button', { class: 'seg-btn' + (st.open === v ? ' on' : ''), type: 'button', onclick: () => { st.open = v; Sound.tap(); draw(); } }, l)));
@@ -134,26 +146,32 @@ const Coven = (() => {
     name.addEventListener('input', () => { st.name = name.value; preview.querySelector('b').textContent = name.value.trim() || 'Мой ковен'; });
     motto.addEventListener('input', () => { st.motto = motto.value; });
     draw();
-    UI.modal({
-      title: 'Новый ковен', cls: 'cv-modal',
-      body: h('div', { class: 'cv-create' }, preview,
-        h('label', { class: 'cv-label' }, 'Название'), name,
-        h('label', { class: 'cv-label' }, 'Девиз'), motto,
-        h('label', { class: 'cv-label' }, 'Символ'), embs,
-        h('label', { class: 'cv-label' }, 'Цвет'), cols,
-        h('label', { class: 'cv-label' }, 'Вступление'), mode),
-      actions: [{ label: 'Основать · ' + COST + ' кристаллов', onClick: async () => {
-        const nm = name.value.trim();
-        if (nm.length < 3) { UI.toast('Название от 3 до 20 букв'); return false; }
-        if (Econ.s.cr < COST) { Sound.deny(); UI.toast('Нужно ' + COST + ' кристаллов'); return false; }
-        try { await call('coven_create', { p_name: nm, p_emblem: st.emblem, p_color: st.color, p_motto: motto.value.trim(), p_open: st.open }); }
-        catch (e) { UI.toast(errText(e)); return false; }
-        Econ.addCrystals(-COST); save(); Sound.fanfare();
-        UI.toast('Ковен «' + nm + '» основан!');
-        await refresh();
-        setTimeout(home, 0);
-      } }, { label: 'Назад', alt: true, onClick: () => { setTimeout(() => browse(), 0); } }]
+    return h('div', { class: 'cv-create' }, preview,
+      withName ? [h('label', { class: 'cv-label' }, 'Название'), name] : null,
+      h('label', { class: 'cv-label' }, 'Девиз'), motto,
+      h('label', { class: 'cv-label' }, 'Символ'), embs,
+      h('label', { class: 'cv-label' }, 'Цвет'), cols,
+      h('label', { class: 'cv-label' }, 'Вступление'), mode);
+  }
+
+  const newCoven = { name: '', emblem: 'e01', color: 'purple', motto: '', open: true };
+  function createForm(box) {
+    const st = newCoven;
+    const btn = h('button', { class: 'btn cv-wide', type: 'button' }, 'Основать · ' + COST + ' кристаллов');
+    btn.addEventListener('click', async () => {
+      const nm = (st.name || '').trim();
+      if (nm.length < 3) { UI.toast('Название от 3 до 20 букв'); return; }
+      if (Econ.s.cr < COST) { Sound.deny(); UI.toast('Нужно ' + COST + ' кристаллов'); return; }
+      btn.disabled = true;
+      try { await call('coven_create', { p_name: nm, p_emblem: st.emblem, p_color: st.color, p_motto: (st.motto || '').trim(), p_open: st.open }); }
+      catch (e) { UI.toast(errText(e)); btn.disabled = false; return; }
+      Econ.addCrystals(-COST); save(); Sound.fanfare();
+      UI.toast('Ковен «' + nm + '» основан!');
+      Object.assign(newCoven, { name: '', motto: '' });
+      await refresh();
+      UI.closeModal(); setTimeout(home, 0);
     });
+    box.replaceChildren(form(st, true), btn, h('p', { class: 'note center' }, 'У тебя ' + Econ.s.cr + ' ' + UI.crystalsWord(Econ.s.cr) + '. До 30 участников в ковене.'));
   }
 
   // ---------- мой ковен ----------
@@ -187,7 +205,7 @@ const Coven = (() => {
     });
     home.redraw = draw;
   }
-  const reopen = async (t) => { await refresh(); if (!my || !my.coven) { UI.closeModal(); setTimeout(() => browse(), 0); return; } if (t) tab = t; if (home.redraw) home.redraw(); };
+  const reopen = async (t) => { await refresh(); if (!my || !my.coven) { UI.closeModal(); setTimeout(() => browse('find'), 0); return; } if (t) tab = t; if (home.redraw) home.redraw(); };
 
   function info(box) {
     const c = my.coven;
@@ -197,7 +215,7 @@ const Coven = (() => {
         h('div', null,
           h('b', null, c.name),
           c.motto ? h('i', null, '«' + c.motto + '»') : null,
-          h('small', null, c.members + '/' + MAX + ' участников · ' + (c.open ? 'открытый' : 'по заявкам')))),
+          h('small', null, '#' + c.id + ' · ' + c.members + '/' + MAX + ' участников · ' + (c.open ? 'открытый' : 'по заявкам')))),
       h('div', { class: 'cv-level' },
         h('span', { class: 'cv-lvl-badge' }, pic('coven/level'), h('b', null, String(c.level))),
         h('div', { class: 'cv-lvl-main' },
@@ -243,22 +261,16 @@ const Coven = (() => {
   function edit() {
     const c = my.coven;
     UI.closeModal();
-    const st = { emblem: c.emblem, color: c.color, open: c.open };
-    const motto = h('input', { class: 'cv-input', maxlength: '80', value: c.motto || '', placeholder: 'Девиз' });
-    const embs = h('div', { class: 'cv-embs' }), cols = h('div', { class: 'cv-cols' }), mode = h('div', { class: 'seg small-seg' }), preview = h('div', { class: 'cv-preview' });
-    function draw() {
-      preview.replaceChildren(emblem(st, 84), h('b', null, c.name));
-      embs.replaceChildren(...EMBLEMS.map((e) => h('button', { class: 'cv-emb' + (st.emblem === e ? ' on' : ''), type: 'button', onclick: () => { st.emblem = e; draw(); } }, pic('coven/emblems/' + e))));
-      cols.replaceChildren(...Object.keys(COLORS).map((k) => h('button', { class: 'cv-col' + (st.color === k ? ' on' : ''), type: 'button', style: 'background:' + COLORS[k], onclick: () => { st.color = k; draw(); } })));
-      mode.replaceChildren(...[[true, 'Открытый'], [false, 'По заявкам']].map(([v, l]) => h('button', { class: 'seg-btn' + (st.open === v ? ' on' : ''), type: 'button', onclick: () => { st.open = v; draw(); } }, l)));
-    }
-    draw();
-    setTimeout(() => UI.modal({ title: 'Настройки ковена', cls: 'cv-modal',
-      body: h('div', { class: 'cv-create' }, preview, h('label', { class: 'cv-label' }, 'Девиз'), motto, h('label', { class: 'cv-label' }, 'Символ'), embs, h('label', { class: 'cv-label' }, 'Цвет'), cols, h('label', { class: 'cv-label' }, 'Вступление'), mode),
-      actions: [{ label: 'Сохранить', onClick: async () => {
-        try { await call('coven_edit', { p_motto: motto.value.trim(), p_emblem: st.emblem, p_color: st.color, p_open: st.open }); } catch (e) { UI.toast(errText(e)); return false; }
-        await refresh(); UI.toast('Сохранено'); setTimeout(home, 0);
-      } }, { label: 'Назад', alt: true, onClick: () => { setTimeout(home, 0); } }] }), 0);
+    const st = { name: c.name, emblem: c.emblem, color: c.color, open: c.open, motto: c.motto || '' };
+    const btn = h('button', { class: 'btn cv-wide', type: 'button' }, 'Сохранить');
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try { await call('coven_edit', { p_motto: (st.motto || '').trim(), p_emblem: st.emblem, p_color: st.color, p_open: st.open }); } catch (e) { UI.toast(errText(e)); btn.disabled = false; return; }
+      await refresh(); UI.toast('Сохранено'); UI.closeModal(); setTimeout(home, 0);
+    });
+    setTimeout(() => UI.modal({ title: 'Настройки ковена', sheet: true, cls: 'fixed-h cv-modal',
+      body: h('div', { class: 'cv-wrap' }, h('div', { class: 'cv-box' }, form(st, false), btn,
+        h('button', { class: 'btn alt cv-wide', type: 'button', onclick: () => { UI.closeModal(); setTimeout(home, 0); } }, 'Назад'))) }), 0);
   }
 
   // ---------- задание недели ----------

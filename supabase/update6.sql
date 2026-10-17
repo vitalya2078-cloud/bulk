@@ -242,6 +242,21 @@ begin
   perform public._log(a, 'Настройка ' || p_k, null, coalesce(p_v, 'null'::jsonb));
 end $$;
 
+-- поиск ковена по названию или по #ID
+create or replace function public.coven_list(init_data text, p_q text default '') returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare me bigint; q text := lower(trim(coalesce(p_q, ''))); qid bigint;
+begin
+  me := (public._tg_user(init_data)->>'id')::bigint;
+  if q ~ '^#?[0-9]{1,12}$' then qid := ltrim(q, '#')::bigint; end if;
+  return coalesce((select jsonb_agg(j order by (j->>'week')::float desc, (j->>'xp')::float desc) from (
+    select public._coven_json(c, (select count(*) from public.coven_members m where m.coven_id = c.id))
+      || jsonb_build_object('requested', exists (select 1 from public.coven_requests r where r.coven_id = c.id and r.uid = me)) j
+    from public.covens c where not c.deleted and (q = '' or c.id = qid or lower(c.name) like '%' || ltrim(q, '#') || '%')
+    order by c.week_xp desc limit 50) x), '[]');
+end $$;
+grant execute on function public.coven_list(text, text) to anon, authenticated;
+
 revoke execute on function public._coven_quest(bigint) from public, anon, authenticated;
 revoke execute on function public._coven_quest_add(bigint, bigint, text, double precision) from public, anon, authenticated;
 revoke execute on function public._boss_open() from public, anon, authenticated;

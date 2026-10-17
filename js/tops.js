@@ -100,7 +100,7 @@ const Tops = (() => {
       }
     }
 
-    UI.modal({ title: 'Топ алхимиков', cls: 'tops-modal', body: h('div', { class: 'tops' }, seg, hint, list, mine), onOpen: draw });
+    UI.modal({ title: 'Топ алхимиков', sheet: true, cls: 'fixed-h tops-modal', body: h('div', { class: 'tops cv-wrap' }, seg, hint, h('div', { class: 'cv-box' }, list, mine)), onOpen: draw });
   }
 
   return { open };

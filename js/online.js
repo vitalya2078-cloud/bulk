@@ -241,7 +241,7 @@ const Online = (() => {
   async function openMail() {
     if (!on()) { UI.toast('Почта работает в Telegram'); return; }
     const list = h('div', { class: 'mail-list' }, h('p', { class: 'top-empty' }, 'Открываю почту...'));
-    UI.modal({ title: 'Почта', cls: 'mail-modal', body: list });
+    UI.modal({ title: 'Почта', sheet: true, cls: 'fixed-h mail-modal', body: h('div', { class: 'cv-wrap' }, h('div', { class: 'cv-box' }, list)) });
     let rows;
     try { rows = await rpc('mail_list', { init_data: initData() }); } catch (e) {
       list.replaceChildren(h('div', { class: 'top-empty' }, h('p', null, 'Почта сейчас недоступна.'), h('small', null, 'Проверь интернет и загляни позже.')));
