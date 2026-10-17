@@ -281,6 +281,7 @@ const UI = (() => {
     nextModal();
   }
   const isModalOpen = () => !!current;
+  const modalClosable = () => !!current && current.closable !== false;
 
   // ---------- экраны ----------
   // Активен ровно один экран. Скрытые не рисуются и не обновляются.
@@ -803,13 +804,25 @@ const UI = (() => {
         toggle('Вибрация', 'ui/phone', 'vib', 'Лёгкий отклик на тапы'),
         h('div', { class: 'set-row' }, pic('ui/abacus', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Формат чисел'), fmt)),
         toggle('Меньше эффектов', 'ui/battery', 'lowfx', 'Для слабых телефонов и экономии батареи'),
+        (typeof Social !== 'undefined' && Platform.canNotify()) ? (() => {
+          const b = h('button', { class: 'switch' + (st.notif ? ' on' : ''), type: 'button', role: 'switch', 'aria-checked': st.notif ? 'true' : 'false', 'aria-label': 'Напоминания' });
+          b.addEventListener('click', async () => { Sound.tap(); const v = !st.notif; if (await Social.setNotify(v)) { b.classList.toggle('on', v); b.setAttribute('aria-checked', v ? 'true' : 'false'); } });
+          return h('div', { class: 'set-row' }, pic('ui/envelope', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Напоминания'), h('small', null, 'Лавка полна, питомец вернулся, пришёл босс')), b);
+        })() : null,
         (typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/key', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Один прогресс'), h('small', null, 'Играй в ВК и Telegram с одним сохранением')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.linkDialog(), 0); } }, 'Связать')) : null,
         (typeof Online !== 'undefined' && Online.isAdmin()) ? h('div', { class: 'set-row' }, pic('ui/key', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Приложение админки'), h('small', null, 'Код для входа, только для команды')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.admCode(), 0); } }, 'Код')) : null,
-        h('p', { class: 'small center', onclick: (() => { let n = 0, t = 0; return () => { clearTimeout(t); t = setTimeout(() => { n = 0; }, 1500); if (++n >= 5 && Platform.kind() !== 'web') { Game.save(); location.href = 'admin/' + (Platform.kind() === 'vk' ? location.search : ''); } }; })() }, 'Версия ' + C.version + ' · ' + Platform.label() + (Platform.kind() === 'web' ? ' · сохранение в этом браузере' : ' · сохранение в облаке'))),
-      actions: (typeof Online !== 'undefined' && Online.isAdmin() ? [{ label: 'Админ-панель', onClick: () => { Game.save(); setTimeout(() => { location.href = 'admin/' + (Platform.kind() === 'vk' ? location.search : ''); }, 200); } }] : [])
-        .concat([{ label: 'Начать заново', alt: true, onClick: () => { resetConfirm(); } }])
+        h('p', { class: 'small center ver-line', onclick: (() => {
+          // одно нажатие - «Что нового»; 5 быстрых нажатий - админка (только для команды)
+          let n = 0, t = 0;
+          return () => {
+            clearTimeout(t); n++;
+            if (n >= 5 && Platform.kind() !== 'web') { n = 0; Game.save(); location.href = 'admin/' + (Platform.kind() === 'vk' ? location.search : ''); return; }
+            t = setTimeout(() => { const one = n === 1; n = 0; if (one && typeof Changelog !== 'undefined') { closeModal(); setTimeout(() => Changelog.open(), 0); } }, 450);
+          };
+        })() }, 'Версия ' + C.version)),
+      actions: (typeof Online !== 'undefined' && Online.isAdmin() ? [{ label: 'Админ-панель', onClick: () => { Game.save(); setTimeout(() => { location.href = 'admin/' + (Platform.kind() === 'vk' ? location.search : ''); }, 200); } }] : null)
     });
   }
 
@@ -1229,7 +1242,7 @@ const UI = (() => {
   }
 
   return {
-    h, pic, money, setText, init, show, refresh, toast, say, sinceSay, modal, closeModal, isModalOpen,
+    h, pic, money, setText, init, show, refresh, toast, say, sinceSay, modal, closeModal, isModalOpen, modalClosable,
     offlineModal, welcomeModal, showGuard, villagerModal, friendBlock,
     applySettings, applyLook, previewFrame, setPhoto, avatarSrc,
     screen: () => screen, ess, crystalsWord, keepSeg

@@ -30,11 +30,18 @@
   }
 
   // ---------- время вне игры ----------
-  function handleGap(sec) {
+  // resume - игру просто сворачивали (она оставалась открытой): начисляем молча, без окна
+  function handleGap(sec, resume) {
     const amount = Econ.offlineEarnings(sec);
     if (!(amount > 0)) return;
     if (sec < 60) { Econ.earn(amount); return; }
     const slept = Brew.onReturn();
+    if (resume) {
+      Econ.earn(amount);
+      UI.toast('+' + Fmt.num(amount) + ' эссенции, пока лавка была свёрнута');
+      saveNow(true);
+      return;
+    }
     UI.offlineModal(amount, sec);
     if (slept) setTimeout(() => UI.toast('Сонное зелье удвоило доход, пока тебя не было'), 600);
   }
@@ -184,6 +191,9 @@
     if (v) UI.welcomeModal(v);
   }
   if (saved && saved.ts) handleGap((Date.now() - saved.ts) / 1000);
+  if (typeof Changelog !== 'undefined') Changelog.check();
+  if (typeof Back !== 'undefined') Back.start();
+  if (typeof Social !== 'undefined') Social.start();
   setTimeout(() => UI.say(pick(saved ? D.phrases.welcome : ['Привет! Я ' + Econ.s.wear.name + ', волшебный котёл. Тапай по мне, и я сварю эссенцию']), 3200), 500);
 
   // ---------- главный цикл ----------
@@ -197,7 +207,7 @@
     lastWall = wall;
     let dt = (now - last) / 1000;
     last = now;
-    if (gap > 5) { handleGap(gap); dt = 0; } // вкладка была скрыта или телефон спал
+    if (gap > 5) { handleGap(gap, true); dt = 0; } // вкладка была скрыта или телефон спал
     dt = Math.max(0, Math.min(dt, 0.1));
 
     Econ.tick(dt);
@@ -246,6 +256,10 @@
         Sound.fanfare();
         Cauldron.setMood('excited', 2000);
         UI.toast('Новый ранг: ' + D.ranks[r].name + '! Тап +1');
+        if (typeof Social !== 'undefined' && Platform.canStory() && !UI.isModalOpen()) {
+          setTimeout(() => UI.modal({ title: 'Новый ранг!', body: UI.h('div', { class: 'center' }, UI.h('div', { class: 'sheet-ico' }, UI.pic('ranks/' + (r + 1))), UI.h('p', null, 'Твоя лавка теперь - «' + D.ranks[r].name + '».')),
+            actions: [{ label: 'Отлично!' }].concat(Social.storyAction('rank', { title: 'Новый ранг!', sub: D.ranks[r].name, img: 'ranks/' + (r + 1) })) }), 1200);
+        }
         UI.say(pick(D.phrases.rankUp), 3000);
         saveNow(true);
       }

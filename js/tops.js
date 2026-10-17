@@ -20,7 +20,8 @@ const Tops = (() => {
     { id: 'rich', tab: 'Богачи', hint: 'У кого больше всего эссенции прямо сейчас.' },
     { id: 'day', tab: 'Сутки', hint: 'Сколько эссенции сварено сегодня. Новые сутки - в полночь по Москве.' },
     { id: 'week', tab: 'Неделя', hint: 'Сварено за эту неделю. Новая неделя - в понедельник.' },
-    { id: 'month', tab: 'Месяц', hint: 'Сварено за этот месяц.' }
+    { id: 'month', tab: 'Месяц', hint: 'Сварено за этот месяц.' },
+    { id: 'covens', tab: 'Ковены', hint: 'Самые сильные ковены недели: очки, которые участники принесли ковену.' }
   ];
 
   async function rpc(fn, body, ms) {
@@ -43,7 +44,7 @@ const Tops = (() => {
     if (/^[a-z]\d\d$/.test(photo || '')) src = UI.avatarSrc(photo);
     else if (/^https:\/\//.test(photo || '')) src = photo;
     else src = UI.avatarSrc('a01');
-    const img = h('img', { class: 'pic round', src, alt: '', draggable: 'false', referrerpolicy: 'no-referrer' });
+    const img = h('img', { class: 'pic round', src, alt: '', draggable: 'false', referrerpolicy: 'no-referrer', decoding: 'async' });
     img.addEventListener('error', () => { img.src = UI.avatarSrc('a01'); }, { once: true });
     return h('span', { class: 'top-ava' }, img);
   }
@@ -53,6 +54,14 @@ const Tops = (() => {
       place(r.place), avatar(r.photo),
       h('span', { class: 'top-name' }, r.name || 'Алхимик'),
       h('span', { class: 'top-score' }, pic('ui/essence', 'top-ess'), h('b', null, Fmt.num(r.score))));
+  }
+
+  function covenRow(r) {
+    return h('div', { class: 'top-row' + (r.is_me ? ' me' : '') + (r.place <= 3 ? ' p' + r.place : '') },
+      place(r.place),
+      h('span', { class: 'top-ava top-emb' }, typeof Coven !== 'undefined' && Coven.emblem ? Coven.emblem(r, 38) : null),
+      h('span', { class: 'top-name' }, r.name, h('small', { class: 'top-sub' }, 'ур ' + r.level + (r.members ? ' · ' + r.members + ' чел.' : ''))),
+      h('span', { class: 'top-score' }, h('b', null, Fmt.num(r.score))));
   }
 
   let tab = 0;
@@ -77,16 +86,23 @@ const Tops = (() => {
       UI.setText(hint, b.hint);
       list.replaceChildren(h('p', { class: 'top-empty' }, 'Загружаю топ...'));
       mine.replaceChildren();
-      // свежие цифры - перед загрузкой, чтобы своё место было честным
-      if (typeof Online !== 'undefined') { try { await Online.hello(false, true); } catch (e) { /* ignore */ } }
+      // свежие цифры отправляем параллельно - топ не ждёт отчёта
+      if (typeof Online !== 'undefined') { try { Online.hello(false, true); } catch (e) { /* ignore */ } }
       let r;
-      try { r = await rpc('top_list', { p_board: b.id, p_limit: T.limit, p_me: (typeof Online !== 'undefined' && Online.uid()) || 0 }); } catch (e) {
+      const meId = (typeof Online !== 'undefined' && Online.uid()) || 0;
+      try { r = b.id === 'covens' ? await rpc('top_covens', { p_limit: T.limit, p_me: meId }) : await rpc('top_list', { p_board: b.id, p_limit: T.limit, p_me: meId }); } catch (e) {
         if (my !== token) return;
         list.replaceChildren(h('div', { class: 'top-empty' }, h('p', null, 'Топ сейчас недоступен.'), h('small', null, 'Проверь интернет и загляни чуть позже.')));
         return;
       }
       if (my !== token) return;
       const rows = (r && r.rows) || [];
+      if (b.id === 'covens') {
+        list.replaceChildren(...(rows.length ? rows.map(covenRow) : [h('p', { class: 'top-empty' }, 'На этой неделе ковены ещё не набрали очков. Самое время!')]));
+        const m = r && r.me;
+        mine.replaceChildren(m && m.place > 8 ? covenRow(Object.assign({ is_me: true }, m)) : m ? null : h('p', { class: 'note center' }, 'Вступи в ковен - и ваш ковен появится здесь.'));
+        return;
+      }
       if (!rows.length) list.replaceChildren(h('p', { class: 'top-empty' }, b.id === 'rich' ? 'Пока здесь пусто. Стань первым!' : 'За этот период пока никто ничего не сварил. Самое время!'));
       else list.replaceChildren(...rows.map(row));
       const m = r && r.me;

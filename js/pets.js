@@ -1036,6 +1036,7 @@ const Pets = (() => {
           ? 'Такой малыш у тебя уже есть - он убежал к маме, а тебе оставил гостинцы: ингредиенты и 5 кристаллов.'
           : pet.name + ' теперь живёт в лавке. ' + pet.bonusText(pet.per) + ', когда он в комнате. Бульк: «Из яйца? Ну, это же волшебная лавка!»')),
       actions: [{ label: 'Ура!', onClick: () => { if (r.margoDone) setTimeout(() => margoModal(D.margo.final, true), 0); } }]
+        .concat(id && !r.dupe && typeof Social !== 'undefined' ? Social.storyAction('pet', { title: (r.golden ? 'Золотой ' : 'Мой ') + pet.name.toLowerCase() + '!', sub: 'Вылупился в моей лавке', img: 'pets/' + id + '/03' }) : [])
     });
     UI.refresh();
     refreshButton();
@@ -1116,5 +1117,12 @@ const Pets = (() => {
     refreshButton();
   }
 
-  return { init, tick, hit, onPotTap, poke, bonus, _idle: () => { lastInput = -1e9; }, _perch: () => { const a = actors[0]; if (a && !a.perch) { a.x = G.cx - G.r * 1.15; jumpUp(a); } }, open, refreshButton, giveEgg, addPet, owned, inRoom, slots, feed, collect, hatch, sendTrip, st };
+  // когда что-то случится само: питомец вернётся из похода, яйцо будет готово (мс, для напоминаний)
+  function timers() {
+    const p = st(), now = Date.now();
+    const ends = Object.values(p.trip || {}).map((t) => t && t.end).filter((t) => t > now);
+    const n = p.nest;
+    return { pet: ends.length ? Math.min(...ends) : 0, egg: n && !eggReady() ? now + Math.max(0, eggNeed() - n.heat) * 1000 : 0 };
+  }
+  return { init, tick, hit, onPotTap, poke, bonus, timers, _idle: () => { lastInput = -1e9; }, _perch: () => { const a = actors[0]; if (a && !a.perch) { a.x = G.cx - G.r * 1.15; jumpUp(a); } }, open, refreshButton, giveEgg, addPet, owned, inRoom, slots, feed, collect, hatch, sendTrip, st };
 })();

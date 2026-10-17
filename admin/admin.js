@@ -346,11 +346,12 @@
   let searchT = 0;
   let PMODE = 'players';
   function modeSeg() {
-    const opts = [['players', 'Игроки'], ['covens', 'Ковены']].concat(can('ban') ? [['reports', 'Жалобы']] : []);
+    const opts = [['players', 'Игроки'], ['covens', 'Ковены']].concat(can('ban') ? [['reports', 'Жалобы'], ['sus', 'Проверка']] : []);
     return h('div', { class: 'seg', style: { margin: '12px 0 0' } }, opts.map(([v, l]) => h('button', { class: v === PMODE ? 'on' : '', onclick: () => { if (PMODE !== v) { PMODE = v; haptic(); render(); } } }, l)));
   }
   async function renderPlayers(id) {
     if (PMODE === 'covens') return renderCovens(id);
+    if (PMODE === 'sus') return renderSus(id);
     if (PMODE === 'reports') return renderReports(id);
     const list = h('div', null, skeleton(6));
     const count = h('span', { class: 'n' }, '');
@@ -399,28 +400,158 @@
     if (stale(id)) return;
     body.replaceChildren(modeSeg(), sec('Ковены', String((rows || []).length)),
       !rows || !rows.length ? h('div', { class: 'panel empty' }, 'Ковенов пока нет') :
-      h('div', { class: 'panel list' }, rows.map((c) => h('button', { class: 'row', onclick: () => { haptic(); openCoven(c); } },
-        h('span', { class: 'ava', style: { backgroundImage: 'url("../assets/images/coven/emblems/' + c.emblem + '.webp")', backgroundSize: '70%', backgroundRepeat: 'no-repeat', backgroundColor: COV_COLORS[c.color] || '#555', borderRadius: '9px' } }),
+      h('div', { class: 'panel list' }, rows.map((c) => h('button', { class: 'row', onclick: () => { haptic(); openCoven(c.id); } },
+        covAva(c),
         h('span', { class: 'who' }, h('b', null, h('em', null, c.name), c.open ? null : h('span', { class: 'tag' }, 'заявки')),
           h('small', null, 'глава ' + (c.leader || '-') + ' · ' + c.members + '/30 · с ' + date(c.created_at))),
         h('span', { class: 'val' }, h('b', null, 'ур ' + c.level), h('small', null, num(c.week) + ' нед'))))));
   }
-  async function openCoven(c) {
-    const inner = h('div', null, skeleton(4));
-    const ok = dialog(c.name, (c.motto ? '«' + c.motto + '» · ' : '') + 'уровень ' + c.level + ', ' + c.members + ' участн.', inner, [{ label: 'Закрыть', cls: 'ghost', v: false }].concat(can('ban') ? [{ label: 'Переименовать', v: 'rename' }] : []));
+  const EMB = (e) => SITE + 'assets/images/coven/emblems/' + e + '.webp';
+  const covAva = (c, lg) => h('span', { class: 'ava' + (lg ? ' lg' : ''), style: { backgroundImage: 'url("' + EMB(c.emblem) + '")', backgroundSize: '70%', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundColor: COV_COLORS[c.color] || '#555', borderRadius: lg ? '14px' : '9px' } });
+  const COV_ROLE = { leader: 'Глава', deputy: 'Заместитель', member: 'Участник' };
+
+  // ковен целиком: оформление, вступление, уровень, участники, заявки, задание, босс, чат
+  async function openCoven(c0) {
+    const cid = typeof c0 === 'object' ? c0.id : c0;
+    if (!sheetEl) sheetScroll = window.scrollY;
+    if (sheetEl) sheetEl.remove();
+    const inner = h('main', null, h('div', { style: { height: '14px' } }), skeleton(5));
+    sheetEl = h('div', { class: 'sheet' },
+      h('div', { class: 'top' }, h('div', { class: 'top-in' },
+        h('button', { class: 'ib', 'aria-label': 'Назад', onclick: () => { closeSheet(); if (tab === 'players' && PMODE === 'covens') render(); } }, icon('back')),
+        h('div', { class: 'title' }, h('b', null, 'Ковен'), h('small', null, '#' + cid)),
+        h('button', { class: 'ib', 'aria-label': 'Обновить', onclick: () => openCoven(cid) }, icon('refresh')))),
+      inner);
+    document.body.append(sheetEl);
+    document.body.style.overflow = 'hidden';
+    let c;
+    try { c = await api('adm_coven', { p_coven: cid }); } catch (e) { inner.replaceChildren(h('div', { style: { height: '14px' } }), failBox(e)); return; }
+    if (!c) { inner.replaceChildren(h('div', { class: 'empty' }, 'Ковен не найден')); return; }
+    inner.replaceChildren(...covenView(c));
+    if (can('ban')) loadCovenChat(cid);
+  }
+
+  let chatBox = null;
+  function covenView(c) {
+    const reopen = () => openCoven(c.id);
+    const out = [];
+    const st = (label, v) => h('div', { class: 'stat' }, h('span', null, label), h('b', null, v));
+    const ms = Array.isArray(c.members) ? c.members : [];
+    out.push(h('div', { class: 'hero' }, covAva(c, true),
+      h('div', { style: { minWidth: 0 } },
+        h('h2', null, c.name),
+        h('div', { class: 'id' }, '#' + c.id + (c.motto ? ' · «' + c.motto + '»' : '')),
+        h('div', { class: 'tags' },
+          h('span', { class: 'tag acc' }, 'ур ' + c.level),
+          h('span', { class: 'tag' }, ms.length + '/30'),
+          h('span', { class: 'tag' }, c.open ? 'вход открыт' : 'по заявке'),
+          c.deleted ? h('span', { class: 'tag red' }, 'распущен') : null))));
+    out.push(sec('Показатели'), h('div', { class: 'stats' },
+      st('Очки всего', num(c.xp)), st('За неделю', num(c.week)),
+      st('Бонус дохода', '+' + c.bonus + '%'), st('Основан', date(c.created_at)),
+      st('Задание недели', c.quest ? (c.quest.done ? 'выполнено' : Math.round(100 * c.quest.progress / Math.max(1, c.quest.target)) + '%') : '-'),
+      st('Босс', c.boss ? (c.boss.dead ? 'побеждён' : Math.round(100 * c.boss.hp / Math.max(1, c.boss.max_hp)) + '% HP') : '-')));
+
     if (can('ban')) {
-      try {
-        const msgs = await api('adm_coven_chat', { p_coven: c.id });
-        inner.replaceChildren(h('div', { class: 'panel', style: { maxHeight: '50vh', overflowY: 'auto', marginBottom: '4px' } }, !msgs.length ? h('div', { class: 'empty' }, 'Чат пуст') :
-          msgs.map((m) => h('div', { class: 'log', style: m.hidden ? { opacity: .45 } : null }, h('div', null, h('b', null, m.uid ? (m.name || 'ID ' + m.uid) : 'система'), ' ', h('span', { class: 'meta' }, dateTime(m.at) + (m.hidden ? ' · скрыто' : ''))), h('div', { class: 'd' }, m.text)))));
-      } catch (e) { inner.replaceChildren(h('p', { class: 'mut' }, errText(e))); }
-    } else inner.replaceChildren();
-    if ((await ok) === 'rename') {
-      const inp = h('input', { class: 'input', value: c.name, maxlength: '20' });
-      if (await dialog('Новое название', 'Девиз ковена тоже сотрётся.', inp, [{ label: 'Отмена', cls: 'ghost', v: false }, { label: 'Сохранить', v: true }])) {
-        if (await act('adm_coven_rename', { p_coven: c.id, p_name: inp.value }, 'Ковен переименован')) render();
-      }
+      const name = h('input', { class: 'input', value: c.name, maxlength: '20' });
+      const motto = h('textarea', { class: 'input', rows: '2', maxlength: '80' }); motto.value = c.motto || '';
+      let emblem = c.emblem, color = c.color, open = c.open;
+      const embBox = h('div', { class: 'emb-grid' });
+      const colBox = h('div', { class: 'col-row' });
+      const drawPick = () => {
+        embBox.replaceChildren(...Array.from({ length: 16 }, (_, i) => { const e = 'e' + String(i + 1).padStart(2, '0');
+          return h('button', { class: 'emb' + (e === emblem ? ' on' : ''), style: { backgroundImage: 'url("' + EMB(e) + '")', backgroundColor: COV_COLORS[color] || '#555' }, onclick: () => { emblem = e; haptic(); drawPick(); } }); }));
+        colBox.replaceChildren(...Object.keys(COV_COLORS).map((k) => h('button', { class: 'col' + (k === color ? ' on' : ''), style: { background: COV_COLORS[k] }, onclick: () => { color = k; haptic(); drawPick(); } })));
+      };
+      drawPick();
+      const sw = h('button', { class: 'sw' + (open ? ' on' : ''), role: 'switch', 'aria-label': 'Открытый вход', onclick: () => { open = !open; sw.classList.toggle('on', open); } });
+      out.push(sec('Оформление и вступление'), h('div', { class: 'panel pad' },
+        field('Название', name), field('Девиз', motto),
+        h('div', { class: 'field' }, h('span', null, 'Эмблема'), embBox),
+        h('div', { class: 'field' }, h('span', null, 'Цвет'), colBox),
+        h('div', { class: 'tog' }, h('div', { class: 't' }, h('b', null, 'Открытый вход'), h('small', null, 'Выключено - вступают только по заявке')), sw),
+        h('button', { class: 'btn wide', onclick: async () => {
+          const f = { motto: motto.value.trim(), emblem, color, open };
+          if (name.value.trim() !== c.name) f.name = name.value.trim();
+          if (await act('adm_coven_edit', { p_coven: c.id, f }, 'Ковен сохранён')) reopen();
+        } }, icon('check'), 'Сохранить')));
     }
+    if (can('edit')) {
+      const xp = h('input', { class: 'input mono', type: 'number', inputmode: 'decimal', value: String(Math.round(c.xp)) });
+      const wx = h('input', { class: 'input mono', type: 'number', inputmode: 'decimal', value: String(Math.round(c.week)) });
+      out.push(sec('Уровень', 'ур ' + c.level), h('div', { class: 'panel pad' },
+        h('div', { class: 'g2' }, field('Очки всего', xp), field('Очки недели', wx)),
+        h('p', { class: 'hint' }, 'Уровень считается из очков всего. Следующий уровень: ' + num(c.need) + ' очков.'),
+        h('button', { class: 'btn ghost wide', onclick: async () => {
+          if (await act('adm_coven_edit', { p_coven: c.id, f: { xp: +xp.value || 0, week_xp: +wx.value || 0 } }, 'Очки обновлены')) reopen();
+        } }, 'Сохранить очки')));
+    }
+
+    out.push(sec('Участники', String(ms.length)));
+    out.push(h('div', { class: 'panel' }, ms.length ? ms.map((m) => h('div', { class: 'member' },
+      ava(m.photo, online(m.seen)),
+      h('button', { class: 'who', style: { textAlign: 'left' }, onclick: () => { haptic(); openPlayer(m.id); } },
+        h('b', null, h('em', null, m.name || 'ID ' + m.id), h('span', { class: 'tag' + (m.role === 'leader' ? ' acc' : '') }, COV_ROLE[m.role] || m.role)),
+        h('small', null, 'неделя ' + num(m.week) + ' · всего ' + num(m.total) + ' · ' + ago(m.seen))),
+      can('ban') ? h('button', { class: 'ib', 'aria-label': 'Действия', onclick: () => memberMenu(c, m) }, icon('sliders')) : null)) : h('div', { class: 'empty' }, 'Пусто')));
+
+    if (Array.isArray(c.requests) && c.requests.length) {
+      out.push(sec('Заявки', String(c.requests.length)), h('div', { class: 'panel' }, c.requests.map((r) => h('div', { class: 'member' },
+        ava(r.photo, false),
+        h('span', { class: 'who' }, h('b', null, h('em', null, r.name || 'ID ' + r.id)), h('small', null, 'ур ' + (r.lvl || 1) + ' · ' + dateTime(r.at))),
+        can('ban') ? [h('button', { class: 'btn sm', onclick: async () => { if (await act('adm_coven_member', { p_coven: c.id, p_uid: r.id, p_action: 'accept' }, 'Принят')) reopen(); } }, 'Принять'),
+          h('button', { class: 'btn ghost sm', onclick: async () => { if (await act('adm_coven_member', { p_coven: c.id, p_uid: r.id, p_action: 'decline' }, 'Отклонено')) reopen(); } }, 'Нет')] : null))));
+    }
+
+    if (can('ban')) {
+      chatBox = h('div', { class: 'panel' }, h('div', { class: 'skel' }));
+      out.push(sec('Чат'), chatBox);
+      out.push(sec('Опасно'), h('div', { class: 'panel pad' },
+        h('button', { class: 'btn danger wide', onclick: async () => {
+          if (!(await confirmBox('Распустить ковен?', 'Все участники выйдут, ковен исчезнет из списка. Отменить нельзя.', 'Распустить', true))) return;
+          if (await act('adm_coven_delete', { p_coven: c.id }, 'Ковен распущен')) { closeSheet(); render(); }
+        } }, icon('trash'), 'Распустить ковен')));
+    }
+    return out;
+  }
+  async function memberMenu(c, m) {
+    const opts = [{ label: 'Отмена', cls: 'ghost', v: false }];
+    if (m.role === 'member') opts.push({ label: 'Сделать заместителем', v: 'promote' });
+    if (m.role === 'deputy') opts.push({ label: 'Снять заместителя', v: 'demote' });
+    if (m.role !== 'leader') opts.push({ label: 'Сделать главой', v: 'lead' });
+    opts.push({ label: 'Исключить', cls: 'danger', v: 'kick' });
+    const v = await dialog(m.name || 'ID ' + m.id, (COV_ROLE[m.role] || '') + ' · неделя ' + num(m.week), null, opts);
+    if (!v) return;
+    if (v === 'kick' && !(await confirmBox('Исключить из ковена?', m.name || 'ID ' + m.id, 'Исключить', true))) return;
+    if (await act('adm_coven_member', { p_coven: c.id, p_uid: m.id, p_action: v }, 'Готово')) openCoven(c.id);
+  }
+  async function loadCovenChat(cid) {
+    const box = chatBox;
+    if (!box) return;
+    try {
+      const msgs = await api('adm_coven_chat', { p_coven: cid });
+      box.replaceChildren(...(!msgs.length ? [h('div', { class: 'empty' }, 'Чат пуст')] : msgs.slice(-60).map((m) => h('div', { class: 'log', style: m.hidden ? { opacity: .45 } : null },
+        h('div', null, h('b', null, m.uid ? (m.name || 'ID ' + m.uid) : 'система'), ' ', h('span', { class: 'meta' }, dateTime(m.at) + (m.hidden ? ' · скрыто' : ''))),
+        h('div', { class: 'd' }, m.text)))));
+    } catch (e) { box.replaceChildren(h('div', { class: 'empty' }, errText(e))); }
+  }
+  // подозрительный рост прогресса: игрок временно вне топов, решение за командой
+  async function renderSus(id) {
+    body.replaceChildren(modeSeg(), h('div', { style: { height: '10px' } }), skeleton(3));
+    let rows;
+    try { rows = await api('adm_sus'); } catch (e) { if (!stale(id)) body.replaceChildren(modeSeg(), failBox(e)); return; }
+    if (stale(id)) return;
+    body.replaceChildren(modeSeg(), sec('На проверке', String((rows || []).length)),
+      !rows || !rows.length ? h('div', { class: 'panel empty' }, 'Подозрительных нет') :
+      h('div', { class: 'panel' }, rows.map((r) => h('div', { class: 'log' },
+        h('div', { class: 'member', style: { padding: 0 } }, ava(r.photo, online(r.last_seen)),
+          h('button', { class: 'who', style: { textAlign: 'left' }, onclick: () => openPlayer(r.id) }, h('b', null, h('em', null, r.name || 'ID ' + r.id)),
+            h('small', null, 'ур ' + r.lvl + ' · сварено ' + num(r.le) + ' · ' + num(r.ph) + '/ч'))),
+        h('div', { class: 'd' }, r.reason + (r.count > 1 ? ' · срабатываний: ' + r.count : '')),
+        h('div', { class: 'meta' }, dateTime(r.at)),
+        h('div', { class: 'btns' },
+          h('button', { class: 'btn sm', onclick: async () => { if (await act('adm_sus_done', { p_id: r.id, p_ok: true }, 'Вернул в топы')) render(); } }, 'Честно'),
+          h('button', { class: 'btn danger sm', onclick: async () => { if (await act('adm_sus_done', { p_id: r.id, p_ok: false }, 'Убран из топов')) render(); } }, 'Накрутка'))))));
   }
   async function renderReports(id) {
     body.replaceChildren(modeSeg(), h('div', { style: { height: '10px' } }), skeleton(3));
@@ -482,6 +613,7 @@
           roleTag(p.team_role),
           p.banned ? h('span', { class: 'tag red' }, 'бан') : null,
           p.top_ban ? h('span', { class: 'tag' }, 'без топа') : null,
+          p.top_hold ? h('span', { class: 'tag red' }, 'на проверке: ' + (p.sus_reason || '')) : null,
           p.premium ? h('span', { class: 'tag acc' }, 'premium') : null,
           p.lang ? h('span', { class: 'tag' }, p.lang) : null))));
 
@@ -812,6 +944,14 @@
           field('Текст на экране', mText)));
     }
 
+    const nBox = h('div', { class: 'panel pad' }, h('div', { class: 'skel' }));
+    out.push(sec('Напоминания'), nBox);
+    api('adm_notify_stats').then((n) => {
+      nBox.replaceChildren(
+        kv('Включили напоминания', num(n.enabled)), kv('Отправлено за сутки', num(n.day)), kv('За неделю', num(n.week)),
+        kv('Ключ ВК для уведомлений', n.vk_key ? 'есть' : 'нет - во ВК напоминания не уходят'),
+        h('p', { class: 'hint' }, 'Не чаще 2 раз в сутки на игрока, с 9:00 до 22:00 по Москве, только тем, кто не в игре.'));
+    }).catch((e) => nBox.replaceChildren(h('p', { class: 'mut' }, /function|does not exist/.test(String(e.message)) ? 'Запусти в базе update9.sql' : errText(e))));
     out.push(sec('Ссылки'),
       h('div', { class: 'panel pad' },
         kv('Игра', h('span', { class: 'mono' }, 't.me/bulkgamemagikbot?startapp')),

@@ -29,6 +29,7 @@ const Coven = (() => {
     const m = String(e && e.message || e);
     if (/name taken/.test(m)) return 'Такое название уже занято';
     if (/bad name/.test(m)) return 'Название от 3 до 20 букв';
+    if (/bad word/.test(m)) return 'В названии грубое слово - придумай другое';
     if (/already in coven/.test(m)) return 'Ты уже в ковене';
     if (/full/.test(m)) return 'В ковене нет мест';
     if (/muted/.test(m)) return 'Тебе пока нельзя писать в чат';
@@ -338,6 +339,10 @@ const Coven = (() => {
       clearInterval(poll); poll = 0;
       Sound.fanfare();
       UI.toast('Босс повержен! Сундуки - в почте');
+      if (typeof Social !== 'undefined' && Platform.canStory() && st && st.boss) {
+        const bn = (BOSS[st.boss] || BOSS.cauldron).name;
+        setTimeout(() => Social.story('boss', { title: 'Босс повержен!', sub: bn + ' · ковен «' + ((my && my.coven && my.coven.name) || '') + '»', img: 'boss/' + st.boss + '_ko', bg: 'backgrounds/boss_arena' }).catch(() => {}), 1800);
+      }
       setTimeout(() => { refresh().then(() => { if (box.isConnected) boss(box); }); }, 600);
     }
     function hit(e) {
@@ -492,5 +497,5 @@ const Coven = (() => {
     setInterval(() => { if (!document.hidden) refresh(); }, 2 * 60000);
   }
 
-  return { start, open, refresh };
+  return { start, open, refresh, emblem };
 })();

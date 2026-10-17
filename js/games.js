@@ -68,14 +68,14 @@ const Games = (() => {
   }
 
   // ---------- общий экран мини-игры ----------
-  let layer = null, cur = null, raf = 0;
+  let layer = null, cur = null, raf = 0, exitFn = null;
   function start(id) {
     if (id === 'match3') runMatch3();
   }
   function close() {
     cancelAnimationFrame(raf); raf = 0;
     if (layer) layer.remove();
-    layer = null; cur = null;
+    layer = null; cur = null; exitFn = null;
     document.body.classList.remove('in-game');
     UI.refresh(true);
   }
@@ -105,7 +105,7 @@ const Games = (() => {
     const ctx = cv.getContext('2d');
     let W = 0, H = 0, cell = 40, ox = 0, oy = 0, dpr = 1;
     const IM = {};
-    COLORS.concat(['striped', 'bomb', 'rainbow', 'cell']).forEach((n) => { IM[n] = Sprites.get('match3/' + n); if (!IM[n]) Sprites.get('match3/' + n, (im) => { IM[n] = im; }); });
+    COLORS.concat(['striped', 'bomb', 'rainbow', 'cell', 'arrow', 'frame', 'garland', 'counter', 'girl_idle', 'girl_joy', 'girl_worry']).forEach((n) => { IM[n] = Sprites.get('match3/' + n); if (!IM[n]) Sprites.get('match3/' + n, (im) => { IM[n] = im; }); });
     const SB = Sprites.get('mini/starburst', (im) => { IM.sb = im; }); if (SB) IM.sb = SB;
 
     function size() {
@@ -114,9 +114,26 @@ const Games = (() => {
       W = r.width; H = r.height;
       cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
       cv.style.width = W + 'px'; cv.style.height = H + 'px';
-      cell = Math.floor(Math.min((W - 16) / COLS, (H - 16) / ROWS));
-      ox = (W - cell * COLS) / 2; oy = (H - cell * ROWS) / 2;
+      // сцена: гирлянда сверху, поле в резной раме, прилавок снизу.
+      // Проём рамы (frame.webp 840x975): x 94..745, y 85..877 - в нём ровно поле 7x8.
+      const FW = 9.05, FH = 9.84;                      // рама в клетках: ширина и высота
+      cell = Math.floor(Math.min(W / FW, (H * 0.86) / FH));
+      const fw = cell * FW, fh = cell * FH;
+      const top = Math.max(0, Math.min(W * 0.21, H - fh - cell * 1.2));  // место под гирлянду
+      const below = W * 0.299 * 0.58;                                    // видимая часть прилавка
+      const off = Math.max(0, (H - top - fh - below) / 2);               // вся сцена - по центру
+      L.fx = (W - fw) / 2; L.fy = off + top; L.fw = fw; L.fh = fh;
+      ox = L.fx + fw * 94 / 840; oy = L.fy + fh * 85 / 975;
+      // поле точно в проёме
+      const ow = fw * 652 / 840, oh = fh * 793 / 975;
+      ox += (ow - cell * COLS) / 2; oy += (oh - cell * ROWS) / 2;
+      L.top = top;
     }
+    const L = { fx: 0, fy: 0, fw: 0, fh: 0, top: 0 };
+    // помощница: обычная / радуется / волнуется
+    const girl = { mood: 'idle', until: 0 };
+    function react(m, ms) { girl.mood = m; girl.until = performance.now() + (ms || 1600); }
+    const img = (im, x, y, w, hgt) => { if (im) ctx.drawImage(im, x, y, w, hgt); };
 
     // ---- поле ----
     let uid = 1;
@@ -197,6 +214,7 @@ const Games = (() => {
     function clearSet(kill, born) {
       const n = kill.size;
       G2.combo++;
+      if (G2.combo >= 2 || born.length || n >= 5) react('joy', 1500);
       const pts = n * 20 * G2.combo + born.length * 60;
       G2.score += pts;
       let sx = 0, sy = 0;
@@ -350,6 +368,23 @@ const Games = (() => {
       if (cv.parentNode && (Math.abs(cv.parentNode.clientWidth - W) > 1 || Math.abs(cv.parentNode.clientHeight - H) > 1)) size();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, W, H);
+      // ---- декор позади поля ----
+      if (IM.garland && L.fy > 8) {
+        const gw = W * 0.98, gh = gw * IM.garland.naturalHeight / IM.garland.naturalWidth;
+        img(IM.garland, (W - gw) / 2, Math.max(-gh * 0.12, L.fy - gh * 0.86), gw, gh);
+      }
+      if (now > girl.until) girl.mood = G2.moves <= 4 && !G2.over ? 'worry' : 'idle';
+      const gim = IM['girl_' + girl.mood] || IM.girl_idle;
+      if (gim) {
+        const gw = cell * 2.6, gh = gw * gim.naturalHeight / gim.naturalWidth;
+        const bob = girl.mood === 'joy' ? Math.abs(Math.sin(now / 140)) * cell * 0.25 : Math.sin(now / 700) * cell * 0.05;
+        const gx = L.fx + L.fw - gw - cell * 0.35, gy = L.fy - gh * 0.62 - bob;
+        img(gim, gx, gy, gw, gh);
+      }
+      if (IM.counter) {
+        const cw = W, chh = cw * IM.counter.naturalHeight / IM.counter.naturalWidth;
+        img(IM.counter, 0, Math.min(H - chh, L.fy + L.fh - chh * 0.42), cw, chh);
+      }
       // ячейки
       for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
         if (IM.cell) ctx.drawImage(IM.cell, ox + c * cell, oy + r * cell, cell, cell);
@@ -379,18 +414,19 @@ const Games = (() => {
           const w = im.naturalWidth * k, hh = im.naturalHeight * k;
           if (p.sp === 'bomb') { ctx.save(); ctx.filter = 'hue-rotate(' + (p.t * 60) + 'deg)'; ctx.drawImage(im, px - w / 2, py - hh / 2, w, hh); ctx.restore(); }
           else ctx.drawImage(im, px - w / 2, py - hh / 2, w, hh);
-          if (p.sp === 'h' || p.sp === 'v') {
-            // полосатое: белые полосы поверх
-            ctx.save(); ctx.globalAlpha = 0.85 + 0.15 * Math.sin(now / 150); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = Math.max(2, cell * 0.07); ctx.lineCap = 'round';
-            for (let i = -1; i <= 1; i++) { ctx.beginPath();
-              if (p.sp === 'h') { ctx.moveTo(px - w * 0.3, py + i * hh * 0.18); ctx.lineTo(px + w * 0.3, py + i * hh * 0.18); }
-              else { ctx.moveTo(px + i * w * 0.18, py - hh * 0.3); ctx.lineTo(px + i * w * 0.18, py + hh * 0.3); }
-              ctx.stroke(); }
+          if ((p.sp === 'h' || p.sp === 'v') && IM.arrow) {
+            // бонус за 4 в ряд: стрелка показывает, что очистится - ряд (влево-вправо) или столбец (вверх-вниз)
+            const pul = 0.92 + 0.08 * Math.sin(now / 160);
+            const aw = cell * 0.98 * pul * sc, ah = aw * IM.arrow.naturalHeight / IM.arrow.naturalWidth;
+            ctx.save(); ctx.translate(px, py); if (p.sp === 'v') ctx.rotate(Math.PI / 2);
+            ctx.drawImage(IM.arrow, -aw / 2, -ah / 2, aw, ah);
             ctx.restore();
           }
         } else { ctx.fillStyle = ['#E84A5F', '#4A8BFF', '#4CC46A', '#FFC43A', '#9B5BFF', '#FF6FB5'][p.t]; ctx.beginPath(); ctx.arc(px, py, sz * 0.4, 0, 7); ctx.fill(); }
       }
       ctx.restore();
+      // рама поверх краёв поля (прячет падающие сверху зелья)
+      img(IM.frame, L.fx, L.fy, L.fw, L.fh);
       // частицы и вспышки
       for (let i = G2.parts.length - 1; i >= 0; i--) {
         const q = G2.parts[i]; q.life += dt; if (q.life > q.dur) { G2.parts.splice(i, 1); continue; }
@@ -419,6 +455,7 @@ const Games = (() => {
       raf = requestAnimationFrame(frame);
     }
 
+    exitFn = () => confirmExit();
     function confirmExit() {
       if (G2.over) { close(); return; }
       UI.modal({ title: 'Выйти из игры?', body: h('p', { class: 'center' }, 'Очки этой партии не сохранятся.'),
@@ -470,5 +507,13 @@ const Games = (() => {
     cur = { id: 'match3', grid, G2, trySwap, findRuns, swapCells, COLS, ROWS };
   }
 
-  return { open, start, close, active: () => !!layer, fullLeft, _cur: () => cur };
+  // кнопка «Назад» телефона в мини-игре: открыто окно - закрываем его, иначе то же, что крестик
+  function back() {
+    if (!layer) return false;
+    if (UI.isModalOpen()) { if (UI.modalClosable()) UI.closeModal(); return true; }
+    if (exitFn) exitFn(); else close();
+    return true;
+  }
+
+  return { open, start, close, back, active: () => !!layer, fullLeft, _cur: () => cur };
 })();

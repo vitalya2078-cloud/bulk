@@ -262,11 +262,54 @@ const Platform = (() => {
     catch (e) { return false; }
   }
 
+  // ---------- избранное / главный экран ----------
+  const tgVer = (v) => { try { return !!(tg && tg.isVersionAtLeast && tg.isVersionAtLeast(v)); } catch (e) { return false; } };
+  const canFavorite = () => kind === 'vk' || (kind === 'tg' && tgVer('8.0') && typeof tg.addToHomeScreen === 'function');
+  async function addFavorite() {
+    if (kind === 'vk') {
+      try { const r = await withTimeout(vkCall('VKWebAppAddToFavorites'), 60000); return !!(r && r.result); } catch (e) { return false; }
+    }
+    if (kind === 'tg' && canFavorite()) {
+      return new Promise((res) => {
+        let done = false;
+        const fin = (v) => { if (done) return; done = true; try { tg.offEvent('homeScreenAdded', ok); } catch (e) { /* ignore */ } res(v); };
+        const ok = () => fin(true);
+        try { tg.onEvent('homeScreenAdded', ok); tg.addToHomeScreen(); } catch (e) { fin(false); }
+        setTimeout(() => fin(false), 60000);
+      });
+    }
+    return false;
+  }
+
+  // ---------- разрешение на напоминания ----------
+  const canNotify = () => kind === 'vk' || (kind === 'tg' && tgVer('6.9') && typeof tg.requestWriteAccess === 'function');
+  async function allowNotify() {
+    if (kind === 'vk') { try { const r = await withTimeout(vkCall('VKWebAppAllowNotifications'), 60000); return !!(r && r.result); } catch (e) { return false; } }
+    if (kind === 'tg' && canNotify()) return new Promise((res) => { try { tg.requestWriteAccess((ok) => res(!!ok)); } catch (e) { res(false); } setTimeout(() => res(false), 60000); });
+    return false;
+  }
+
+  // ---------- истории ----------
+  const canStory = () => kind === 'vk' || (kind === 'tg' && tgVer('7.8') && typeof tg.shareToStory === 'function');
+  // blob - картинка (data:image/jpeg) для ВК; url - картинка на сайте для Telegram; text - подпись
+  async function shareStory(o) {
+    if (kind === 'vk') {
+      try {
+        await vkCall('VKWebAppShowStoryBox', { background_type: 'image', blob: o.blob, attachment: { text: 'go_to', type: 'url', url: 'https://vk.com/app' + CONFIG.vkAppId } });
+        return true;
+      } catch (e) { return false; }
+    }
+    if (kind === 'tg' && canStory()) {
+      try { tg.shareToStory(o.url, { text: (o.text || '').slice(0, 200), widget_link: { url: 'https://t.me/' + CONFIG.tgBotUsername + '?startapp', name: 'Бульк' } }); return true; } catch (e) { return false; }
+    }
+    return false;
+  }
+
   const label = () => ({ vk: 'ВКонтакте', tg: 'Telegram', web: 'браузер' }[kind]);
 
   return {
     init, kind: () => kind, label, userId, referrer, profile, authData, setUid,
-    storageGet, storageSet, adsAvailable, rewardedAd, haptic,
+    storageGet, storageSet, adsAvailable, rewardedAd, haptic, canFavorite, addFavorite, canStory, shareStory, canNotify, allowNotify,
     invite, share, hasLeaderboard, leaderboard
   };
 })();

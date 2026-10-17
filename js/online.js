@@ -14,6 +14,7 @@ const Online = (() => {
   const on = () => !!initData();
   const SESS = Math.random().toString(36).slice(2) + Date.now().toString(36);
   let kicked = false, uid = 0;
+  let platPhoto = ''; // фото из ВК / Telegram - его показываем другим игрокам (топы, ковен)
   const save = () => { if (window.Game) Game.save(); };
   const ls = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } return null; };
 
@@ -42,7 +43,7 @@ const Online = (() => {
     try { saveObj = JSON.parse(Econ.serialize()); } catch (e) { /* ignore */ }
     return {
       start: start ? '1' : '0', claim: start ? '1' : '0', sess: SESS, ver: CONFIG.version,
-      name: (s.prof.name || '').trim(), avatar: s.prof.avatar === 'photo' ? '' : s.prof.avatar,
+      name: (s.prof.name || '').trim(), avatar: s.prof.avatar === 'photo' ? '' : s.prof.avatar, photo: platPhoto,
       lvl: s.lvl, rank: Econ.rank(), le: Math.floor(s.le), e: Math.floor(s.e), ph: Math.floor(Econ.basePerHour()),
       cr: s.cr, mastery: Econ.mastery(), play: Math.floor(s.stat.play || 0),
       ref: start ? Platform.referrer() : '', save: saveObj
@@ -307,18 +308,29 @@ const Online = (() => {
       h('small', { class: 'letter-date' }, when(m.at))), actions });
   }
 
+  // ---------- напоминания: когда что случится (база пришлёт сообщение, если игрок не в игре) ----------
+  function notifyPush(leaving) {
+    if (!on()) return;
+    const s = Econ.s;
+    const t = (typeof Pets !== 'undefined' && Pets.timers) ? Pets.timers() : { pet: 0, egg: 0 };
+    const full = leaving ? (Date.now() + Econ.pantryHours() * 3600000) / 1000 : 0;
+    rpc('notify_set', { init_data: initData(), p: { on: !!s.set.notif, full, pet: t.pet / 1000, egg: t.egg / 1000 } }, 6000).catch(() => {});
+  }
+
   function start() {
     const b = document.getElementById('mail-btn');
     if (b) b.addEventListener('click', () => { Sound.unlock(); Sound.tap(); openMail(); });
     badge();
     if (!on()) return;
+    Platform.profile().then((p) => { platPhoto = (p && p.photo) || ''; }).catch(() => {});
     setTimeout(() => hello(true), 1500);
     setInterval(() => { if (!document.hidden) hello(false); }, 60000);
     // свернул - сразу отправляем прогресс; вернулся - проверяем, не открыта ли игра в другом месте
-    document.addEventListener('visibilitychange', () => { hello(false, true); });
+    document.addEventListener('visibilitychange', () => { hello(false, true); notifyPush(document.hidden); });
+    setTimeout(() => notifyPush(false), 4000);
   }
 
   const call = (fn, body, ms) => rpc(fn, Object.assign({ init_data: initData() }, body || {}), ms);
 
-  return { call, start, openMail, admCode, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid };
+  return { call, start, openMail, admCode, notifyPush, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid };
 })();

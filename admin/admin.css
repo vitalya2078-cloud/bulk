@@ -257,3 +257,15 @@ pre { margin: 0; padding: 0 14px 14px; white-space: pre-wrap; word-break: break-
   border-radius: 50%; background: var(--s2); border: 1px solid var(--line2); color: var(--acc); opacity: 0; pointer-events: none;
   transform: translateY(calc(var(--p, 0) * 30px - 20px)) rotate(calc(var(--p, 0) * 300deg)); transition: opacity .15s; }
 .ptr.show { opacity: calc(.3 + var(--p, 0) * .7); }
+
+/* ---------- 0.20: ковен целиком ---------- */
+.emb-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 4px; }
+.emb { aspect-ratio: 1; border-radius: 8px; background-size: 72%; background-position: center; background-repeat: no-repeat; border: 1px solid var(--line2); opacity: .55; }
+.emb.on { opacity: 1; box-shadow: 0 0 0 2px var(--acc); }
+.col-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.col { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; }
+.col.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--acc); }
+.member .who { flex: 1; min-width: 0; }
+.member .who b { display: flex; align-items: center; gap: 6px; font-weight: 550; }
+.member .who em { font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.member .who small { display: block; color: var(--dim); font: 500 11px var(--mono); }

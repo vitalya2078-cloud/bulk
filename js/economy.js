@@ -47,6 +47,8 @@ const Econ = (() => {
       inv: '',         // день последней награды за приглашение
       welcome: false,  // подарок за приход по приглашению уже получен
       snd: true,
+      seenVer: '',     // последняя версия, чьё «Что нового» игрок видел
+      fav: { n: 0, at: 0, done: false }, // предложение добавить игру в избранное / на главный экран
       cat: 'garden',   // открытый раздел в Лавке
       // ---- 0.2 ----
       cr: C.crystals.start,                    // лунные кристаллы
@@ -54,7 +56,7 @@ const Econ = (() => {
       prof: { name: '', avatar: 'a01', title: 'novice' },
       own: { av: [], acc: [], pot: [] },       // купленное и подаренное
       wear: { head: '', face: '', liquid: 'auto', pot: 'base', name: 'Бульк', spoon: 'spoon', bed: 'bed_cushion', toy: '', stand: 'stand_iron' },
-      set: { music: 0.35, sfx: 0.8, vib: true, nums: 'short', lowfx: false },
+      set: { music: 0.35, sfx: 0.8, vib: true, nums: 'short', lowfx: false, notif: false, notifAsked: 0 },
       stat: { start: Date.now(), days: 0, lastDay: '', bestStreak: 0, maxPh: 0, play: 0 },
       // ---- 0.3: события по календарю ----
       lvl: 1, xp: 0,     // уровень алхимика и опыт на текущем уровне

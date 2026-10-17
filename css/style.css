@@ -1357,11 +1357,12 @@ button:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
 .row-card.trip .info { flex: 1; }
 .row-card.trip .pet-actions { justify-content: flex-start; }
 
-.loot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin: 8px 0; }
+.loot-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; margin: 8px 0; }
 .loot { position: relative; display: flex; flex-direction: column; align-items: center; padding: 6px 3px; border: 2px solid var(--ink); border-radius: 14px; background: var(--plum-2); }
 .loot .pic { width: 40px; height: 40px; }
 .loot b { position: absolute; top: 3px; right: 6px; font-size: 12px; color: var(--gold); }
-.loot small { font-size: 10.5px; text-align: center; line-height: 1.1; }
+.loot small { font-size: 10.5px; text-align: center; line-height: 1.1; max-width: 100%; overflow-wrap: anywhere; hyphens: auto; }
+.loot { min-width: 0; }
 .loot.off { opacity: .5; }
 
 .egg-card { display: flex; gap: 12px; align-items: center; margin: 12px 0; padding: 10px; border: 2px solid var(--ink); border-radius: 16px; background: var(--plum-2); }
@@ -1912,7 +1913,7 @@ body.in-game .modal-wrap { z-index: 30; }
 .tops .top-seg { margin: 2px 0 8px; padding: 0; overflow: visible; }
 .tops .top-seg .seg-btn { flex: 1 1 0; min-width: 0; padding: 6px 4px; font-size: 12.5px; line-height: 1.15; white-space: normal; text-align: center; }
 .top-score { white-space: nowrap; }
-.top-crown { top: -14px; }
+.top-crown { top: -12px; left: auto; right: -10px; width: 24px; height: 24px; transform: rotate(28deg); transform-origin: 50% 80%; }
 
 /* ===== 0.14 почта, бан ===== */
 .mail-list { display: flex; flex-direction: column; gap: 6px; }
@@ -2072,3 +2073,17 @@ body.in-game .modal-wrap { z-index: 30; }
 .cv-wide + .cv-wide { margin-top: 8px; }
 .tops .note.center { flex: none; margin: 0 0 8px; }
 .modal.sheet.fixed-h { height: 82%; max-height: 82%; }
+
+/* ===== 0.20 «Что нового» ===== */
+.cl-block { margin: 0 0 10px; padding: 10px 12px; border: 2px solid var(--ink); border-radius: 14px; background: var(--plum-2); }
+.cl-block.main { background: #5B2E86; box-shadow: 0 0 0 2px var(--gold) inset; }
+.cl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.cl-head b { color: #FFE48A; font: 900 16px var(--head); }
+.cl-head small { color: var(--muted); font-size: 12px; }
+.cl-list { margin: 0; padding-left: 18px; color: #FFF6E8; font-size: 13.5px; line-height: 1.35; }
+.cl-list li + li { margin-top: 4px; }
+.cl-list li::marker { color: #9BE564; }
+.cl-sep { margin: 14px 2px 8px; color: var(--muted); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; text-align: center; }
+.top-emb { border: 0; background: none; overflow: visible; display: grid; place-items: center; }
+.top-name .top-sub { display: block; color: var(--muted); font-size: 11px; font-weight: 700; }
+.tops .top-seg .seg-btn { font-size: 11.5px; padding: 6px 2px; }
