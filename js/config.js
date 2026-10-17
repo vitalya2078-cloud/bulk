@@ -6,14 +6,14 @@
 
 const CONFIG = {
   name: 'Бульк',
-  version: '0.13.0',
+  version: '0.13.1',
   saveKey: 'bulk_save_v1',
 
   // ВКонтакте: ID мини-приложения (для ссылки-приглашения на стене)
   vkAppId: 0,
   // Telegram: имя бота и короткое имя мини-приложения из @BotFather.
-  // Ссылка-приглашение будет вида https://t.me/<бот>/<приложение>?startapp=ref_<id>
-  tgBotUsername: '',
+  // Ссылка-приглашение: https://t.me/<бот>?startapp=ref_<id> (Main App) или /<приложение> если задано
+  tgBotUsername: 'bulkgamemagikbot',
   tgAppName: '',
 
   // Вне ВК и Telegram реклама и приглашения «срабатывают» понарошку,

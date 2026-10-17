@@ -146,8 +146,9 @@ const Platform = (() => {
   // ---------- приглашения и посты ----------
   function inviteLink() {
     const id = userId();
-    if (kind === 'tg' && CONFIG.tgBotUsername && CONFIG.tgAppName) {
-      return 'https://t.me/' + CONFIG.tgBotUsername + '/' + CONFIG.tgAppName + (id ? '?startapp=ref_' + id : '');
+    if (kind === 'tg' && CONFIG.tgBotUsername) {
+      // без имени приложения - ссылка на главное приложение бота (Main App)
+      return 'https://t.me/' + CONFIG.tgBotUsername + (CONFIG.tgAppName ? '/' + CONFIG.tgAppName : '') + '?startapp=' + (id ? 'ref_' + id : 'play');
     }
     if (kind === 'vk' && CONFIG.vkAppId) return 'https://vk.com/app' + CONFIG.vkAppId + (id ? '#ref_' + id : '');
     return '';
