@@ -18,7 +18,24 @@ const Platform = (() => {
   // ---------- запуск ----------
   async function init() {
     if (kind === 'vk') {
+      // вырезы экрана и панели ВК: приходят в событии VKWebAppUpdateConfig (insets)
+      const st = document.documentElement.style;
+      const applyInsets = (ins) => {
+        if (!ins) return;
+        if (ins.top) st.setProperty('--safe-top', ins.top + 'px');
+        if (ins.bottom) st.setProperty('--safe-bottom', ins.bottom + 'px');
+      };
+      try {
+        vk.subscribe((e) => {
+          const d = e && e.detail;
+          if (d && d.type === 'VKWebAppUpdateConfig' && d.data) applyInsets(d.data.insets || d.data.safe_area_insets);
+        });
+      } catch (e) { /* старый bridge */ }
       try { await withTimeout(vkCall('VKWebAppInit'), 3000); } catch (e) { console.warn(e); }
+      try { const c = await withTimeout(vkCall('VKWebAppGetConfig'), 2000); if (c) applyInsets(c.insets || c.safe_area_insets); } catch (e) { /* нет в вебе */ }
+      // свайп «назад» в iOS не должен закрывать игру во время тапов
+      vkCall('VKWebAppSetSwipeSettings', { history: false }).catch(() => {});
+      vkCall('VKWebAppSetViewSettings', { status_bar_style: 'light', action_bar_color: '#24163A', navigation_bar_color: '#24163A' }).catch(() => {});
     } else if (kind === 'tg') {
       try {
         tg.ready();
@@ -196,7 +213,7 @@ const Platform = (() => {
   }
 
   // Рейтинг друзей есть только во ВКонтакте (окно самой платформы)
-  const hasLeaderboard = () => kind === 'vk';
+  const hasLeaderboard = () => false; // есть свой «Топ алхимиков»
   async function leaderboard(score) {
     try { await vkCall('VKWebAppShowLeaderBoardBox', { user_result: Math.max(0, Math.floor(score)) }); return true; }
     catch (e) { return false; }
