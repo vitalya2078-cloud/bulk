@@ -251,9 +251,9 @@ const Story = (() => {
     box.append(h('h3', { class: 'section-title' }, 'Истории жителей'));
     if (!list.length) {
       const done = Object.keys(D.storyChains).filter((id) => st()[id] && st()[id].done).length;
-      box.append(h('p', { class: 'note center' }, done === Object.keys(D.storyChains).length
+      box.append(h('div', { class: 'panel' }, h('p', { class: 'note center' }, done === Object.keys(D.storyChains).length
         ? 'Ты помог всем жителям. Деревня тебя обожает!'
-        : 'Подружись с жителями до уровня «Приятель» - и они попросят о помощи.'));
+        : 'Подружись с жителями до уровня «Приятель» - и они попросят о помощи.')));
       return;
     }
     list.sort((a, b) => (progress(b).ready ? 1 : 0) - (progress(a).ready ? 1 : 0)).forEach((id) => box.append(card(id)));

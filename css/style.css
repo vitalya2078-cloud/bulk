@@ -1814,3 +1814,33 @@ body.has-modal #toast::before, body.has-modal #toast::after { display: none; }
 .stats .stat small { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 /* скрытый тост не должен ловить нажатия (из-за этого не срабатывали кнопки под ним) */
 #toast:not(.show) { pointer-events: none !important; visibility: hidden; }
+
+/* 0.11.4: окна не заезжают под кнопки Telegram */
+.modal-wrap { padding: calc(var(--safe-top) + 50px) 14px calc(var(--safe-bottom) + 14px); }
+.modal-wrap.bottom { padding: calc(var(--safe-top) + 50px) 6px calc(var(--safe-bottom) + 8px); }
+.modal, .modal.sheet { max-height: 100%; }
+
+/* разделы: заголовки по центру на ленте, тексты на подложке */
+.screen .section-title { display: table; margin: 16px auto 10px; padding: 10px 34px 20px; min-width: 200px; text-align: center;
+  background: var(--i-hud-ribbon-s) center / 100% 100% no-repeat; color: #FFE48A; font-size: 16px; font-weight: 900;
+  text-shadow: -1.5px 0 #3A1050, 1.5px 0 #3A1050, 0 -1.5px #3A1050, 0 2px 0 #3A1050; }
+.screen .panel { margin: 10px 0; padding: 12px 10px; border: solid 18px; border-image: var(--i-hud-card) 46 fill / 18px stretch; text-align: center; }
+.screen .panel .note, .screen .note { color: #F3E8FF; text-shadow: 0 1px 2px rgba(10,4,20,.8); }
+.screen > .scroll > .note, .screen .scroll > p.note { margin: 6px 4px 10px; padding: 10px 12px; border: solid 14px; border-image: var(--i-hud-card) 46 fill / 14px stretch; text-align: center; }
+.panel .btn { width: 100%; margin: 8px 0 4px; }
+.panel.empty .empty-ico { display: block; width: 84px; height: 84px; margin: 2px auto 6px; object-fit: contain; }
+.hero { padding: 4px 4px 2px; }
+.hero h2 { color: #FFE48A; text-shadow: -1.5px 0 #3A1050, 1.5px 0 #3A1050, 0 -1.5px #3A1050, 0 2px 0 #3A1050; }
+.hero p { color: #F3E8FF; }
+.mastery { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.mastery-ico { width: 52px; height: 52px; }
+.mastery small { display: block; color: #E8DCFF; font-size: 12px; }
+.mastery b { font-size: 26px; color: #FFE48A; text-shadow: 0 2px 0 #3A1050; }
+
+/* гардероб: сцена в рамке-витрине, яркость под фон раздела */
+.preview { margin: 4px 0 12px; height: 230px; border: solid 18px; border-image: var(--i-hud-card) 46 / 18px stretch; overflow: hidden; }
+.preview-cv { filter: brightness(.88) saturate(1.05); }
+.preview::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 26px 8px rgba(20,8,36,.75); }
+.preview .pot-name { z-index: 2; }
+.screen .panel { flex: none; height: auto; min-height: 0; }
+.screen .section-title { min-width: 250px; padding: 10px 40px 20px; }

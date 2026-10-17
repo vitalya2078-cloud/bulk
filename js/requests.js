@@ -130,7 +130,7 @@ const Requests = (() => {
     const l = list();
     box.append(h('h3', { class: 'section-title' }, 'Просьбы жителей ' + l.length + ' / ' + R.max));
     if (!l.length) {
-      box.append(h('p', { class: 'note center' }, 'Пока никто ни о чём не просит. Жители заходят в лавку - помоги им, и просьба появится здесь.'));
+      box.append(h('div', { class: 'panel empty' }, pic('quest/journal', 'empty-ico'), h('p', { class: 'note center' }, 'Пока никто ни о чём не просит. Жители заходят в лавку - помоги им, и просьба появится здесь.')));
     } else {
       l.slice().sort((a, b) => (ready(b) ? 1 : 0) - (ready(a) ? 1 : 0)).forEach((r) => box.append(card(r)));
     }

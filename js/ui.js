@@ -52,9 +52,24 @@ const UI = (() => {
   const toastQ = [];
   let toastBusy = false;
   function toast(msg) {
+    const el = $('toast');
     if (toastQ.length && toastQ[toastQ.length - 1] === msg) return;
+    if (!toastQ.length && el && el.classList.contains('show') && el.textContent === msg) { clearTimeout(toastT); toastT = setTimeout(hideToast, 2000); return; }
     toastQ.push(msg);
+    if (toastQ.length > 2) toastQ.splice(0, toastQ.length - 2);
     if (!toastBusy) nextToast();
+  }
+  // убрать сообщение сразу (без анимации) и забыть очередь - когда открывается окно
+  function dropToast() {
+    const el = $('toast');
+    toastQ.length = 0;
+    clearTimeout(toastT);
+    toastBusy = false;
+    if (!el) return;
+    el.style.transition = 'none';
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.style.transition = '';
   }
   function nextToast() {
     const el = $('toast');
@@ -225,7 +240,7 @@ const UI = (() => {
 
   function nextModal() {
     const o = queue.shift();
-    if (!o) { current = null; document.body.classList.remove('has-modal'); return; }
+    if (!o) { current = null; if (document.body.classList.contains('has-modal')) { const t = $('toast'); if (t) { t.style.transition = 'none'; requestAnimationFrame(() => { t.style.transition = ''; }); } } document.body.classList.remove('has-modal'); return; }
     current = o;
     const body = typeof o.body === 'function' ? o.body() : o.body;
     const box = h('div', { class: 'modal' + (o.sheet ? ' sheet' : '') + (o.cls ? ' ' + o.cls : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': o.title },
@@ -246,6 +261,8 @@ const UI = (() => {
     );
     const wrap = h('div', { class: 'modal-wrap' + (o.sheet ? ' bottom' : '') }, box);
     wrap.addEventListener('click', (e) => { if (e.target === wrap && o.closable !== false) closeModal(); });
+    // старое сообщение не переезжает вниз в новое окно
+    if (!document.body.classList.contains('has-modal')) dropToast();
     $('modal-root').append(wrap);
     document.body.classList.add('has-modal');
     fitTitle(box);
@@ -610,31 +627,34 @@ const UI = (() => {
     friends: {
       key: () => 'f' + (Econ.canInvite() ? 1 : 0),
       render(box) {
-        box.append(h('div', { class: 'hero' },
+        const panel = h('div', { class: 'panel' });
+        panel.append(h('div', { class: 'hero' },
           h('div', { class: 'hero-ico', 'aria-hidden': 'true' }, pic('ui/envelope')),
           h('h2', null, 'Позови друзей в лавку'),
           h('p', null, 'Друг, который придёт по твоему приглашению, получит ' + ess(C.welcomeBonus) + ' эссенции на старт.')));
-        const invBtn = h('button', { class: 'btn', type: 'button', onclick: doInvite }, 'Пригласить друга');
-        box.append(invBtn);
-        const hint = h('p', { class: 'note' });
-        box.append(hint);
+        panel.append(h('button', { class: 'btn', type: 'button', onclick: doInvite }, 'Пригласить друга'));
+        const hint = h('p', { class: 'note center' });
+        panel.append(hint);
         refs.push(() => setText(hint, Econ.canInvite()
           ? 'За приглашение сегодня получишь ' + ess(Econ.hoursOfIncome(C.inviteRewardHours, 2000)) + ' эссенции.'
           : 'Награду за приглашение сегодня уже получил. Звать друзей всё равно можно!'));
+        box.append(panel);
 
+        const p2 = h('div', { class: 'panel' });
+        p2.append(h('div', { class: 'mastery' }, pic('ui/trophy', 'mastery-ico'),
+          h('div', null, h('small', null, 'Твоё мастерство'), h('b', null, Fmt.num(Econ.mastery())))));
+        p2.append(h('p', { class: 'note center' }, 'Растёт вместе с эссенцией и уровнями карточек.'));
         if (Platform.hasLeaderboard()) {
-          box.append(h('button', { class: 'btn alt', type: 'button', onclick: async () => {
+          p2.append(h('button', { class: 'btn alt', type: 'button', onclick: async () => {
             if (!(await Platform.leaderboard(Econ.mastery()))) toast('Рейтинг сейчас недоступен');
           } }, 'Рейтинг друзей'));
         }
-        box.append(h('button', { class: 'btn alt', type: 'button', onclick: async () => {
+        p2.append(h('button', { class: 'btn alt', type: 'button', onclick: async () => {
           const r = await Platform.share('Я держу волшебную лавку в игре «Бульк»! Мастерство: ' + Econ.mastery() + '. Заглянешь?');
           if (r === 'copied') toast('Текст скопирован');
           else if (r === 'fail') toast('Не получилось поделиться');
         } }, 'Рассказать о лавке'));
-
-        box.append(h('p', { class: 'note left' },
-          'Твоё мастерство: ' + Econ.mastery() + '. Оно растёт вместе с эссенцией и уровнями карточек.'));
+        box.append(p2);
       }
     }
   };
