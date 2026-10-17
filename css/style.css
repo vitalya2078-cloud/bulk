@@ -2038,3 +2038,29 @@ body.in-game .modal-wrap { z-index: 30; }
 .cv-send .pic { width: 100%; height: 100%; }
 .cv-send:active { transform: scale(.92); }
 .cv-send[disabled] { opacity: .5; }
+
+/* ===== 0.18 задание недели и босс ===== */
+.cv-quest { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 10px; border: 2px solid var(--ink); border-radius: 14px; background: rgba(0, 0, 0, .2); }
+.cv-quest.done { box-shadow: 0 0 0 2px #5BE0B3 inset; }
+.cv-quest-chest { flex: 0 0 58px; width: 58px; height: 58px; object-fit: contain; }
+.cv-q-name { display: flex; align-items: center; gap: 5px; margin-top: 3px; color: #FFF6E8; font-size: 13px; font-weight: 800; }
+.cv-q-ico { width: 20px; height: 20px; }
+.cv-hp { position: relative; height: 38px; margin: 0 4px 6px; border: solid 0; border-width: 0 34px; border-image: url("../assets/images/coven/hpbar.webp") 0 100 fill / 0 34px stretch; }
+.cv-hp-bar { position: absolute; left: 2px; right: 2px; top: 11px; bottom: 11px; border-radius: 6px; background: #1A0E2C; overflow: hidden; }
+.cv-hp-bar i { display: block; height: 100%; background: linear-gradient(#FF8A8A, #D9304A); transition: width .25s; }
+.cv-hp-text { position: absolute; inset: 0; display: grid; place-items: center; color: #FFF; font: 900 13px var(--head); text-shadow: 0 1px 0 #000, 0 0 3px #000; }
+.cv-arena { position: relative; height: 330px; margin: 0 -2px; border: 2px solid var(--ink); border-radius: 16px; overflow: hidden; background: url("../assets/images/backgrounds/boss_arena.webp") center 62% / cover; touch-action: manipulation; user-select: none; -webkit-user-select: none; cursor: pointer; }
+.cv-arena.wait { filter: saturate(.6) brightness(.8); cursor: default; }
+.cv-boss { position: absolute; left: 50%; bottom: 40px; width: 72% !important; height: auto !important; transform: translateX(-50%); transform-origin: 50% 100%; animation: cvBossIdle 2.4s ease-in-out infinite; pointer-events: none; filter: drop-shadow(0 10px 8px rgba(0, 0, 0, .45)); }
+.cv-boss.sleep { filter: brightness(.25) drop-shadow(0 0 12px rgba(180, 120, 255, .6)); animation: none; }
+.cv-boss.hit { animation: cvBossHit .18s ease-out, cvBossIdle 2.4s ease-in-out .18s infinite; }
+@keyframes cvBossIdle { 50% { transform: translateX(-50%) scale(1.03, .97); } }
+@keyframes cvBossHit { 0% { transform: translateX(-50%) scale(.92, 1.06) rotate(-3deg); filter: brightness(1.8) drop-shadow(0 10px 8px rgba(0, 0, 0, .45)); } 100% { transform: translateX(-50%); } }
+.cv-boss-fx { position: absolute; inset: 0; pointer-events: none; }
+.cv-dmg { position: absolute; transform: translate(-50%, -50%); color: #FFE48A; font: 900 22px var(--head); text-shadow: -2px 0 #3A1050, 2px 0 #3A1050, 0 -2px #3A1050, 0 2px #3A1050; animation: cvDmg .9s ease-out forwards; }
+@keyframes cvDmg { to { transform: translate(-50%, -150%); opacity: 0; } }
+.cv-boss-name { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; color: #FFE48A; font: 900 20px var(--head); text-shadow: -2px 0 #3A1050, 2px 0 #3A1050, 0 -2px #3A1050, 0 2px #3A1050, 0 3px 0 #3A1050; }
+.cv-boss-say { position: absolute; left: 12px; right: 12px; top: 10px; padding: 6px 10px; border-radius: 12px; background: rgba(20, 8, 36, .7); color: #FFF6E8; font-size: 13px; text-align: center; }
+.cv-boss-info { margin: 8px 0 0; color: #E8DCFF; font-size: 13px; }
+.cv-boss-info b { color: #FFE48A; }
+.cv-boss-top { margin-top: 4px; }

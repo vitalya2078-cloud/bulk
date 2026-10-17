@@ -755,6 +755,18 @@
             h('button', { class: 'btn ghost', disabled: !a, onclick: async () => { if (await act('adm_setting', { p_k: 'announce', p_v: null }, 'Объявление снято')) reload(); } }, 'Снять'))));
     }
 
+    if (can('settings')) {
+      const bt = s.boss_test && s.boss_test.on;
+      const sw = h('button', { class: 'sw' + (bt ? ' on' : ''), role: 'switch', 'aria-label': 'Босс в будни' });
+      sw.addEventListener('click', async () => {
+        const on = !sw.classList.contains('on');
+        if (await act('adm_setting', { p_k: 'boss_test', p_v: on ? { on: true } : null }, on ? 'Босс открыт и в будни' : 'Босс только по выходным')) sw.classList.toggle('on', on);
+      });
+      out.push(sec('Босс ковенов', 'пт-вс'),
+        h('div', { class: 'panel pad' },
+          h('div', { class: 'tog' }, h('div', { class: 't' }, h('b', null, 'Босс в будни'), h('small', null, 'Для проверки: босс доступен в любой день. Обычно - с пятницы по воскресенье')), sw)));
+    }
+
     if (can('maint')) {
       const m = s.maint || null;
       const mText = h('input', { class: 'input', maxlength: '200', placeholder: 'Мы немножко подкручиваем котёл. Загляни чуть позже!', value: (m && m.text) || '' });
@@ -820,7 +832,7 @@
     }
     body.replaceChildren(...out);
   }
-  const actionName = (a) => ({ 'Настройка boost': 'Бонус дохода', 'Настройка announce': 'Объявление', 'Настройка maint': 'Техработы' })[a] || a;
+  const actionName = (a) => ({ 'Настройка boost': 'Бонус дохода', 'Настройка announce': 'Объявление', 'Настройка maint': 'Техработы', 'Настройка boss_test': 'Босс в будни' })[a] || a;
   function detailText(l) {
     const d = l.details || {};
     if (!Object.keys(d).length) return '';

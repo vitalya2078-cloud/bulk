@@ -41,6 +41,9 @@ const Coven = (() => {
   // ---------- состояние ----------
   async function refresh() {
     if (!Online.on()) return null;
+    try {
+      if (my && my.coven) { const st = Econ.s; await call('coven_progress', { p_taps: Math.floor(st.taps || 0), p_brewed: Math.floor(st.brewed || 0), p_served: Math.floor(st.served || 0) }); }
+    } catch (e) { /* без сети */ }
     try { my = await call('coven_me', {}); } catch (e) { return my; }
     applyBonus();
     badge();
@@ -163,12 +166,14 @@ const Coven = (() => {
     function draw() {
       const reqN = my && my.requests ? my.requests.length : 0;
       const unread = tab !== 'chat' && my && my.last_msg > lastSeenMsg;
-      seg.replaceChildren(...[['info', 'Ковен', reqN], ['chat', 'Чат', unread ? '•' : 0], ['members', 'Состав', 0]].map(([id, l, n]) => h('button', {
+      const bossLive = my && my.boss && my.boss.open && !my.boss.dead;
+      seg.replaceChildren(...[['info', 'Ковен', reqN], ['boss', 'Босс', bossLive ? '!' : 0], ['chat', 'Чат', unread ? '•' : 0], ['members', 'Состав', 0]].map(([id, l, n]) => h('button', {
         class: 'seg-btn' + (tab === id ? ' on' : ''), type: 'button', onclick: () => { if (tab !== id) { Sound.tap(); tab = id; draw(); } }
       }, l, n ? h('span', { class: 'seg-badge' }, String(n)) : null)));
       clearInterval(poll); poll = 0;
       foot.replaceChildren();
       if (tab === 'chat') { chat(box, foot); return; }
+      if (tab === 'boss') { boss(box); return; }
       const t = tab;
       (t === 'info' ? info : members)(box);
       // свежие данные: состав и заявки могли измениться
@@ -199,6 +204,7 @@ const Coven = (() => {
           h('div', { class: 'cv-lvl-top' }, h('b', null, 'Уровень ' + c.level), h('span', null, c.need ? Fmt.num(Math.floor(c.xp)) + ' / ' + Fmt.num(c.need) : 'максимум')),
           h('div', { class: 'cv-bar' }, h('i', { style: 'width:' + (lvlFrac * 100) + '%' })),
           h('small', null, 'Бонус всем участникам: ', h('b', null, '+' + c.bonus + '% к доходу'), ' · за неделю ' + Fmt.num(Math.floor(c.week)) + ' очк.'))),
+      questCard(my.quest),
       h('p', { class: 'note center' }, 'Каждая минута в игре любого участника - очко ковену. Чем больше вас играет, тем быстрее растёт уровень.')
     ];
     if (my.requests && my.requests.length) {
@@ -253,6 +259,128 @@ const Coven = (() => {
         try { await call('coven_edit', { p_motto: motto.value.trim(), p_emblem: st.emblem, p_color: st.color, p_open: st.open }); } catch (e) { UI.toast(errText(e)); return false; }
         await refresh(); UI.toast('Сохранено'); setTimeout(home, 0);
       } }, { label: 'Назад', alt: true, onClick: () => { setTimeout(home, 0); } }] }), 0);
+  }
+
+  // ---------- задание недели ----------
+  const QUEST = {
+    taps: { img: 'ui/ladle', name: 'Натапать котлом', unit: 'тапов' },
+    brew: { img: 'ui/flask', name: 'Сварить зелья', unit: 'зелий' },
+    serve: { img: 'ui/basket', name: 'Помочь жителям', unit: 'заказов' },
+    play: { img: 'ui/hourglass', name: 'Провести время в лавке', unit: 'минут' }
+  };
+  function questCard(q) {
+    if (!q) return null;
+    const d = QUEST[q.type] || QUEST.taps;
+    const frac = Math.max(0, Math.min(1, q.progress / q.target));
+    return h('div', { class: 'cv-quest' + (q.done ? ' done' : '') },
+      pic(q.done ? 'coven/chest_open' : 'coven/chest', 'cv-quest-chest'),
+      h('div', { class: 'cv-lvl-main' },
+        h('div', { class: 'cv-lvl-top' }, h('b', null, 'Задание недели'), h('span', null, q.done ? 'выполнено!' : Fmt.num(Math.floor(q.progress)) + ' / ' + Fmt.num(q.target))),
+        h('div', { class: 'cv-q-name' }, pic(d.img, 'cv-q-ico'), d.name + ': ' + Fmt.num(q.target) + ' ' + d.unit),
+        h('div', { class: 'cv-bar' }, h('i', { style: 'width:' + (frac * 100) + '%' })),
+        h('small', null, q.done ? 'Награда уже в почте у всех, кто помогал.' : 'Твой вклад: ' + Fmt.num(Math.floor(q.mine || 0)) + '. Награда всем, кто помогал: 10 кристаллов и 4 часа дохода.')));
+  }
+
+  // ---------- босс выходных ----------
+  const BOSS = {
+    cauldron: { name: 'Тёмный котёл', say: 'Бульк-бульк! Ваши зелья скиснут!' },
+    swamp: { name: 'Болотный дух', say: 'Кто топчет моё болото?!' },
+    pumpkin: { name: 'Тыквенный король', say: 'На колени перед королём тыкв!' },
+    frost: { name: 'Снежная ведьмочка', say: 'Заморожу все ваши котлы!' }
+  };
+  const dur = (sec) => { sec = Math.max(0, Math.floor(sec)); const d = Math.floor(sec / 86400), hh = Math.floor(sec % 86400 / 3600), mm = Math.floor(sec % 3600 / 60); return (d ? d + ' д ' : '') + (d || hh ? hh + ' ч ' : '') + mm + ' мин'; };
+  function boss(box) {
+    box.replaceChildren(h('p', { class: 'top-empty' }, 'Ищу босса...'));
+    let st = null, pending = 0, hp = 0, flushing = false;
+    const hpFill = h('i'), hpText = h('span', { class: 'cv-hp-text' }), mine = h('b'), arena = h('div', { class: 'cv-arena' });
+    const sprite = h('img', { class: 'pic cv-boss', alt: '', draggable: 'false' });
+    const fx = h('div', { class: 'cv-boss-fx' });
+    const top = h('div', { class: 'cv-list cv-boss-top' });
+    function drawHp() {
+      const v = Math.max(0, hp - pending);
+      hpFill.style.width = (100 * v / st.max_hp) + '%';
+      hpText.textContent = Fmt.num(Math.ceil(v)) + ' / ' + Fmt.num(Math.ceil(st.max_hp));
+    }
+    function drawTop() {
+      top.replaceChildren(...(st.top || []).map((t, i) => h('div', { class: 'cv-row' + (t.me ? ' me' : '') },
+        h('span', { class: 'cv-place' }, String(i + 1)),
+        h('span', { class: 'top-ava' }, h('img', { class: 'pic round', src: UI.avatarSrc(/^[a-z]\d\d$/.test(t.photo || '') ? t.photo : 'a01'), alt: '' })),
+        h('div', { class: 'cv-info' }, h('b', null, t.name || 'Алхимик')),
+        h('span', { class: 'cv-contrib' }, h('b', null, Fmt.num(Math.floor(t.dmg))), h('small', null, 'урона')))));
+      if (!top.children.length) top.append(h('p', { class: 'note center' }, 'Пока никто не ударил. Будь первым!'));
+    }
+    async function flush() {
+      if (flushing || pending <= 0 || !box.isConnected) return;
+      flushing = true;
+      const n = pending;
+      let r;
+      try { r = await call('boss_hit', { p_n: n }, 6000); } catch (e) { flushing = false; return; }
+      pending = Math.max(0, pending - n);
+      flushing = false;
+      if (!r) return;
+      hp = r.hp;
+      if (r.dead) { win(); return; }
+      drawHp();
+    }
+    function win() {
+      clearInterval(poll); poll = 0;
+      Sound.fanfare();
+      UI.toast('Босс повержен! Сундуки - в почте');
+      setTimeout(() => { refresh().then(() => { if (box.isConnected) boss(box); }); }, 600);
+    }
+    function hit(e) {
+      if (!st || st.dead || hp - pending <= 0) return;
+      pending += 1;
+      Sound.blub && Sound.blub();
+      Platform.haptic();
+      sprite.classList.remove('hit'); void sprite.offsetWidth; sprite.classList.add('hit');
+      const r = arena.getBoundingClientRect();
+      const x = (e.clientX || r.left + r.width / 2) - r.left, y = (e.clientY || r.top + r.height / 2) - r.top;
+      const n = h('span', { class: 'cv-dmg', style: 'left:' + x + 'px;top:' + y + 'px' }, '-' + (1 + ((my.coven.level || 1) - 1) * 0.1).toFixed(1).replace('.0', '').replace('.', ','));
+      fx.append(n); setTimeout(() => n.remove(), 900);
+      drawHp();
+      if (hp - pending <= 0) flush();
+    }
+    async function load() {
+      try { st = await call('boss_state', {}); } catch (e) { box.replaceChildren(h('p', { class: 'top-empty' }, errText(e))); return; }
+      if (!st) return;
+      hp = st.hp || 0;
+      const b = BOSS[st.boss || st.next] || BOSS.cauldron;
+      if (!st.open) {
+        box.replaceChildren(h('div', { class: 'cv-arena wait' },
+          h('img', { class: 'pic cv-boss sleep', src: IMG('boss/' + (st.next || 'cauldron')), alt: '' }),
+          h('div', { class: 'cv-boss-name' }, b.name)),
+          h('p', { class: 'center cv-boss-info' }, 'Босс выходных придёт в пятницу. До битвы: ', h('b', null, dur(st.starts_in))),
+          h('p', { class: 'note center' }, 'Бейте его тапами всем ковеном с пятницы по воскресенье. Победа - сундук с кристаллами каждому бойцу, тройке лучших - сундук героя.'));
+        return;
+      }
+      if (st.dead) {
+        box.replaceChildren(h('div', { class: 'cv-arena' }, h('img', { class: 'pic cv-boss', src: IMG('boss/' + st.boss + '_ko'), alt: '' }), h('div', { class: 'cv-boss-name' }, b.name + ' повержен!')),
+          h('p', { class: 'center cv-boss-info' }, 'Награды уже в почте. Новый босс - в следующую пятницу.'),
+          h('h3', { class: 'cv-sub' }, 'Лучшие бойцы'), top);
+        drawTop();
+        return;
+      }
+      sprite.src = IMG('boss/' + st.boss);
+      arena.replaceChildren(sprite, fx, h('div', { class: 'cv-boss-name' }, b.name), h('div', { class: 'cv-boss-say' }, b.say));
+      arena.onpointerdown = hit;
+      box.replaceChildren(
+        h('div', { class: 'cv-hp' }, h('div', { class: 'cv-hp-bar' }, hpFill), hpText),
+        arena,
+        h('p', { class: 'center cv-boss-info' }, 'Тапай по боссу! Твой урон: ', mine, ' · до конца ', dur(st.ends_in)),
+        h('h3', { class: 'cv-sub' }, 'Лучшие бойцы'), top);
+      mine.textContent = Fmt.num(Math.floor(st.mine || 0));
+      drawHp(); drawTop();
+    }
+    load();
+    poll = setInterval(async () => {
+      await flush();
+      if (!box.isConnected) return;
+      try {
+        const s2 = await call('boss_state', {}, 6000);
+        if (s2 && st && !st.dead) { st.top = s2.top; st.mine = s2.mine; hp = Math.min(hp, s2.hp); mine.textContent = Fmt.num(Math.floor(s2.mine || 0)); drawTop(); drawHp(); if (s2.dead) win(); }
+      } catch (e) { /* ignore */ }
+    }, 2500);
   }
 
   // ---------- состав ----------
