@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru" translate="no" class="notranslate">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#24163A">
+  <!-- Запрещаем браузерам переводить и «улучшать» страницу: это ломает игру -->
+  <meta name="google" content="notranslate">
+  <meta name="yandex" content="notranslate">
+  <meta name="robots" content="notranslate">
+  <title>Бульк</title>
+  <!-- Шрифты. Без интернета подставятся системные. -->
+  <link rel="preload" as="image" href="assets/images/ui/splash_book.webp?v=0.11.0">
+  <link rel="preload" as="image" href="assets/images/splash/logo.webp?v=0.11.0">
+  <link rel="icon" type="image/png" href="assets/icon.png?v=0.11.0">
+  <link rel="apple-touch-icon" href="assets/icon.png?v=0.11.0">
+  <link rel="stylesheet" href="css/style.css?v=0.11.0">
+</head>
+<body translate="no" class="notranslate">
+  <!-- Экран загрузки: висит, пока не придут картинки главного экрана -->
+  <div id="boot" class="boot">
+    <canvas id="boot-cv" class="boot-cv"></canvas>
+    <div class="boot-bottom">
+      <div class="boot-tip"><b class="boot-tip-label">Совет</b><span id="boot-tip-text"></span></div>
+      <div class="boot-bar">
+        <div id="boot-fill" class="boot-fill"><i class="boot-bubbles"></i><img class="boot-head" src="assets/images/ui/essence.webp?v=0.11.0" alt="" draggable="false"></div>
+        <b id="boot-pct" class="boot-pct">0%</b>
+      </div>
+      <small id="boot-status" class="boot-text">Разогреваем котёл…</small>
+      <button id="boot-start" class="btn boot-start" type="button" hidden>Нажми, чтобы начать</button>
+      <small id="boot-hint" class="boot-hint">Коснись экрана, чтобы включить звук</small>
+    </div>
+  </div>
+  <div id="app">
+    <header class="topbar">
+      <div class="avatar-wrap"><button id="btn-profile" class="avatar-btn" type="button" aria-label="Профиль"><img id="avatar-img" class="pic" src="assets/images/avatars/a01.webp?v=0.11.0" alt="" draggable="false" referrerpolicy="no-referrer"><img class="avatar-frame" src="assets/images/hud/avatar_frame.webp?v=0.11.0" alt="" draggable="false"></button><button id="lvl-chip" class="lvl-chip" type="button" aria-label="Уровень алхимика и навыки">1</button></div>
+      <button id="rank-btn" class="rank" type="button" aria-label="Ранг лавки">
+        <span class="rank-ico" aria-hidden="true"><img id="rank-icon" class="pic" src="assets/images/ranks/1.webp?v=0.11.0" alt="" draggable="false"></span>
+        <span class="rank-text">
+          <b id="rank-name">Лоток травницы</b>
+          <i class="rank-bar"><i id="rank-fill"></i></i>
+        </span>
+      </button>
+      <button id="crystal-pill" class="crystal-pill" type="button" aria-label="Лунные кристаллы"><img class="pic" src="assets/images/ui/crystal.webp?v=0.11.0" alt="" draggable="false"><b id="crystals">0</b></button>
+      <button id="btn-settings" class="round" type="button" aria-label="Настройки"><img class="pic" src="assets/images/ui/gear.webp?v=0.11.0" alt="" draggable="false"></button>
+    </header>
+
+    <div class="wallet">
+      <button id="balance-btn" class="balance-btn" type="button" aria-label="Эссенция и доход">
+        <span class="balance"><img class="flask" src="assets/images/ui/essence.webp?v=0.11.0" alt="" draggable="false"><span id="balance">0</span></span>
+        <small class="per-hour"><b id="st-hour-mini">+0</b> в час</small>
+      </button>
+    </div>
+
+    <main class="screens">
+      <section class="screen active" data-screen="main">
+        <div id="stage">
+          <canvas id="cauldron" aria-label="Котёл Бульк. Тапай, чтобы варить эссенцию"></canvas>
+          <div id="speech" class="speech" aria-live="polite"></div>
+          <div id="effects" class="effects"></div>
+          <div class="side-btns">
+          <button id="event-btn" class="event-btn" type="button" aria-label="Праздничное событие" hidden><img class="pic" src="assets/images/events/halloween/candy_bucket.webp?v=0.11.0" alt="" draggable="false"><b>0</b><span class="dot" hidden></span></button>
+          <button id="brew-btn" class="brew-btn" type="button" aria-label="Зельеварня: варка, сумка, рецепты"><img class="pic" src="assets/images/ui/potion_bag.webp?v=0.11.0" alt="" draggable="false"><span>Зелья</span><b hidden></b></button>
+          <button id="pets-btn" class="brew-btn pets-btn" type="button" aria-label="Питомцы, походы и яйца" hidden><img class="pic" src="assets/images/ui/paw_heart.webp?v=0.11.0" alt="" draggable="false"><span>Питомцы</span><b hidden></b></button>
+          </div>
+          <div id="visitor" class="visitor" aria-live="polite"></div>
+          <div id="guard" class="guard" hidden></div>
+        </div>
+        <div class="daily-row">
+          <button id="btn-gift" class="daily" type="button"><img class="d-ico" src="assets/images/ui/gift.webp?v=0.11.0" alt="" draggable="false"><span><b>Подарок</b><small id="sub-gift"></small></span><span id="dot-gift" class="dot" hidden></span></button>
+          <button id="btn-recipe" class="daily" type="button"><img class="d-ico" src="assets/images/ui/book.webp?v=0.11.0" alt="" draggable="false"><span><b>Рецепт дня</b><small id="sub-recipe"></small></span><span id="dot-recipe" class="dot" hidden></span></button>
+          <button id="btn-rune" class="daily" type="button"><img class="d-ico" src="assets/images/ui/rune.webp?v=0.11.0" alt="" draggable="false"><span><b>Руна дня</b><small id="sub-rune"></small></span><span id="dot-rune" class="dot" hidden></span></button>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="shop">
+        <div class="shop-wrap">
+          <div class="stats shop-stats">
+            <div class="stat"><small>За тап</small><b id="st-tap">+1</b></div>
+            <div class="stat"><small>В час</small><b id="st-hour">+0</b></div>
+            <div class="stat"><small>Копится</small><b id="st-cap">3 ч</b></div>
+          </div>
+          <div id="shop-body" class="scroll"></div>
+        </div>
+      </section>
+      <section class="screen" data-screen="wardrobe"><div id="wardrobe-body" class="scroll"></div></section>
+      <section class="screen" data-screen="tasks"><div id="tasks-body" class="scroll"></div></section>
+      <section class="screen" data-screen="friends"><div id="friends-body" class="scroll"></div></section>
+    </main>
+
+    <nav id="tabs" class="tabs" role="tablist"></nav>
+
+    <div id="modal-root"></div>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <!-- Скрипты платформ грузятся только там, где они нужны:
+       Telegram передаёт tgWebAppData в адресе, ВКонтакте - vk_app_id. -->
+  <script>
+    (function () {
+      var url = location.search + location.hash;
+      if (url.indexOf('tgWebAppData') >= 0) document.write('<script src="https://telegram.org/js/telegram-web-app.js"><\/script>');
+      if (url.indexOf('vk_app_id') >= 0) document.write('<script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"><\/script>');
+    })();
+  </script>
+
+  <script src="js/manifest.js?v=0.11.0"></script>
+  <script src="js/format.js?v=0.11.0"></script>
+  <script src="js/config.js?v=0.11.0"></script>
+  <script src="js/loader.js?v=0.11.0"></script>
+  <script src="js/content.js?v=0.11.0"></script>
+  <script src="js/platform.js?v=0.11.0"></script>
+  <script src="js/audio.js?v=0.11.0"></script>
+  <script src="js/economy.js?v=0.11.0"></script>
+  <script src="js/antibot.js?v=0.11.0"></script>
+  <script src="js/cauldron.js?v=0.11.0"></script>
+  <script src="js/ui.js?v=0.11.0"></script>
+  <script src="js/daily.js?v=0.11.0"></script>
+  <script src="js/events.js?v=0.11.0"></script>
+  <script src="js/scene.js?v=0.11.0"></script>
+  <script src="js/skills.js?v=0.11.0"></script>
+  <script src="js/brewing.js?v=0.11.0"></script>
+  <script src="js/pets.js?v=0.11.0"></script>
+  <script src="js/story.js?v=0.11.0"></script>
+  <script src="js/talk.js?v=0.11.0"></script>
+  <script src="js/requests.js?v=0.11.0"></script>
+  <script src="js/visitors.js?v=0.11.0"></script>
+  <script src="js/main.js?v=0.11.0"></script>
+</body>
+</html>
