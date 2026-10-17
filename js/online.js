@@ -130,6 +130,24 @@ const Online = (() => {
       h('div', { class: 'link-code' }, String(c).replace(/(\d{3})(\d{3})/, '$1 $2')),
       h('p', null, 'Введи его в игре на другой платформе. Код действует 10 минут.')), actions: [{ label: 'Готово' }] });
   }
+  // ---------- код для входа в приложение админки (только команда) ----------
+  const APK = 'https://github.com/vitalya2078-cloud/bulk/releases/download/admin-apk/bulk-admin.apk';
+  async function admCode() {
+    let r;
+    try { r = await rpc('adm_login_code', { init_data: initData() }); } catch (e) { UI.toast('Не получилось, попробуй позже'); return; }
+    let left = r.ttl || 300, tm = 0;
+    const timer = h('b', null, '');
+    const tick = () => { UI.setText(timer, Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0')); if (left-- <= 0) { clearInterval(tm); UI.setText(timer, 'код устарел'); } };
+    const openApk = () => { try { if (window.Telegram && Telegram.WebApp && Telegram.WebApp.openLink) { Telegram.WebApp.openLink(APK); return; } } catch (e) { /* ignore */ } window.open(APK, '_blank'); };
+    UI.modal({ title: 'Вход в админку', body: h('div', { class: 'center' },
+      h('div', { class: 'link-code' }, String(r.code).replace(/(\d{3})(\d{3})/, '$1 $2')),
+      h('p', null, 'Введи код в приложении «Бульк Админ». Действует ещё ', timer, '.'),
+      h('p', { class: 'small' }, 'Код покажи только себе: он открывает админку.')),
+      onOpen: () => { tick(); tm = setInterval(tick, 1000); },
+      onClose: () => clearInterval(tm),
+      actions: [{ label: 'Готово' }, { label: 'Скачать приложение', alt: true, onClick: () => { openApk(); return false; } }] });
+  }
+
   function enterCode() {
     const input = h('input', { class: 'link-input', type: 'text', inputmode: 'numeric', maxlength: '7', placeholder: '000 000', autocomplete: 'off' });
     UI.modal({ title: 'Ввести код', body: h('div', { class: 'center' }, h('p', null, 'Код из игры на другой платформе:'), input),
@@ -302,5 +320,5 @@ const Online = (() => {
 
   const call = (fn, body, ms) => rpc(fn, Object.assign({ init_data: initData() }, body || {}), ms);
 
-  return { call, start, openMail, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid };
+  return { call, start, openMail, admCode, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid };
 })();

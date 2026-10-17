@@ -1,0 +1,36 @@
+# Сборка приложения «Бульк Админ» (APK) и выкладка в релиз admin-apk.
+# Сама админка обновляется в приложении без переустановки, поэтому APK пересобирается
+# только при изменении оболочки (папка android).
+name: admin-apk
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/admin-apk.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Встроить админку
+        run: |
+          mkdir -p android/app/src/main/assets/admin
+          cp admin/* android/app/src/main/assets/admin/
+      - name: Сборка
+        run: gradle -p android assembleRelease --no-daemon --stacktrace
+      - name: Релиз
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk bulk-admin.apk
+          gh release delete admin-apk -y --cleanup-tag || true
+          gh release create admin-apk bulk-admin.apk --title "Бульк Админ" --notes "Приложение админки. Сборка ${{ github.run_number }}. Админка внутри обновляется сама при запуске." --latest=false

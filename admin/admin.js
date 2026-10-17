@@ -1,12 +1,18 @@
 // =====================================================================
-//  Бульк · Админ. Открывается внутри Telegram (из настроек игры или по ссылке бота).
-//  Каждое действие проверяет база: роль и права берутся по подписи Telegram.
+//  Бульк · Админ. Работает внутри Telegram и ВК (из настроек игры), в браузере
+//  и в приложении «Бульк Админ» (вход по коду из игры).
+//  Каждое действие проверяет база: роль и права берутся по подписи платформы или ключу приложения.
 // =====================================================================
 (() => {
   'use strict';
   const URL_RPC = 'https://ahqaficklfciahzlghec.supabase.co/rest/v1/rpc/';
   const KEY = 'sb_publishable_IXd8i1DDSci-bdAZPOZciQ_wsCL9lOx';
-  const AVA = (n) => '../assets/images/avatars/' + n + '.webp';
+  // в приложении страница лежит в телефоне, картинки игры берём с сайта
+  const SITE = /github\.io$/.test(location.hostname) || location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? '../' : 'https://vitalya2078-cloud.github.io/bulk/';
+  const AVA = (n) => SITE + 'assets/images/avatars/' + n + '.webp';
+  const APP = window.BulkApp || null;
+  const TOKEN_KEY = 'bulk_adm_token';
+  const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } return null; };
   const RANKS = ['Лоток травницы', 'Лавочка', 'Аптека', 'Мастерская', 'Зельеварня', 'Гильдия алхимиков', 'Академия', 'Королевский алхимик', 'Хранитель Камня'];
   const RANK_NEED = [0, 5e3, 5e4, 5e6, 8e7, 4e8, 2.5e9, 1e10, 6e10];
   const ROLES = { creator: 'Создатель', admin: 'Админ', moderator: 'Модератор', support: 'Поддержка', custom: 'Особые права' };
@@ -25,9 +31,19 @@
   const PERM_NAME = Object.fromEntries(PERMS.concat([['team', 'Команда']]));
 
   const tg = (window.Telegram && window.Telegram.WebApp) || null;
-  const initData = (tg && tg.initData) || '';
-  const tgUser = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
+  const tgData = (tg && tg.initData) || '';
+  const tgUser = (tgData && tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
+  const vkData = /[?&]vk_user_id=/.test(location.search) && /[?&]sign=/.test(location.search) ? 'vk:' + location.search.slice(1) : '';
+  // как база узнаёт, кто это: подпись Telegram / ВК или ключ приложения
+  let initData = tgData || vkData || (store(TOKEN_KEY) ? 'adm:' + store(TOKEN_KEY) : '');
+  const tokenMode = () => initData.startsWith('adm:');
+  function openExt(u) {
+    try { if (APP && APP.open) { APP.open(u); return; } } catch (e) { /* ignore */ }
+    try { if (tgData && tg.openLink) { tg.openLink(u); return; } } catch (e) { /* ignore */ }
+    window.open(u, '_blank');
+  }
   let ME = { id: 0, role: null, perms: [] };
+  const ADM_V = '0.19';
   const can = (p) => ME.perms.includes(p);
 
   // ---------- значки ----------
@@ -111,7 +127,7 @@
   const kv = (k, v) => h('div', { class: 'kv' }, h('span', null, k), h('b', null, v));
   const field = (label, input) => h('label', { class: 'field' }, h('span', null, label), input);
   const roleTag = (r) => r ? h('span', { class: 'tag ' + (ROLE_TAG[r] || '') }, ROLES[r] || r) : null;
-  function haptic(t) { try { if (tg && tg.HapticFeedback) t === 'ok' ? tg.HapticFeedback.notificationOccurred('success') : t === 'err' ? tg.HapticFeedback.notificationOccurred('error') : tg.HapticFeedback.impactOccurred('light'); } catch (e) { /* ignore */ } }
+  function haptic(t) { try { if (APP && APP.vibrate) { APP.vibrate(t === 'err' ? 60 : t === 'ok' ? 25 : 12); return; } if (tg && tg.HapticFeedback) t === 'ok' ? tg.HapticFeedback.notificationOccurred('success') : t === 'err' ? tg.HapticFeedback.notificationOccurred('error') : tg.HapticFeedback.impactOccurred('light'); } catch (e) { /* ignore */ } }
 
   let toastT = 0;
   function toast(text, err) {
@@ -133,17 +149,21 @@
   }
   const confirmBox = (title, text, ok, danger) => dialog(title, text, null, [{ label: 'Отмена', cls: 'ghost', v: false }, { label: ok || 'Да', cls: danger ? 'danger' : '', v: true }]);
 
-  async function api(fn, body) {
+  async function api(fn, body, bare) {
     const ctl = new AbortController();
     const tm = setTimeout(() => ctl.abort(), 15000);
     try {
       const r = await fetch(URL_RPC + fn, {
         method: 'POST', signal: ctl.signal,
         headers: { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify(Object.assign({ init_data: initData }, body || {}))
+        body: JSON.stringify(bare ? (body || {}) : Object.assign({ init_data: initData }, body || {}))
       });
       const txt = await r.text();
-      if (!r.ok) { let m = txt; try { m = JSON.parse(txt).message || txt; } catch (e) { /* ignore */ } throw new Error(m); }
+      if (!r.ok) {
+        let m = txt; try { m = JSON.parse(txt).message || txt; } catch (e) { /* ignore */ }
+        if (/bad session/.test(m) && tokenMode()) { store(TOKEN_KEY, null); initData = ''; setTimeout(() => loginScreen('Вход устарел, войди заново'), 0); }
+        throw new Error(m);
+      }
       return txt ? JSON.parse(txt) : null;
     } catch (e) {
       if (e.name === 'AbortError') throw new Error('Сервер долго не отвечает');
@@ -156,7 +176,8 @@
     if (r) return 'Нет права: ' + (PERM_NAME[r[1]] || r[1]);
     if (/not admin/.test(m)) return 'Ты не в команде';
     if (/creator is fixed/.test(m)) return 'Создателя изменить нельзя';
-    if (/bad signature|too old/.test(m)) return 'Подпись Telegram устарела, открой панель заново';
+    if (/bad signature|too old/.test(m)) return 'Подпись платформы устарела, открой панель заново';
+    if (/bad session/.test(m)) return 'Вход устарел, войди заново';
     if (/Failed to fetch|NetworkError|долго|Load failed/.test(m)) return 'Нет связи с базой. Проверь интернет или VPN';
     return 'Ошибка: ' + m.slice(0, 120);
   }
@@ -166,7 +187,7 @@
 
   // ---------- Telegram ----------
   function setupTelegram() {
-    if (!tg) return;
+    if (!tgData) return;
     try {
       tg.ready(); tg.expand();
       if (tg.setHeaderColor) tg.setHeaderColor('#08090C');
@@ -183,7 +204,15 @@
       if (tg.BackButton) { tg.BackButton.show(); tg.BackButton.onClick(back); }
     } catch (e) { /* ignore */ }
   }
-  function back() { if (document.querySelector('.dlg')) return; if (sheetEl) { closeSheet(); return; } location.href = '../'; }
+  function back() { if (document.querySelector('.dlg')) return; if (sheetEl) { closeSheet(); return; } location.href = '../' + (vkData ? location.search : ''); }
+  // кнопка «Назад» телефона в приложении: true - обработали сами, false - приложение свернётся
+  window.onAppBack = () => {
+    const d = document.querySelector('.dlg');
+    if (d) { d.dispatchEvent(new MouseEvent('click', { bubbles: true })); return true; }
+    if (sheetEl) { closeSheet(); return true; }
+    if (tab !== 'home' && $('app').querySelector('.nav')) { const b = $('app').querySelector('.nav button[data-t="home"]'); if (b) { b.click(); return true; } }
+    return false;
+  };
 
   // ---------- каркас ----------
   const ALL_TABS = [
@@ -215,10 +244,11 @@
     }, icon(t.icon), t.label)));
     $('app').replaceChildren(
       h('div', { class: 'top' }, h('div', { class: 'top-in' },
-        h('div', { class: 'mark' }, 'Б'),
-        h('div', { class: 'title' }, h('b', null, 'Бульк · Админ'), h('small', null, (ROLES[ME.role] || '') + (tgUser ? ' · ' + (tgUser.username ? '@' + tgUser.username : tgUser.first_name) : ''))),
+        h('div', { class: 'mark' }, glyph()),
+        h('div', { class: 'title' }, h('b', null, 'Бульк · Админ'), h('small', null, (ROLES[ME.role] || '') + (ME.name ? ' · ' + ME.name : tgUser ? ' · ' + (tgUser.username ? '@' + tgUser.username : tgUser.first_name) : ''))),
         refreshBtn,
-        h('button', { class: 'ib', 'aria-label': 'В игру', onclick: () => { location.href = '../'; } }, icon('play')))),
+        tokenMode() ? null : h('button', { class: 'ib', 'aria-label': 'В игру', onclick: () => { location.href = '../' + (vkData ? location.search : ''); } }, icon('play')))),
+      ptr,
       body,
       h('div', { class: 'nav' }, nav));
   }
@@ -446,7 +476,7 @@
       ava(p.photo, online(p.last_seen), true),
       h('div', { style: { minWidth: 0 } },
         h('h2', null, p.name || 'Без имени'),
-        h('div', { class: 'id' }, 'ID ' + id, p.username ? [' · ', h('a', { href: 'https://t.me/' + p.username, target: '_blank' }, '@' + p.username)] : null),
+        h('div', { class: 'id' }, 'ID ' + id, p.username ? [' · ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); openExt('https://t.me/' + p.username); } }, '@' + p.username)] : null),
         h('div', { class: 'tags' },
           online(p.last_seen) ? h('span', { class: 'tag green' }, 'онлайн') : h('span', { class: 'tag' }, ago(p.last_seen)),
           roleTag(p.team_role),
@@ -465,7 +495,7 @@
         st('Первый вход', date(p.first_seen)), st('Версия', p.ver || '-')),
       h('div', { class: 'panel pad', style: { marginTop: '8px' } },
         kv('Telegram', p.tg ? h('span', { class: 'mono' }, String(p.tg)) : 'не привязан'),
-        kv('ВКонтакте', p.vk ? h('a', { href: 'https://vk.com/id' + p.vk, target: '_blank' }, 'id' + p.vk) : 'не привязан'),
+        kv('ВКонтакте', p.vk ? h('a', { href: '#', onclick: (e) => { e.preventDefault(); openExt('https://vk.com/id' + p.vk); } }, 'id' + p.vk) : 'не привязан'),
         kv('Пригласил его', p.ref ? (p.ref_name || 'ID ' + p.ref) : 'никто'),
         kv('Он пригласил', num(p.invited) + ' ' + word(p.invited, 'друга', 'друзей', 'друзей')),
         kv('Сохранение', dateTime(p.save_at)),
@@ -787,8 +817,8 @@
         kv('Игра', h('span', { class: 'mono' }, 't.me/bulkgamemagikbot?startapp')),
         kv('Панель', h('span', { class: 'mono' }, '.../bulk/admin')),
         h('div', { class: 'btns' },
-          h('button', { class: 'btn ghost sm', onclick: () => { try { tg.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent('https://t.me/bulkgamemagikbot?startapp') + '&text=' + encodeURIComponent('Заходи в мою волшебную лавку «Бульк»!')); } catch (e) { toast('Открой в Telegram', true); } } }, 'Поделиться игрой'),
-          h('button', { class: 'btn ghost sm', onclick: () => { const u = 'https://supabase.com/dashboard/project/ahqaficklfciahzlghec'; try { tg.openLink(u); } catch (e) { window.open(u); } } }, 'Supabase'))));
+          h('button', { class: 'btn ghost sm', onclick: () => openExt('https://t.me/share/url?url=' + encodeURIComponent('https://t.me/bulkgamemagikbot?startapp') + '&text=' + encodeURIComponent('Заходи в мою волшебную лавку «Бульк»!')) }, 'Поделиться игрой'),
+          h('button', { class: 'btn ghost sm', onclick: () => openExt('https://supabase.com/dashboard/project/ahqaficklfciahzlghec') }, 'Supabase'))));
     body.replaceChildren(...out);
   }
 
@@ -820,6 +850,7 @@
           h('p', { class: 'hint' }, 'Проще всего: найди человека во вкладке «Игроки» и нажми «Добавить в команду». По ID можно добавить и того, кто ещё не заходил в игру: свой ID он увидит, если откроет панель.')));
     }
 
+    out.push(...accountBlock());
     out.push(sec('Мои права', ROLES[ME.role]),
       h('div', { class: 'panel pad' }, h('div', { class: 'perms', style: { marginTop: 0 } }, ME.perms.map((p) => h('span', null, PERM_NAME[p] || p)))));
 
@@ -830,7 +861,57 @@
           detailText(l) ? h('div', { class: 'd' }, detailText(l)) : null,
           h('div', { class: 'meta' }, dateTime(l.at) + ' · ' + (l.admin_name || 'ID ' + l.admin))))) : h('div', { class: 'panel empty' }, 'Пока пусто'));
     }
+    out.push(h('p', { class: 'ver mono' }, 'админка ' + ADM_V + (APP && APP.version ? ' · приложение ' + APP.version() : '')));
     body.replaceChildren(...out);
+    loadDevices();
+  }
+
+  // ---------- мой аккаунт: соцсети, устройства, выход ----------
+  let devBox = null;
+  function accountBlock() {
+    const net = (name, idv, other) => h('div', { class: 'net' },
+      h('span', { class: 'net-n' }, name),
+      idv ? h('span', { class: 'mono ok' }, icon('check'), String(idv)) : h('button', { class: 'btn ghost sm', onclick: () => linkSecond(other) }, icon('plus'), 'Привязать'));
+    devBox = h('div', { class: 'panel' }, h('div', { class: 'skel' }));
+    return [sec('Мой аккаунт'),
+      h('div', { class: 'panel pad' },
+        net('Telegram', ME.tg, 'Telegram'), net('ВКонтакте', ME.vk, 'ВК'),
+        h('p', { class: 'hint' }, 'Войти в админку можно кодом из игры на любой привязанной платформе.')),
+      sec('Входы в приложение'), devBox];
+  }
+  async function loadDevices() {
+    if (!devBox) return;
+    const box = devBox;
+    let list;
+    try { list = await api('adm_devices'); } catch (e) { box.replaceChildren(h('div', { class: 'empty' }, errText(e))); return; }
+    const rows = (list || []).map((d) => h('div', { class: 'dev' },
+      h('span', { class: 'who' }, h('b', null, d.device || 'Устройство', d.current ? h('span', { class: 'tag acc' }, 'это') : null),
+        h('small', null, 'вход ' + dateTime(d.created) + ' · был ' + ago(d.seen))),
+      d.current ? h('button', { class: 'btn ghost sm', onclick: logout }, 'Выйти')
+        : h('button', { class: 'btn ghost sm', onclick: async () => {
+          if (!(await confirmBox('Выйти на этом устройстве?', 'Чтобы войти снова, понадобится новый код из игры.', 'Выйти', true))) return;
+          if (await act('adm_device_drop', { p_id: d.id }, 'Устройство отключено')) loadDevices();
+        } }, 'Отключить')));
+    box.replaceChildren(...(rows.length ? rows : [h('div', { class: 'empty' }, tokenMode() ? '' : 'Нет входов. Скачай приложение «Бульк Админ» и войди по коду из игры.')]));
+  }
+  async function logout() {
+    if (!(await confirmBox('Выйти из админки?', 'Чтобы войти снова, понадобится новый код из игры.', 'Выйти', true))) return;
+    try { await api('adm_logout'); } catch (e) { /* всё равно выходим */ }
+    store(TOKEN_KEY, null); initData = '';
+    loginScreen();
+  }
+  async function linkSecond(other) {
+    let code;
+    try { code = await api('adm_link_code'); } catch (e) { toast(/play first/.test(String(e.message)) ? 'Сначала зайди в игру хотя бы раз' : errText(e), true); return; }
+    await dialog('Привязать ' + other, null,
+      h('div', null,
+        h('div', { class: 'bigcode mono' }, String(code).padStart(6, '0').replace(/(\d{3})(\d{3})/, '$1 $2')),
+        h('ol', { class: 'steps' },
+          h('li', null, 'Открой игру ' + (other === 'ВК' ? 'во ВКонтакте' : 'в Telegram') + '.'),
+          h('li', null, 'Настройки → «Один прогресс» → «Связать» → «Ввести код».'),
+          h('li', null, 'Введи этот код и выбери, какой прогресс оставить.')),
+        h('p', { class: 'hint' }, 'Код действует 10 минут. После привязки входить можно с обеих платформ.')),
+      [{ label: 'Готово', v: true }]);
   }
   const actionName = (a) => ({ 'Настройка boost': 'Бонус дохода', 'Настройка announce': 'Объявление', 'Настройка maint': 'Техработы', 'Настройка boss_test': 'Босс в будни' })[a] || a;
   function detailText(l) {
@@ -861,17 +942,89 @@
 
   // ---------- вход ----------
   function stateScreen(title, text, extra) {
-    $('app').replaceChildren(h('div', { class: 'state' }, h('div', null, h('div', { class: 'mark' }, 'Б'), h('h2', null, title), h('p', null, text), extra || null)));
+    $('app').replaceChildren(h('div', { class: 'state' }, h('div', null, h('div', { class: 'mark big' }, glyph()), h('h2', null, title), h('p', null, text), extra || null)));
   }
+  function loginScreen(note) {
+    const inp = h('input', { class: 'codein mono', type: 'text', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: '7', placeholder: '000 000', 'aria-label': 'Код из игры' });
+    const err = h('p', { class: 'login-err' }, note || '');
+    const btn = h('button', { class: 'btn wide', disabled: true }, 'Войти');
+    const digits = () => inp.value.replace(/\D/g, '').slice(0, 6);
+    inp.addEventListener('input', () => {
+      const d = digits();
+      inp.value = d.length > 3 ? d.slice(0, 3) + ' ' + d.slice(3) : d;
+      btn.disabled = d.length !== 6;
+      UI_setText(err, '');
+      if (d.length === 6) go();
+    });
+    let busy = false;
+    async function go() {
+      if (busy) return;
+      busy = true; btn.disabled = true; btn.textContent = 'Проверяю...';
+      let r = null;
+      try {
+        r = await api('adm_login', { p_code: digits(), p_device: (APP && APP.device ? APP.device() : deviceName()) }, true);
+      } catch (e) { r = { error: errText(e) }; }
+      busy = false; btn.textContent = 'Войти';
+      if (r && r.token) {
+        store(TOKEN_KEY, r.token); initData = 'adm:' + r.token;
+        haptic('ok'); boot(); return;
+      }
+      haptic('err');
+      const m = r && r.error;
+      UI_setText(err, m === 'bad code' ? 'Код не подходит или устарел' : m === 'too many tries' ? 'Слишком много попыток. Подожди 10 минут' : (m || 'Не получилось'));
+      inp.value = ''; inp.focus();
+    }
+    btn.addEventListener('click', go);
+    $('app').replaceChildren(h('div', { class: 'state login' }, h('div', null,
+      h('div', { class: 'mark big' }, glyph()),
+      h('h2', null, 'Бульк · Админ'),
+      h('p', null, 'Вход по коду из игры'),
+      inp, btn, err,
+      h('ol', { class: 'steps' },
+        h('li', null, 'Открой «Бульк» во ВКонтакте или Telegram.'),
+        h('li', null, 'Настройки → «Приложение админки» → «Код».'),
+        h('li', null, 'Введи 6 цифр здесь. Код живёт 5 минут.')),
+      h('p', { class: 'hint' }, 'Кнопка с кодом видна только команде лавки.'))));
+    setTimeout(() => inp.focus(), 250);
+  }
+  const UI_setText = (el, t) => { el.textContent = t; };
+  function deviceName() {
+    const ua = navigator.userAgent || '';
+    const m = ua.match(/Android [\d.]+; ([^;)]+?)(?: Build|\))/);
+    return (m ? m[1].trim() : /iPhone/.test(ua) ? 'iPhone' : /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'Mac' : 'Браузер') + (APP ? '' : ' · браузер');
+  }
+  function glyph() {
+    const NS = 'http://www.w3.org/2000/svg';
+    const s = document.createElementNS(NS, 'svg');
+    s.setAttribute('viewBox', '0 0 48 48'); s.setAttribute('class', 'glyph');
+    s.innerHTML = '<path d="M9 21h30"/><path d="M11 21c0 9 5.5 15 13 15s13-6 13-15"/><path d="M17 36l-2 4M31 36l2 4"/><circle cx="20" cy="14" r="2.2"/><circle cx="27" cy="10" r="1.6"/><circle cx="29" cy="16" r="1.2"/>';
+    return s;
+  }
+
+  // ---------- потянуть вниз - обновить ----------
+  const ptr = h('div', { class: 'ptr' }, icon('refresh'));
+  (() => {
+    let y0 = -1, dy = 0;
+    document.addEventListener('touchstart', (e) => { y0 = window.scrollY <= 0 && !document.querySelector('.dlg') && !sheetEl ? e.touches[0].clientY : -1; dy = 0; }, { passive: true });
+    document.addEventListener('touchmove', (e) => {
+      if (y0 < 0) return;
+      dy = Math.max(0, e.touches[0].clientY - y0);
+      ptr.style.setProperty('--p', Math.min(1, dy / 90));
+      ptr.classList.toggle('show', dy > 12);
+    }, { passive: true });
+    document.addEventListener('touchend', () => {
+      if (y0 >= 0 && dy > 90 && refreshBtn) { haptic(); render(); }
+      y0 = -1; dy = 0; ptr.classList.remove('show'); ptr.style.setProperty('--p', 0);
+    });
+  })();
+
   async function boot() {
     setupTelegram();
-    if (!initData) {
-      stateScreen('Открой через Telegram', 'Панель работает только внутри Telegram: так база узнаёт, кто ты. Игра → Настройки → «Админ-панель».', h('button', { class: 'btn', onclick: () => { location.href = '../'; } }, 'В игру'));
-      return;
-    }
+    if (!initData) { loginScreen(); return; }
     stateScreen('Проверяю доступ', 'Секунду...');
     let me;
     try { me = await api('adm_me'); } catch (e) {
+      if (!initData) return; // ключ устарел - уже показан вход
       stateScreen('Нет связи с базой', errText(e), h('button', { class: 'btn', onclick: boot }, 'Повторить'));
       return;
     }
@@ -879,7 +1032,7 @@
       stateScreen('Нет доступа', 'Панель только для команды лавки. Передай создателю свой ID:', h('div', null, h('code', null, String((me && me.id) || (tgUser && tgUser.id) || '-'))));
       return;
     }
-    ME = { id: me.id, role: me.role, perms: me.perms || [] };
+    ME = { id: me.id, role: me.role, perms: me.perms || [], name: tokenMode() ? me.name : '', tg: me.tg, vk: me.vk };
     shell();
     render();
   }

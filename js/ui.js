@@ -805,8 +805,10 @@ const UI = (() => {
         toggle('Меньше эффектов', 'ui/battery', 'lowfx', 'Для слабых телефонов и экономии батареи'),
         (typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/key', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Один прогресс'), h('small', null, 'Играй в ВК и Telegram с одним сохранением')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.linkDialog(), 0); } }, 'Связать')) : null,
-        h('p', { class: 'small center', onclick: (() => { let n = 0, t = 0; return () => { clearTimeout(t); t = setTimeout(() => { n = 0; }, 1500); if (++n >= 5 && Platform.kind() === 'tg') { Game.save(); location.href = 'admin/'; } }; })() }, 'Версия ' + C.version + ' · ' + Platform.label() + (Platform.kind() === 'web' ? ' · сохранение в этом браузере' : ' · сохранение в облаке'))),
-      actions: (typeof Online !== 'undefined' && Online.isAdmin() ? [{ label: 'Админ-панель', onClick: () => { Game.save(); setTimeout(() => { location.href = 'admin/'; }, 200); } }] : [])
+        (typeof Online !== 'undefined' && Online.isAdmin()) ? h('div', { class: 'set-row' }, pic('ui/key', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Приложение админки'), h('small', null, 'Код для входа, только для команды')),
+          h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.admCode(), 0); } }, 'Код')) : null,
+        h('p', { class: 'small center', onclick: (() => { let n = 0, t = 0; return () => { clearTimeout(t); t = setTimeout(() => { n = 0; }, 1500); if (++n >= 5 && Platform.kind() !== 'web') { Game.save(); location.href = 'admin/' + (Platform.kind() === 'vk' ? location.search : ''); } }; })() }, 'Версия ' + C.version + ' · ' + Platform.label() + (Platform.kind() === 'web' ? ' · сохранение в этом браузере' : ' · сохранение в облаке'))),
+      actions: (typeof Online !== 'undefined' && Online.isAdmin() ? [{ label: 'Админ-панель', onClick: () => { Game.save(); setTimeout(() => { location.href = 'admin/' + (Platform.kind() === 'vk' ? location.search : ''); }, 200); } }] : [])
         .concat([{ label: 'Начать заново', alt: true, onClick: () => { resetConfirm(); } }])
     });
   }

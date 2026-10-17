@@ -1,0 +1,17 @@
+{
+ "v": "ec94343a1af6",
+ "files": {
+  "admin.css": {
+   "size": 21092,
+   "sha256": "ef57fe14f31301ba37835898224565adba5495764c184e57d9fc8dfaf72f8863"
+  },
+  "admin.js": {
+   "size": 76489,
+   "sha256": "dfedb814f95906dd745162bfeee9a348c826d03f6ffe1ebe7edd077da31acfe3"
+  },
+  "index.html": {
+   "size": 834,
+   "sha256": "e02bee751cc3af5fcced3d64adac37407dd4d75deea143da35da961e66b4f065"
+  }
+ }
+}
