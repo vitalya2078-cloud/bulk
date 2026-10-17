@@ -11,6 +11,7 @@
 
   // ---------- сохранение ----------
   function saveNow(toCloud) {
+    if (typeof Online !== 'undefined' && Online.blocked()) return; // игра открыта в другом месте
     const str = Econ.serialize();
     try { localStorage.setItem(C.saveKey, str); } catch (e) { /* приватный режим */ }
     if (toCloud) Platform.storageSet(C.saveKey, str);
@@ -20,9 +21,12 @@
   async function loadSave() {
     let local = null, remote = null;
     try { local = JSON.parse(localStorage.getItem(C.saveKey) || 'null'); } catch (e) { /* повреждено */ }
+    let server = null;
+    const srvP = typeof Online !== 'undefined' ? Online.loadServer() : Promise.resolve(null);
     try { const v = await Platform.storageGet(C.saveKey); if (v) remote = JSON.parse(v); } catch (e) { /* повреждено */ }
-    if (local && remote) return (remote.ts || 0) > (local.ts || 0) ? remote : local;
-    return local || remote;
+    try { server = await srvP; } catch (e) { /* без сети */ }
+    // самое свежее из трёх: этот телефон, облако платформы, наша база (общая для ВК и Telegram)
+    return [local, remote, server].filter((x) => x && typeof x === 'object').sort((a, b) => (b.ts || 0) - (a.ts || 0))[0] || null;
   }
 
   // ---------- время вне игры ----------
@@ -274,7 +278,6 @@
   if (typeof Scene !== 'undefined') Scene.items().forEach((it) => critical.add(it.img));
   if (typeof Pets !== 'undefined' && Pets.inRoom) Pets.inRoom().forEach((id) => { for (let i = 0; i < 16; i++) critical.add('pets/' + id + '/' + String(i).padStart(2, '0')); });
   const critUrls = [...critical].map(IMG).concat([...document.images].map((im) => im.getAttribute('src')).filter((u) => u && u.startsWith('assets/')));
-  if (typeof Tops !== 'undefined') Tops.start();
   if (typeof Online !== 'undefined') Online.start();
   Loader.boot(critUrls, [...preload].filter((n) => !critical.has(n)).map(IMG));
   requestAnimationFrame(frame);

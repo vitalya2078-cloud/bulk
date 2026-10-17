@@ -1936,3 +1936,21 @@ body.in-game .modal-wrap { z-index: 30; }
 .ban-ico { display: block; width: 72px; height: 72px; margin: 0 auto; }
 .ban-box h2 { margin: 8px 0; color: #FFE48A; }
 .ban-box small { color: var(--muted); }
+
+/* ===== 0.16 левая колонка, топ, один прогресс ===== */
+.side-btns.left-btns { right: auto; left: 0; }
+.top-score { display: inline-flex; align-items: center; gap: 4px; }
+.top-ess { width: 18px; height: 18px; }
+.tops .top-seg .seg-btn { font-size: 13px; }
+.link-steps { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(0, 0, 0, .18); text-align: left; }
+.link-steps p { margin: 4px 0; }
+.link-code { margin: 6px auto 10px; font-size: 40px; font-weight: 900; letter-spacing: .12em; color: #FFE48A; text-shadow: 0 3px 0 var(--ink); }
+.link-input { display: block; width: 100%; max-width: 240px; margin: 8px auto 4px; padding: 10px; border: 2px solid var(--ink); border-radius: 14px; background: #1E1232; color: #FFE48A; font: 900 30px var(--head); letter-spacing: .12em; text-align: center; outline: none; }
+.link-input:focus { border-color: var(--gold); }
+.link-choose { display: flex; flex-direction: column; gap: 8px; }
+.link-card { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 12px 14px; border: 2px solid var(--ink); border-radius: 14px; background: var(--plum); color: #FFF6E8; font: inherit; text-align: left; cursor: pointer; }
+.link-card:active { transform: scale(.98); }
+.link-card small { color: #FFE48A; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: .06em; }
+.link-card b { font-size: 18px; }
+.link-card span { color: var(--muted); font-size: 13px; }
+.side-btns.left-btns { top: calc(var(--safe-top) + 86px); }

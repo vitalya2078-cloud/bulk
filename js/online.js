@@ -1,16 +1,19 @@
 // =====================================================================
 //  Связь с базой (0.14): статистика игрока, почта с подарками, правки
 //  от администратора, бан, объявления и бонус дохода.
-//  Работает только в Telegram (база проверяет подпись). Без сети игра идёт как обычно.
+//  0.16: один аккаунт на ВК и Telegram (привязка кодом), сохранение в базе,
+//  одна активная сессия: открыл игру на другом устройстве - здесь игра встаёт на паузу.
+//  База проверяет подпись платформы. Без сети игра идёт как обычно.
 // =====================================================================
 
 const Online = (() => {
   const T = CONFIG.tops;
   const h = (...a) => UI.h(...a);
   const pic = (n, c) => UI.pic(n, c);
-  const tg = () => (window.Telegram && window.Telegram.WebApp) || null;
-  const initData = () => { const t = tg(); return (t && t.initData) || ''; };
-  const on = () => Platform.kind() === 'tg' && !!initData();
+  const initData = () => Platform.authData();
+  const on = () => !!initData();
+  const SESS = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  let kicked = false, uid = 0;
   const save = () => { if (window.Game) Game.save(); };
   const ls = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } return null; };
 
@@ -38,7 +41,7 @@ const Online = (() => {
     let saveObj = null;
     try { saveObj = JSON.parse(Econ.serialize()); } catch (e) { /* ignore */ }
     return {
-      start: start ? '1' : '0', ver: CONFIG.version,
+      start: start ? '1' : '0', claim: start ? '1' : '0', sess: SESS, ver: CONFIG.version,
       name: (s.prof.name || '').trim(), avatar: s.prof.avatar === 'photo' ? '' : s.prof.avatar,
       lvl: s.lvl, rank: Econ.rank(), le: Math.floor(s.le), e: Math.floor(s.e), ph: Math.floor(Econ.basePerHour()),
       cr: s.cr, mastery: Econ.mastery(), play: Math.floor(s.stat.play || 0),
@@ -47,13 +50,15 @@ const Online = (() => {
   }
 
   let lastHello = 0;
-  async function hello(start) {
-    if (!on()) return;
-    if (!start && Date.now() - lastHello < 60000) return;
+  async function hello(start, force) {
+    if (!on() || kicked) return;
+    if (!start && Date.now() - lastHello < (force ? 5000 : 45000)) return;
     lastHello = Date.now();
     let r;
     try { r = await rpc('hello', { init_data: initData(), p: stats(start) }); } catch (e) { console.warn('online', e); return; }
     if (!r) return;
+    if (r.uid) { uid = r.uid; Platform.setUid(uid); }
+    if (r.kicked) { kickScreen(); return; }
     state = { admin: !!r.admin, mail: +r.mail || 0, banned: !!r.banned, settings: r.settings || {}, reason: r.reason || '' };
     applySettings(start);
     if (state.banned) { banScreen(state.reason); return; }
@@ -72,6 +77,102 @@ const Online = (() => {
         h('p', null, reason || (maint ? 'Мы немножко подкручиваем котёл. Загляни чуть позже!' : 'Твой аккаунт заблокирован в игре.')),
         maint ? null : h('small', null, 'Если это ошибка, напиши в бота «Бульк».')));
     document.body.append(blocked);
+  }
+
+  // ---------- игра открыта на другом устройстве ----------
+  function kickScreen() {
+    if (kicked) return;
+    kicked = true;
+    const box = h('div', { class: 'ban-screen' },
+      h('div', { class: 'ban-box' },
+        pic('ui/phone', 'ban-ico'),
+        h('h2', null, 'Лавка открыта в другом месте'),
+        h('p', null, 'Ты сейчас играешь на другом устройстве или в другом приложении. Играть сразу в двух местах нельзя, чтобы прогресс не перепутался.'),
+        h('button', { class: 'btn', type: 'button', onclick: () => { location.reload(); } }, 'Играть здесь')));
+    document.body.append(box);
+  }
+
+  // сохранение из базы: при запуске берём самое свежее (локальное, облако платформы, база)
+  async function loadServer() {
+    if (!on()) return null;
+    try {
+      const r = await rpc('load_save', { init_data: initData() }, 4500);
+      if (r && r.uid) { uid = r.uid; Platform.setUid(uid); }
+      return r && r.save && typeof r.save === 'object' ? r.save : null;
+    } catch (e) { console.warn('online load', e); return null; }
+  }
+
+  // ---------- привязка ВК и Telegram ----------
+  const PLAT = { tg: 'Telegram', vk: 'ВКонтакте' };
+  const RANKS = () => (DATA.ranks || []).map((r) => r.name);
+  function linkDialog() {
+    if (!on()) { UI.toast('Привязка работает в ВК и Telegram'); return; }
+    const other = Platform.kind() === 'tg' ? 'ВКонтакте' : 'Telegram';
+    UI.modal({
+      title: 'Один прогресс',
+      body: h('div', { class: 'link-box' },
+        h('p', { class: 'center' }, 'Играй и в Telegram, и во ВКонтакте с одним прогрессом. Сразу в двух местах играть нельзя: открыл в одном - в другом лавка встанет на паузу.'),
+        h('div', { class: 'link-steps' },
+          h('p', null, h('b', null, '1. '), 'Здесь нажми «Получить код».'),
+          h('p', null, h('b', null, '2. '), 'Открой игру в ' + other + ': Настройки → «Один прогресс» → «Ввести код».'))),
+      actions: [
+        { label: 'Получить код', onClick: async () => {
+          let c;
+          try { c = await rpc('link_code', { init_data: initData() }); } catch (e) { UI.toast('Не получилось, попробуй позже'); return false; }
+          setTimeout(() => showCode(c), 0);
+        } },
+        { label: 'Ввести код', alt: true, onClick: () => { setTimeout(enterCode, 0); } }
+      ]
+    });
+  }
+  function showCode(c) {
+    UI.modal({ title: 'Твой код', body: h('div', { class: 'center' },
+      h('div', { class: 'link-code' }, String(c).replace(/(\d{3})(\d{3})/, '$1 $2')),
+      h('p', null, 'Введи его в игре на другой платформе. Код действует 10 минут.')), actions: [{ label: 'Готово' }] });
+  }
+  function enterCode() {
+    const input = h('input', { class: 'link-input', type: 'text', inputmode: 'numeric', maxlength: '7', placeholder: '000 000', autocomplete: 'off' });
+    UI.modal({ title: 'Ввести код', body: h('div', { class: 'center' }, h('p', null, 'Код из игры на другой платформе:'), input),
+      onOpen: () => setTimeout(() => input.focus(), 200),
+      actions: [{ label: 'Дальше', onClick: async () => {
+        const code = input.value.replace(/\D/g, '');
+        if (code.length !== 6) { UI.toast('В коде 6 цифр'); return false; }
+        let info;
+        try { info = await rpc('link_info', { init_data: initData(), p_code: code }); } catch (e) {
+          const m = String(e);
+          UI.toast(/bad code/.test(m) ? 'Код не подходит или устарел' : /same platform/.test(m) ? 'Этот аккаунт уже привязан к такой платформе' : /same account/.test(m) ? 'Это код этого же аккаунта' : 'Не получилось, попробуй позже');
+          return false;
+        }
+        setTimeout(() => chooseKeep(code, info), 0);
+      } }, { label: 'Отмена', alt: true }] });
+  }
+  function chooseKeep(code, info) {
+    const card = (x, title, keep) => h('button', { class: 'link-card', type: 'button', onclick: async () => {
+      UI.closeModal();
+      setTimeout(() => UI.modal({ title: 'Точно?', body: h('p', { class: 'center' }, 'Останется прогресс «' + title + '». Второй прогресс пропадёт навсегда.'),
+        actions: [{ label: 'Объединить', onClick: () => apply(code, keep) }, { label: 'Отмена', alt: true }] }), 0);
+    } },
+      h('small', null, title), h('b', null, x.name || 'Алхимик'),
+      h('span', null, 'Уровень ' + x.lvl + ' · ' + (RANKS()[x.rank] || '')),
+      h('span', null, 'Сварено ' + Fmt.num(x.le) + ' · ' + x.cr + ' ' + UI.crystalsWord(x.cr)));
+    UI.modal({ title: 'Какой прогресс оставить?', body: h('div', { class: 'link-choose' },
+      card(info.mine, 'Здесь, ' + (PLAT[info.mine.platform] || ''), 'mine'),
+      card(info.other, PLAT[info.other.platform] || 'Другой', 'other'),
+      h('p', { class: 'small center' }, 'Нажми на тот, который хочешь сохранить.')), actions: [{ label: 'Отмена', alt: true }] });
+  }
+  async function apply(code, keep) {
+    let r;
+    try { r = await rpc('link_apply', { init_data: initData(), p_code: code, p_keep: keep }); } catch (e) { UI.toast('Не получилось, попробуй позже'); return false; }
+    // дальше играем с общим прогрессом: кладём его локально как самый свежий и перезапускаем
+    kicked = true;
+    if (r && r.save) {
+      const sv = Object.assign({}, r.save, { ts: Date.now() });
+      const str = JSON.stringify(sv);
+      try { localStorage.setItem(CONFIG.saveKey, str); } catch (e) { /* ignore */ }
+      try { Platform.storageSet(CONFIG.saveKey, str); } catch (e) { /* ignore */ }
+    }
+    UI.modal({ title: 'Готово!', closable: false, body: h('p', { class: 'center' }, 'Аккаунты связаны. Теперь прогресс общий для ВКонтакте и Telegram.'),
+      actions: [{ label: 'Продолжить', onClick: () => { setTimeout(() => location.reload(), 300); } }] });
   }
 
   // ---------- настройки из админки ----------
@@ -193,10 +294,11 @@ const Online = (() => {
     if (b) b.addEventListener('click', () => { Sound.unlock(); Sound.tap(); openMail(); });
     badge();
     if (!on()) return;
-    setTimeout(() => hello(true), 4000);
-    setInterval(() => { if (!document.hidden) hello(false); }, 5 * 60000);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) hello(false); });
+    setTimeout(() => hello(true), 1500);
+    setInterval(() => { if (!document.hidden) hello(false); }, 60000);
+    // свернул - сразу отправляем прогресс; вернулся - проверяем, не открыта ли игра в другом месте
+    document.addEventListener('visibilitychange', () => { hello(false, true); });
   }
 
-  return { start, openMail, isAdmin: () => state.admin, hello };
+  return { start, openMail, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid };
 })();

@@ -311,7 +311,7 @@
 
   // ---------- игроки ----------
   const PL = { q: '', filter: '', sort: 'seen', rows: [], total: 0 };
-  const FILTERS = [['', 'Все'], ['online', 'Онлайн'], ['new', 'Новые'], ['limited', 'С ограничениями'], ['banned', 'Баны']];
+  const FILTERS = [['', 'Все'], ['online', 'Онлайн'], ['new', 'Новые'], ['tg', 'Telegram'], ['vk', 'ВК'], ['limited', 'С ограничениями'], ['banned', 'Баны']];
   const SORTS = [['seen', 'Последний вход'], ['le', 'Больше сварили'], ['cr', 'Больше кристаллов'], ['lvl', 'Выше уровень'], ['play', 'Дольше играют'], ['new', 'Новые сначала']];
   let searchT = 0;
   async function renderPlayers(id) {
@@ -345,6 +345,8 @@
       ava(p.photo, online(p.last_seen)),
       h('span', { class: 'who' },
         h('b', null, h('em', null, p.name || 'Без имени'),
+          p.tg ? h('span', { class: 'tag blue' }, 'tg') : null,
+          p.vk ? h('span', { class: 'tag' }, 'vk') : null,
           p.banned ? h('span', { class: 'tag red' }, 'бан') : null,
           p.top_ban ? h('span', { class: 'tag' }, 'без топа') : null,
           p.no_gift ? h('span', { class: 'tag' }, 'без подарков') : null),
@@ -401,6 +403,8 @@
         st('Заходов', num(p.sessions)), st('Дней в игре', num(p.days)),
         st('Первый вход', date(p.first_seen)), st('Версия', p.ver || '-')),
       h('div', { class: 'panel pad', style: { marginTop: '8px' } },
+        kv('Telegram', p.tg ? h('span', { class: 'mono' }, String(p.tg)) : 'не привязан'),
+        kv('ВКонтакте', p.vk ? h('a', { href: 'https://vk.com/id' + p.vk, target: '_blank' }, 'id' + p.vk) : 'не привязан'),
         kv('Пригласил его', p.ref ? (p.ref_name || 'ID ' + p.ref) : 'никто'),
         kv('Он пригласил', num(p.invited) + ' ' + word(p.invited, 'друга', 'друзей', 'друзей')),
         kv('Сохранение', dateTime(p.save_at)),
@@ -760,6 +764,7 @@
     if (!Object.keys(d).length) return '';
     if (/^Письмо/.test(l.action)) return '«' + (d.title || '') + '»' + giftText(d.gift);
     if (l.action === 'Правка сохранения') return opsText(d);
+    if (l.action === 'Привязал платформу') return 'Telegram ' + (d.tg || '-') + ' + ВК ' + (d.vk || '-');
     if (l.action === 'Назначил в команду') return (ROLES[d.role] || d.role) + (d.role === 'custom' && d.perms ? ': ' + d.perms.map((p) => PERM_NAME[p] || p).join(', ') : '');
     if (l.action === 'Изменил игрока') {
       const a = [];

@@ -49,14 +49,27 @@ const Platform = (() => {
     return '';
   }
 
-  // Код пригласившего: ВК - #ref_123 в адресе, Telegram - startapp=ref_123
+  // Подпись платформы для нашей базы: Telegram - initData, ВК - параметры запуска (с подписью sign)
+  function authData() {
+    if (kind === 'tg') return (tg && tg.initData) || '';
+    if (kind === 'vk') return qs.has('sign') && qs.has('vk_user_id') ? 'vk:' + location.search.slice(1) : '';
+    return '';
+  }
+
+  // Код пригласившего: ВК - #ref_123 в адресе, Telegram - startapp=ref_123.
+  // Код - номер игрока в нашей базе (uid); отрицательный пишется как n123.
   function referrer() {
     let raw = '';
     if (kind === 'tg') raw = (tg.initDataUnsafe && tg.initDataUnsafe.start_param) || '';
     else raw = (location.hash || '').replace('#', '') || qs.get('ref') || '';
-    const m = /^ref_(\w+)$/.exec(raw);
-    return m && m[1] !== userId() ? m[1] : '';
+    const m = /^ref_(n?\d+)$/.exec(raw);
+    if (!m) return '';
+    const id = m[1].replace(/^n/, '-');
+    return id !== String(myUid || userId()) ? id : '';
   }
+  let myUid = 0;
+  const setUid = (u) => { myUid = u || 0; };
+  const refCode = () => { const u = myUid || +userId() || 0; return u ? 'ref_' + String(u).replace('-', 'n') : ''; };
 
   // ---------- имя и фото профиля платформы ----------
   // { name, photo } - пустые строки, если платформа их не дала
@@ -148,9 +161,9 @@ const Platform = (() => {
     const id = userId();
     if (kind === 'tg' && CONFIG.tgBotUsername) {
       // без имени приложения - ссылка на главное приложение бота (Main App)
-      return 'https://t.me/' + CONFIG.tgBotUsername + (CONFIG.tgAppName ? '/' + CONFIG.tgAppName : '') + '?startapp=' + (id ? 'ref_' + id : 'play');
+      return 'https://t.me/' + CONFIG.tgBotUsername + (CONFIG.tgAppName ? '/' + CONFIG.tgAppName : '') + '?startapp=' + (refCode() || 'play');
     }
-    if (kind === 'vk' && CONFIG.vkAppId) return 'https://vk.com/app' + CONFIG.vkAppId + (id ? '#ref_' + id : '');
+    if (kind === 'vk' && CONFIG.vkAppId) return 'https://vk.com/app' + CONFIG.vkAppId + (refCode() ? '#' + refCode() : '');
     return '';
   }
 
@@ -192,7 +205,7 @@ const Platform = (() => {
   const label = () => ({ vk: 'ВКонтакте', tg: 'Telegram', web: 'браузер' }[kind]);
 
   return {
-    init, kind: () => kind, label, userId, referrer, profile,
+    init, kind: () => kind, label, userId, referrer, profile, authData, setUid,
     storageGet, storageSet, adsAvailable, rewardedAd, haptic,
     invite, share, hasLeaderboard, leaderboard
   };

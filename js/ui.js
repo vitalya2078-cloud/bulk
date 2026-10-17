@@ -644,7 +644,7 @@ const UI = (() => {
         p2.append(h('div', { class: 'mastery' }, pic('ui/trophy', 'mastery-ico'),
           h('div', null, h('small', null, 'Твоё мастерство'), h('b', null, Fmt.num(Econ.mastery())))));
         p2.append(h('p', { class: 'note center' }, 'Растёт вместе с эссенцией и уровнями карточек.'));
-        p2.append(h('button', { class: 'btn', type: 'button', onclick: () => { Sound.tap(); Tops.open(0); } }, 'Топ алхимиков'));
+        p2.append(h('button', { class: 'btn', type: 'button', onclick: () => { Sound.tap(); Tops.open(1); } }, 'Топ алхимиков'));
         if (Platform.hasLeaderboard()) {
           p2.append(h('button', { class: 'btn alt', type: 'button', onclick: async () => {
             if (!(await Platform.leaderboard(Econ.mastery()))) toast('Рейтинг сейчас недоступен');
@@ -803,8 +803,10 @@ const UI = (() => {
         toggle('Вибрация', 'ui/phone', 'vib', 'Лёгкий отклик на тапы'),
         h('div', { class: 'set-row' }, pic('ui/abacus', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Формат чисел'), fmt)),
         toggle('Меньше эффектов', 'ui/battery', 'lowfx', 'Для слабых телефонов и экономии батареи'),
+        (typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/key', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Один прогресс'), h('small', null, 'Играй в ВК и Telegram с одним сохранением')),
+          h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.linkDialog(), 0); } }, 'Связать')) : null,
         h('p', { class: 'small center', onclick: (() => { let n = 0, t = 0; return () => { clearTimeout(t); t = setTimeout(() => { n = 0; }, 1500); if (++n >= 5 && Platform.kind() === 'tg') { Game.save(); location.href = 'admin/'; } }; })() }, 'Версия ' + C.version + ' · ' + Platform.label() + (Platform.kind() === 'web' ? ' · сохранение в этом браузере' : ' · сохранение в облаке'))),
-      actions: (window.Online && Online.isAdmin() ? [{ label: 'Админ-панель', onClick: () => { Game.save(); setTimeout(() => { location.href = 'admin/'; }, 200); } }] : [])
+      actions: (typeof Online !== 'undefined' && Online.isAdmin() ? [{ label: 'Админ-панель', onClick: () => { Game.save(); setTimeout(() => { location.href = 'admin/'; }, 200); } }] : [])
         .concat([{ label: 'Начать заново', alt: true, onClick: () => { resetConfirm(); } }])
     });
   }
@@ -1220,6 +1222,7 @@ const UI = (() => {
     $('brew-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Brew.open(); });
     $('pets-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Pets.open(); });
     $('games-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Games.open(); });
+    $('tops-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Tops.open(0); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current && current.closable !== false) closeModal(); });
   }
 
