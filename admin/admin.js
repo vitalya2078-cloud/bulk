@@ -314,7 +314,14 @@
   const FILTERS = [['', 'Все'], ['online', 'Онлайн'], ['new', 'Новые'], ['tg', 'Telegram'], ['vk', 'ВК'], ['limited', 'С ограничениями'], ['banned', 'Баны']];
   const SORTS = [['seen', 'Последний вход'], ['le', 'Больше сварили'], ['cr', 'Больше кристаллов'], ['lvl', 'Выше уровень'], ['play', 'Дольше играют'], ['new', 'Новые сначала']];
   let searchT = 0;
+  let PMODE = 'players';
+  function modeSeg() {
+    const opts = [['players', 'Игроки'], ['covens', 'Ковены']].concat(can('ban') ? [['reports', 'Жалобы']] : []);
+    return h('div', { class: 'seg', style: { margin: '12px 0 0' } }, opts.map(([v, l]) => h('button', { class: v === PMODE ? 'on' : '', onclick: () => { if (PMODE !== v) { PMODE = v; haptic(); render(); } } }, l)));
+  }
   async function renderPlayers(id) {
+    if (PMODE === 'covens') return renderCovens(id);
+    if (PMODE === 'reports') return renderReports(id);
     const list = h('div', null, skeleton(6));
     const count = h('span', { class: 'n' }, '');
     const search = h('input', { type: 'search', placeholder: 'Имя, @ник или ID', value: PL.q, enterkeyhint: 'search' });
@@ -323,7 +330,7 @@
       PL.filter = v; chips.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c === e.currentTarget)); haptic(); loadPlayers(list, count, true);
     } }, l)));
     const sort = h('select', { onchange: () => { PL.sort = sort.value; loadPlayers(list, count, true); } }, SORTS.map(([v, l]) => h('option', { value: v, selected: PL.sort === v }, l)));
-    body.replaceChildren(h('div', { style: { height: '12px' } }), h('label', { class: 'search' }, icon('search'), search), chips, h('div', { class: 'bar-line' }, count, sort), list);
+    body.replaceChildren(modeSeg(), h('div', { style: { height: '10px' } }), h('label', { class: 'search' }, icon('search'), search), chips, h('div', { class: 'bar-line' }, count, sort), list);
     await loadPlayers(list, count, true, id);
   }
   async function loadPlayers(list, count, reset, id) {
@@ -352,6 +359,60 @@
           p.no_gift ? h('span', { class: 'tag' }, 'без подарков') : null),
         h('small', null, 'ур ' + p.lvl + ' · ' + (RANKS[p.rnk] || '-') + ' · ' + ago(p.last_seen))),
       h('span', { class: 'val' }, h('b', null, v[1]), h('small', null, v[0])));
+  }
+
+  const COV_COLORS = { purple: '#8E5BE8', red: '#E5484D', orange: '#F28C28', gold: '#E8B923', green: '#3FAE5A', teal: '#22A3A3', blue: '#3D7BE0', pink: '#E46AB3' };
+  async function renderCovens(id) {
+    body.replaceChildren(modeSeg(), h('div', { style: { height: '10px' } }), skeleton(4));
+    let rows;
+    try { rows = await api('adm_covens'); } catch (e) { if (!stale(id)) body.replaceChildren(modeSeg(), failBox(e)); return; }
+    if (stale(id)) return;
+    body.replaceChildren(modeSeg(), sec('Ковены', String((rows || []).length)),
+      !rows || !rows.length ? h('div', { class: 'panel empty' }, 'Ковенов пока нет') :
+      h('div', { class: 'panel list' }, rows.map((c) => h('button', { class: 'row', onclick: () => { haptic(); openCoven(c); } },
+        h('span', { class: 'ava', style: { backgroundImage: 'url("../assets/images/coven/emblems/' + c.emblem + '.webp")', backgroundSize: '70%', backgroundRepeat: 'no-repeat', backgroundColor: COV_COLORS[c.color] || '#555', borderRadius: '9px' } }),
+        h('span', { class: 'who' }, h('b', null, h('em', null, c.name), c.open ? null : h('span', { class: 'tag' }, 'заявки')),
+          h('small', null, 'глава ' + (c.leader || '-') + ' · ' + c.members + '/30 · с ' + date(c.created_at))),
+        h('span', { class: 'val' }, h('b', null, 'ур ' + c.level), h('small', null, num(c.week) + ' нед'))))));
+  }
+  async function openCoven(c) {
+    const inner = h('div', null, skeleton(4));
+    const ok = dialog(c.name, (c.motto ? '«' + c.motto + '» · ' : '') + 'уровень ' + c.level + ', ' + c.members + ' участн.', inner, [{ label: 'Закрыть', cls: 'ghost', v: false }].concat(can('ban') ? [{ label: 'Переименовать', v: 'rename' }] : []));
+    if (can('ban')) {
+      try {
+        const msgs = await api('adm_coven_chat', { p_coven: c.id });
+        inner.replaceChildren(h('div', { class: 'panel', style: { maxHeight: '50vh', overflowY: 'auto', marginBottom: '4px' } }, !msgs.length ? h('div', { class: 'empty' }, 'Чат пуст') :
+          msgs.map((m) => h('div', { class: 'log', style: m.hidden ? { opacity: .45 } : null }, h('div', null, h('b', null, m.uid ? (m.name || 'ID ' + m.uid) : 'система'), ' ', h('span', { class: 'meta' }, dateTime(m.at) + (m.hidden ? ' · скрыто' : ''))), h('div', { class: 'd' }, m.text)))));
+      } catch (e) { inner.replaceChildren(h('p', { class: 'mut' }, errText(e))); }
+    } else inner.replaceChildren();
+    if ((await ok) === 'rename') {
+      const inp = h('input', { class: 'input', value: c.name, maxlength: '20' });
+      if (await dialog('Новое название', 'Девиз ковена тоже сотрётся.', inp, [{ label: 'Отмена', cls: 'ghost', v: false }, { label: 'Сохранить', v: true }])) {
+        if (await act('adm_coven_rename', { p_coven: c.id, p_name: inp.value }, 'Ковен переименован')) render();
+      }
+    }
+  }
+  async function renderReports(id) {
+    body.replaceChildren(modeSeg(), h('div', { style: { height: '10px' } }), skeleton(3));
+    let rows;
+    try { rows = await api('adm_reports'); } catch (e) { if (!stale(id)) body.replaceChildren(modeSeg(), failBox(e)); return; }
+    if (stale(id)) return;
+    body.replaceChildren(modeSeg(), sec('Жалобы на сообщения', String((rows || []).length)),
+      !rows || !rows.length ? h('div', { class: 'panel empty' }, 'Жалоб нет') :
+      h('div', { class: 'panel' }, rows.map((r) => h('div', { class: 'item' },
+        h('span', { class: 'ic' }, icon('alert')),
+        h('div', { class: 't' },
+          h('b', null, h('a', { href: '#', onclick: (e) => { e.preventDefault(); openPlayer(r.uid); } }, r.name || 'ID ' + r.uid), r.chat_ban ? h('span', { class: 'tag red', style: { marginLeft: '6px' } }, 'заглушён') : null),
+          h('p', null, '«' + r.text + '»'),
+          h('div', { class: 'meta' }, 'ковен ' + (r.coven || '-') + ' · жалоб ' + r.count + ' · ' + dateTime(r.at)),
+          h('div', { class: 'btns' },
+            h('button', { class: 'btn danger sm', onclick: async () => { if (await act('adm_report_done', { p_msg: r.msg, p_hide: true }, 'Сообщение скрыто')) render(); } }, 'Скрыть'),
+            h('button', { class: 'btn ghost sm', onclick: async () => { if (await act('adm_report_done', { p_msg: r.msg, p_hide: false }, 'Жалоба отклонена')) render(); } }, 'Всё в порядке')),
+          r.chat_ban ? null : h('button', { class: 'btn ghost sm wide', style: { marginTop: '8px' }, onclick: async () => {
+            if (await confirmBox('Заглушить ' + (r.name || 'игрока') + '?', 'Он не сможет писать в чат ковена, пока ты не снимешь запрет в его карточке.', 'Заглушить', true)) {
+              if (await act('adm_set_player', { p_id: r.uid, f: { chat_ban: true } }, 'Игрок заглушён')) render();
+            }
+          } }, 'Заглушить в чате'))))));
   }
 
   // ---------- карточка игрока ----------
@@ -476,7 +537,8 @@
           }),
           h('div', { class: 'inline', style: { paddingBottom: '12px' } }, reason, h('button', { class: 'btn ghost', onclick: () => act('adm_set_player', { p_id: id, f: { ban_reason: reason.value.trim() } }, 'Причина сохранена') }, 'OK')),
           tog('Убрать из топов', 'Очки не записываются и не видны', p.top_ban, (v) => act('adm_set_player', { p_id: id, f: { top_ban: v } }, v ? 'Убран из топов' : 'Снова в топах')),
-          tog('Без общих подарков', 'Не забирает подарки из писем «всем»', p.no_gift, (v) => act('adm_set_player', { p_id: id, f: { no_gift: v } }, 'Сохранено')));
+          tog('Без общих подарков', 'Не забирает подарки из писем «всем»', p.no_gift, (v) => act('adm_set_player', { p_id: id, f: { no_gift: v } }, 'Сохранено')),
+          tog('Заглушить в чате', 'Не может писать в чат ковена', p.chat_ban, (v) => act('adm_set_player', { p_id: id, f: { chat_ban: v } }, v ? 'Заглушён' : 'Может писать')));
       }
       box.append(h('div', { class: 'btns' },
         can('ban') ? h('button', { class: 'btn ghost sm', onclick: async () => {
@@ -764,6 +826,8 @@
     if (!Object.keys(d).length) return '';
     if (/^Письмо/.test(l.action)) return '«' + (d.title || '') + '»' + giftText(d.gift);
     if (l.action === 'Правка сохранения') return opsText(d);
+    if (l.action === 'Скрыл сообщение') return 'сообщение в чате ковена';
+    if (l.action === 'Переименовал ковен') return '→ «' + d.name + '»';
     if (l.action === 'Привязал платформу') return 'Telegram ' + (d.tg || '-') + ' + ВК ' + (d.vk || '-');
     if (l.action === 'Назначил в команду') return (ROLES[d.role] || d.role) + (d.role === 'custom' && d.perms ? ': ' + d.perms.map((p) => PERM_NAME[p] || p).join(', ') : '');
     if (l.action === 'Изменил игрока') {
@@ -772,6 +836,7 @@
       if (d.ban_reason) a.push('причина: ' + d.ban_reason);
       if ('top_ban' in d) a.push(d.top_ban ? 'убран из топов' : 'возвращён в топы');
       if ('no_gift' in d) a.push(d.no_gift ? 'без общих подарков' : 'общие подарки разрешены');
+      if ('chat_ban' in d) a.push(d.chat_ban ? 'заглушён в чате' : 'может писать в чат');
       if ('note' in d) a.push('заметка');
       return a.join(', ');
     }

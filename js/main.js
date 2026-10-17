@@ -279,6 +279,7 @@
   if (typeof Pets !== 'undefined' && Pets.inRoom) Pets.inRoom().forEach((id) => { for (let i = 0; i < 16; i++) critical.add('pets/' + id + '/' + String(i).padStart(2, '0')); });
   const critUrls = [...critical].map(IMG).concat([...document.images].map((im) => im.getAttribute('src')).filter((u) => u && u.startsWith('assets/')));
   if (typeof Online !== 'undefined') Online.start();
+  if (typeof Coven !== 'undefined') Coven.start();
   Loader.boot(critUrls, [...preload].filter((n) => !critical.has(n)).map(IMG));
   requestAnimationFrame(frame);
 })();
