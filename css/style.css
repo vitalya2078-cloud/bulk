@@ -1812,3 +1812,5 @@ body.has-modal #toast::before, body.has-modal #toast::after { display: none; }
 .sheet-head .seg, .screen .seg { gap: 4px; }
 .seg.fade-x { --fr-k: 1; }
 .stats .stat small { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+/* скрытый тост не должен ловить нажатия (из-за этого не срабатывали кнопки под ним) */
+#toast:not(.show) { pointer-events: none !important; visibility: hidden; }
