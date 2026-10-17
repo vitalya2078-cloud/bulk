@@ -2,7 +2,7 @@
 // В кэш кладём только целые файлы: размер совпал с заявленным сервером.
 // Запрос с ?r= (повтор после ошибки) всегда идёт в сеть и перезаписывает запись в кэше.
 const VERSION = new URL(self.location).searchParams.get('v') || '0';
-const CACHE = 'bulk2-' + VERSION;
+const CACHE = 'bulk3-' + VERSION;
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => {
@@ -12,10 +12,14 @@ self.addEventListener('activate', (e) => {
 });
 
 // ответ целый? (если сервер назвал размер - он должен совпасть)
+// Сервер может отдавать файлы сжатыми (gzip/br): тогда content-length - размер сжатого,
+// а тело уже распаковано, сравнивать их нельзя. Сверяем размер только для несжатых ответов.
 function whole(r) {
   return r.clone().arrayBuffer().then((ab) => {
-    const len = r.headers.get('content-length');
     if (!ab.byteLength) return false;
+    const enc = (r.headers.get('content-encoding') || '').toLowerCase();
+    const len = r.headers.get('content-length');
+    if (enc && enc !== 'identity') return true;
     return !len || +len === ab.byteLength;
   }).catch(() => false);
 }
@@ -41,8 +45,9 @@ self.addEventListener('fetch', (e) => {
   const isCode = req.mode === 'navigate' || /\.(html|js|css)$/.test(url.pathname) || url.pathname.endsWith('/');
   // страница, скрипты и стили - сначала из сети (обновления приходят сразу), без сети - из кэша
   if (isCode) {
-    e.respondWith(fromNet(req, req, true).then((r) => (r.ok ? r : caches.match(req).then((h) => h || r)))
-      .catch(() => caches.match(req).then((r) => r || caches.match('index.html'))));
+    e.respondWith(fetch(req.mode === 'navigate' ? req.url : req, { cache: 'no-store' })
+      .then((r) => { if (r.ok) { const cp = r.clone(); caches.open(CACHE).then((c) => c.put(req, cp)).catch(() => {}); } return r; })
+      .catch(() => caches.match(req).then((r) => r || caches.match('index.html')).then((r) => r || fetch(req))));
     return;
   }
   // картинки и звуки: ключ без ?r=
