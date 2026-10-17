@@ -686,6 +686,6 @@ const Brew = (() => {
     return activeList().map((a) => ({ img: a.p.img, label: a.p.desc.split(' ').slice(0, 3).join(' '), left: a.left, key: a.p.id }));
   }
 
-  return { init, open, brew, drink, reward, onTap, onBubble, onReturn, refreshButton, chips, activeList, isActive, bagCount, count, nearest,
+  return { init, give, open, brew, drink, reward, onTap, onBubble, onReturn, refreshButton, chips, activeList, isActive, bagCount, count, nearest,
     dailyPick, dailySolved, ing: (id) => ING[id], recipe: (rid) => REC[rid] };
 })();

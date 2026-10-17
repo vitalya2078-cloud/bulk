@@ -1844,3 +1844,48 @@ body.has-modal #toast::before, body.has-modal #toast::after { display: none; }
 .preview .pot-name { z-index: 2; }
 .screen .panel { flex: none; height: auto; min-height: 0; }
 .screen .section-title { min-width: 250px; padding: 10px 40px 20px; }
+
+/* =====================================================================
+   0.12 - мини-игры
+   ===================================================================== */
+.side-btns .games-btn .pic { width: 40px; height: 40px; }
+.games-tickets { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; padding: 8px 10px; border: solid 12px; border-image: var(--i-hud-card-on) 46 fill / 12px stretch; color: #F3E8FF; font-size: 13px; font-weight: 800; }
+.games-tickets b { color: #FFE48A; font-size: 18px; margin-left: 4px; }
+.ticket-ico { width: 36px; height: 36px; flex: none; }
+.games-list { display: flex; flex-direction: column; gap: 8px; }
+.game-card { display: flex; align-items: center; gap: 10px; min-height: 66px; padding: 4px 6px; border: solid 14px; border-image: var(--i-hud-card) 46 fill / 14px stretch; background: none; color: #FFF; text-align: left; }
+.game-card.soon { filter: grayscale(.7) brightness(.75); }
+.game-ico { width: 54px; height: 54px; flex: none; }
+.game-info { flex: 1; min-width: 0; }
+.game-info b { display: block; font-size: 15px; color: #FFE48A; }
+.game-info small { color: #E8DCFF; font-size: 12px; }
+.game-play { width: 40px; height: 40px; flex: none; }
+.game-card:active { transform: scale(.98); }
+
+/* экран мини-игры поверх всего */
+body.in-game .tabs, body.in-game .topbar, body.in-game .wallet { visibility: hidden; }
+.game-layer { position: absolute; inset: 0; z-index: 25; display: flex; flex-direction: column; padding: calc(var(--safe-top) + 8px) 8px calc(var(--safe-bottom) + 10px);
+  background: linear-gradient(180deg, rgba(22,10,40,.35), rgba(22,10,40,.15) 40%, rgba(22,10,40,.55)), var(--i-backgrounds-mg-shelf, #2A1840) center / cover no-repeat; }
+.game-head { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: solid 16px; border-image: var(--i-hud-card) 46 fill / 16px stretch; color: #FFF; }
+.game-head .game-x { position: static; flex: none; width: 40px; height: 40px; }
+.game-stat { flex: none; text-align: center; min-width: 52px; }
+.game-stat small, .game-goal small { display: block; font-size: 11px; color: #E8DCFF; }
+.game-stat b { font-size: 26px; color: #FFE48A; text-shadow: 0 2px 0 #3A1050; }
+.game-stat b.low { color: #FF7A7A; animation: start-pulse .8s ease-in-out infinite; }
+.game-goal { flex: 1; min-width: 0; text-align: center; }
+.game-goal b { font-size: 20px; color: #FFF; }
+.game-bar { position: relative; height: 14px; margin: 2px 6px 4px; border-radius: 8px; background: #2A1640; box-shadow: inset 0 2px 0 rgba(0,0,0,.4); border: 1.5px solid #6A3A1E; }
+.game-bar > i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 8px; background: linear-gradient(180deg, #FFE38A, #F2A23A); transition: width .3s; }
+.gstar { position: absolute; top: 50%; transform: translate(-50%, -52%); font-size: 18px; color: #6A5480; text-shadow: 0 1px 0 #2A1040; }
+.gstar.on { color: #FFD24A; text-shadow: 0 0 6px rgba(255,210,80,.9), 0 1px 0 #6A3A1E; }
+.game-host { flex: none; width: 52px; height: 52px; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 50% 35%, #6A4A9A, #2A1840); border: 2px solid #E8B04A; }
+.game-host-pic { width: 130%; height: auto; margin: 4% 0 0 -15%; max-width: none; }
+.game-board { flex: 1; min-height: 0; position: relative; margin-top: 8px; }
+.game-cv { position: absolute; inset: 0; touch-action: none; }
+.game-result { text-align: center; }
+.res-stars span { font-size: 46px; color: #5A4470; margin: 0 4px; text-shadow: 0 3px 0 #2A1040; }
+.res-stars span.on { color: #FFD24A; text-shadow: 0 0 12px rgba(255,210,80,.9), 0 3px 0 #6A3A1E; }
+.res-score small { display: block; color: #FFE48A; font-weight: 900; }
+.res-score b { font-size: 34px; color: #FFF; }
+.game-result .reward-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 10px 0; }
+body.in-game .modal-wrap { z-index: 30; }

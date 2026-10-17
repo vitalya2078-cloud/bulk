@@ -201,7 +201,7 @@
 
     const onMain = UI.screen() === 'main';
     // пока открыта заставка загрузки, гости не приходят и пузыри не летят
-    const paused = UI.isModalOpen() || !onMain || !!document.getElementById('boot');
+    const paused = UI.isModalOpen() || !onMain || !!document.getElementById('boot') || (typeof Games !== 'undefined' && Games.active());
     Visitors.update(dt, paused);
     Pets.tick(dt, onMain);
     Events.update(dt, paused);

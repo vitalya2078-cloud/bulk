@@ -1217,6 +1217,7 @@ const UI = (() => {
     $('btn-rune').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Daily.openRune(); });
     $('brew-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Brew.open(); });
     $('pets-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Pets.open(); });
+    $('games-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Games.open(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current && current.closable !== false) closeModal(); });
   }
 
