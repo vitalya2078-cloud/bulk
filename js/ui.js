@@ -305,7 +305,7 @@ const UI = (() => {
       const bd = h('span', { class: 'badge', hidden: true });
       badges[id] = bd;
       nav.append(h('button', { class: 'tab', type: 'button', role: 'tab', 'data-go': id, onclick: () => { Sound.tap(); show(id); } },
-        h('span', { class: 'ti', 'aria-hidden': 'true' }, pic(t.img)), h('span', null, t.label), bd));
+        h('span', { class: 'ti', 'aria-hidden': 'true' }, pic(t.img), bd), h('span', null, t.label)));
     });
   }
 
@@ -321,6 +321,7 @@ const UI = (() => {
     $('speech').classList.remove('show');
     if (id === 'main') Cauldron.resize();
     rebuild(true);
+    if (id === 'shop' || id === 'tasks') updateBadges();
   }
 
   function rebuild(resetScroll) {
@@ -415,13 +416,33 @@ const UI = (() => {
     if (v) setText(b, v);
   }
 
+  // значок гаснет, когда игрок заглянул во вкладку, и загорается снова только на новое:
+  // лавка - карточка (с уровнем), которую стало можно купить; задания - награда сверх уже виденных
+  const SEEN_KEY = 'bulk_seen_tabs';
+  let seen = { shop: [], tasks: 0 };
+  try { const v = JSON.parse(localStorage.getItem(SEEN_KEY) || 'null'); if (v && Array.isArray(v.shop)) seen = { shop: v.shop, tasks: +v.tasks || 0 }; } catch (e) { /* ignore */ }
+  const saveSeen = () => { try { localStorage.setItem(SEEN_KEY, JSON.stringify(seen)); } catch (e) { /* ignore */ } };
+  let badgeNow = { shop: [], tasks: 0 };
+
+  function markSeen(id) {
+    if (id === 'shop' && seen.shop.join() !== badgeNow.shop.join()) seen.shop = badgeNow.shop.slice();
+    else if (id === 'tasks' && seen.tasks !== badgeNow.tasks) seen.tasks = badgeNow.tasks;
+    else return;
+    saveSeen();
+  }
+
   function updateBadges() {
     const s = S();
-    let affordable = 0;
-    D.cards.forEach((c) => { if (!Econ.cardLock(c) && Econ.level(c.id) < C.cardMaxLevel && Econ.cardCost(c, Econ.level(c.id)) <= s.e) affordable++; });
-    setBadge('shop', affordable);
+    const buy = [];
+    D.cards.forEach((c) => { const l = Econ.level(c.id); if (!Econ.cardLock(c) && l < C.cardMaxLevel && Econ.cardCost(c, l) <= s.e) buy.push(c.id + ':' + l); });
     const daily = Econ.dailyState().available ? 1 : 0;
-    setBadge('tasks', Econ.claimableQuests() + daily + Story.readyList().length + Requests.readyCount() + (typeof Guide !== 'undefined' && Guide.ready() ? 1 : 0));
+    const tasks = Econ.claimableQuests() + daily + Story.readyList().length + Requests.readyCount() + (typeof Guide !== 'undefined' && Guide.ready() ? 1 : 0);
+    badgeNow = { shop: buy, tasks };
+    if (screen === 'shop' || screen === 'tasks') markSeen(screen);
+    // забрал награду - счёт виденного уменьшается, чтобы следующая новая снова зажгла значок
+    if (seen.tasks > tasks) { seen.tasks = tasks; saveSeen(); }
+    setBadge('shop', buy.filter((k) => !seen.shop.includes(k)).length);
+    setBadge('tasks', Math.max(0, tasks - seen.tasks));
     setBadge('main', screen !== 'main' && Visitors.active() ? '!' : 0);
   }
 
