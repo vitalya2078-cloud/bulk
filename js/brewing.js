@@ -466,7 +466,7 @@ const Brew = (() => {
     const body = h('div', { class: 'brew' });
     const draw = () => UI.keepSeg(body, () => drawInner(body, draw));
     draw();
-    UI.modal({ sheet: true, title: '', body, onClose: refreshButton,
+    UI.modal({ sheet: true, title: '', body, cls: 'brew-modal', onClose: refreshButton,
       onOpen: (box) => box.classList.add('fixed-h') });
   }
 
@@ -476,7 +476,7 @@ const Brew = (() => {
     const top = h('div', { class: 'sheet-top' });
     body.append(top);
     top.append(h('div', { class: 'brew-head' }, pic('ui/potion_bag', 'brew-head-ico'),
-      h('div', { class: 'brew-head-text' }, h('b', null, 'Зельеварня'), h('small', null, 'Сумка: ' + bagCount() + ' / ' + B.bagMax), h('small', null, 'Рецептов: ' + s.book.length + ' из ' + D.recipeList.length)),
+      h('div', { class: 'brew-head-text' }, h('b', null, 'Зельеварня'), h('small', null, 'Сумка ' + bagCount() + '/' + B.bagMax + ' · Рецепты ' + s.book.length + '/' + D.recipeList.length)),
       h('div', { class: 'ev-candy' }, pic('ui/crystal', 'cr-ico'), h('b', null, s.cr))));
     const tabs = [['brew', 'Варить'], ['bag', 'Сумка'], ['book', 'Книга'], ['shop', 'Торговка']];
     top.append(h('div', { class: 'seg' }, tabs.map(([id, l]) => {
@@ -524,9 +524,12 @@ const Brew = (() => {
       b.addEventListener('click', () => { if (!id) return; slots.splice(i, 1); Sound.tap(); redraw(); });
       return b;
     }));
-    body.append(slotRow);
-    body.append(h('p', { class: 'small center brew-preview' },
-      slots.length < 3 ? 'Выбери ' + (3 - slots.length) + ' ' + Fmt.plural(3 - slots.length, ['ингредиент', 'ингредиента', 'ингредиентов']) + ' ниже или возьми рецепт из книги.'
+    const bench = h('div', { class: 'brew-bench' });
+    body.append(bench);
+    const row = h('div', { class: 'brew-row' }, slotRow);
+    bench.append(row);
+    bench.append(h('p', { class: 'small center brew-preview' },
+      slots.length < 3 ? 'Выбери ещё ' + (3 - slots.length) + ' ' + Fmt.plural(3 - slots.length, ['ингредиент', 'ингредиента', 'ингредиентов']) + ' или возьми рецепт из книги'
         : willGet ? 'Получится: ' + willGet.name : 'Такого рецепта ты ещё не знаешь. Рискнём?'));
     const go = h('button', { class: 'btn brew-go', type: 'button', disabled: slots.length < 3 }, pic('ui/mortar', 'btn-ico'), 'Сварить');
     go.addEventListener('click', () => {
@@ -542,7 +545,7 @@ const Brew = (() => {
       UI.refresh();
       refreshButton();
     });
-    body.append(go);
+    row.append(go);
 
     // ингредиенты
     const have = D.ingr.filter((x) => count(x.id) > 0);
@@ -682,8 +685,11 @@ const Brew = (() => {
   }
 
   // фишки действующих зелий на экране котла
+  // коротко для плашки на главном экране; полное описание - в окне эффектов
+  const SHORT = { power: 'Тап ×2', gold: 'Доход ×1,5', guest: 'Гости ×2', time: 'Копится +4 ч', bubbles: 'Пузыри ×3',
+    luck: 'Крит +10%', wisdom: 'Опыт ×2', dragon: 'Тап ×5', sleep: 'Сон ×2' };
   function chips() {
-    return activeList().map((a) => ({ img: a.p.img, label: a.p.desc.split(' ').slice(0, 3).join(' '), left: a.left, key: a.p.id }));
+    return activeList().map((a) => ({ img: a.p.img, label: SHORT[a.p.id] || a.p.desc, name: a.p.name, desc: a.p.desc, left: a.left, key: a.p.id }));
   }
 
   return { init, give, open, brew, drink, reward, onTap, onBubble, onReturn, refreshButton, chips, activeList, isActive, bagCount, count, nearest,

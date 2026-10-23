@@ -382,6 +382,13 @@ const UI = (() => {
     setText($('st-tap'), '+' + ess(Econ.tapValue()));
     setText($('st-hour'), '+' + ess(Econ.perHour()));
     setText($('st-hour-mini'), '+' + ess(Econ.perHour()));
+    const mul = Econ.incomeMul();
+    $('st-mul').hidden = !(mul > 1.001);
+    setText($('st-mul'), '×' + mulText(mul));
+    // длинная сумма не должна залезать под боковые кнопки
+    const bl = $('balance'), len = (bl.textContent || '').length;
+    bl.parentNode.classList.toggle('long', len > 7);
+    bl.parentNode.classList.toggle('xlong', len > 10);
     setText($('st-cap'), Econ.pantryHours() + ' ч');
     setText($('crystals'), s.cr);
     setText($('lvl-chip'), s.lvl);
@@ -417,23 +424,46 @@ const UI = (() => {
     setBadge('main', screen !== 'main' && Visitors.active() ? '!' : 0);
   }
 
+  // ×1,5 / ×2 / ×12
+  const mulText = (m) => (Math.round(m * 10) / 10).toString().replace('.', ',');
+  // короткое время для плашки: «1:59» до часа, дальше «2 ч»
+  const shortLeft = (sec) => (sec < 0 ? '∞' : sec >= 3600 ? Math.floor(sec / 3600) + ' ч' : Fmt.clock(sec));
+  // всё, что сейчас действует: эффекты, выпитые зелья, бонус лавки, бонус ковена
+  function activeFx() {
+    const out = [];
+    Econ.activeEffects().forEach((e) => out.push({ key: 'e' + e.key, img: e.def.img, label: e.def.income ? 'Доход ×' + e.def.income : 'Тап ×' + e.def.tap,
+      name: e.def.name, desc: e.def.income ? 'Доход в час ×' + e.def.income : 'Сила тапа ×' + e.def.tap, left: e.left }));
+    if (typeof Brew !== 'undefined') Brew.chips().forEach((p) => out.push({ key: 'p' + p.key, img: p.img, label: p.label, name: p.name, desc: p.desc, left: p.left }));
+    const g = Econ.globalMul();
+    if (g > 1) {
+      const b = (typeof Online !== 'undefined' && Online.boost) ? Online.boost() : null;
+      out.push({ key: 'g', img: 'ui/sparkle', label: 'Лавка ×' + mulText(g), name: 'Бонус лавки' + (b && b.label ? ': ' + b.label : ''), desc: 'Весь доход ×' + mulText(g) + ' для всех игроков',
+        left: b && b.until ? (Date.parse(b.until) - Date.now()) / 1000 : -1 });
+    }
+    const cm = Econ.covenMul();
+    if (cm > 1.001) out.push({ key: 'c', img: 'ui/coven', label: 'Ковен +' + Math.round((cm - 1) * 100) + '%', name: 'Бонус ковена', desc: 'Доход +' + Math.round((cm - 1) * 100) + '% за уровень ковена', left: -1 });
+    return out;
+  }
+  function fxInfo() {
+    const list = activeFx();
+    if (!list.length) return;
+    modal({ title: 'Что сейчас действует', body: h('div', null,
+      list.map((x) => h('div', { class: 'income-row' }, pic(x.img), h('span', null, h('b', null, x.name), h('small', null, x.desc)), h('b', null, x.left < 0 ? 'пока действует' : Fmt.clock(x.left)))),
+      Econ.incomeMul() > 1.001 ? h('p', { class: 'small center' }, 'Вместе доход в час ×' + mulText(Econ.incomeMul()) + '.') : null),
+      actions: [{ label: 'Понятно', alt: true }] });
+  }
   let fxKey = '';
+  const FX_MAX = 3;
   function updateEffects() {
-    const list = Econ.activeEffects();
-    const pots = typeof Brew !== 'undefined' ? Brew.chips() : [];
-    const k = list.map((e) => e.key + Math.ceil(e.left)).join('|') + '#' + pots.map((p) => p.key + Math.ceil(p.left)).join('|');
+    const list = activeFx();
+    const k = list.map((x) => x.key + shortLeft(x.left)).join('|');
     if (k === fxKey) return;
     fxKey = k;
     const box = $('effects');
-    box.innerHTML = '';
-    list.forEach((e) => {
-      const what = e.def.income ? '×' + e.def.income + ' доход' : '×' + e.def.tap + ' тап';
-      box.append(h('div', { class: 'chip', title: e.def.name }, pic(e.def.img, 'chip-ico'), h('b', null, what), Fmt.clock(e.left)));
-    });
-    // выпитые зелья
-    pots.forEach((p) => {
-      box.append(h('div', { class: 'chip pot' }, pic(p.img, 'chip-ico'), h('b', null, p.label), p.left < 0 ? 'до возвращения' : Fmt.clock(p.left)));
-    });
+    const shown = list.length > FX_MAX + 1 ? list.slice(0, FX_MAX) : list;
+    box.replaceChildren(...shown.map((x) => h('button', { class: 'chip', type: 'button', title: x.name, onclick: () => { Sound.tap(); fxInfo(); } },
+      pic(x.img, 'chip-ico'), h('b', null, x.label), h('span', null, shortLeft(x.left)))),
+    list.length > shown.length ? h('button', { class: 'chip more', type: 'button', onclick: () => { Sound.tap(); fxInfo(); } }, h('b', null, '+' + (list.length - shown.length))) : '');
   }
 
   function updateDailyRow() {

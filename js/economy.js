@@ -274,7 +274,10 @@ const Econ = (() => {
   // бонус ковена: +2% за каждый уровень ковена
   let cmul = 1;
   const setCovenMul = (m) => { cmul = m >= 1 && m <= 2 ? m : 1; };
-  const perHour = () => derive().perHour * fxMul('income') * (potion('gold') ? 1.5 : 1) * gmul * cmul;
+  // всё, что сейчас умножает доход в час (эффекты, золотое зелье, бонус лавки, ковен)
+  const incomeMul = () => fxMul('income') * (potion('gold') ? 1.5 : 1) * gmul * cmul;
+  const covenMul = () => cmul;
+  const perHour = () => derive().perHour * incomeMul();
   const tapValue = () => ((1 + s.scoop + rank() + sk('t1')) * Math.pow(1.25, sk('t5')) + derive().perHour * (C.tapIncomeShare + 0.0001 * sk('t3'))) * fxMul('tap')
     * (potion('power') ? 2 : 1) * (potion('dragon') ? 5 : 1) * (1 + petB('tap')) * gmul * cmul;
   const hoursOfIncome = (h, min) => Math.max(min || 0, basePerHour() * h);
@@ -622,7 +625,7 @@ const Econ = (() => {
     orderReward, serveVisitor, storiesUnlocked, friendLevel, friendProgress, visitorGift, bestFriends,
     itemState, buyItem, equip, liquidColor, potColorValue, setCauldronName,
     avatarOwned, buyAvatar, setAvatar, setName, titlesUnlocked, setTitle, titleName,
-    countDay, statTick, addCrystals: (n) => { s.cr += n; }, setGlobalMul, globalMul, setCovenMul,
+    countDay, statTick, addCrystals: (n) => { s.cr += n; }, setGlobalMul, globalMul, setCovenMul, covenMul, incomeMul,
     findVisitor, storyAtOf, grant, today,
     skill: sk, skillSpent, skillPoints, xpToNext, addXp, learnSkill, resetSkills, recipeAttempts,
     wasCrit: () => lastCrit, potion,

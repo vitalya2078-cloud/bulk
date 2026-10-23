@@ -372,5 +372,7 @@ const Online = (() => {
 
   const call = (fn, body, ms) => rpc(fn, Object.assign({ init_data: initData() }, body || {}), ms);
 
-  return { call, start, openMail, admCode, notifyPush, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid };
+  const boost = () => (state.settings && state.settings.boost) || null;
+
+  return { boost, call, start, openMail, admCode, notifyPush, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid };
 })();

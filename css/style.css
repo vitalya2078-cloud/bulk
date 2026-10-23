@@ -2087,3 +2087,52 @@ body.in-game .modal-wrap { z-index: 30; }
 .top-emb { border: 0; background: none; overflow: visible; display: grid; place-items: center; }
 .top-name .top-sub { display: block; color: var(--muted); font-size: 11px; font-weight: 700; }
 .tops .top-seg .seg-btn { font-size: 11.5px; padding: 6px 2px; }
+
+/* ---------- 0.20.3: главный экран - множитель дохода и эффекты под доходом ----------
+   Раньше плашки эффектов стояли столбиком слева и уходили под кнопки «Топ» / «Ковен» / «Почта».
+   Теперь они в свободной середине под доходом, компактные; полный список - по нажатию. */
+.per-hour .mul { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 9px; background: linear-gradient(180deg, #FFE9A8, #F2A23A);
+  color: #3A1F00; font-style: normal; font-weight: 900; line-height: 18px; text-shadow: none; box-shadow: 0 1px 0 #2A1640; }
+.balance-btn .balance.long { font-size: 30px; }
+.balance-btn .balance.xlong { font-size: 25px; }
+.balance-btn .balance.long .flask { width: 32px; height: 32px; }
+.wallet .effects { position: static; display: flex; flex-flow: row wrap; justify-content: center; align-items: center; gap: 4px; margin: 4px 0 0; }
+.wallet .effects:empty { display: none; }
+.wallet .effects .chip { display: inline-flex; align-items: center; gap: 4px; min-height: 26px; margin: 0; padding: 2px 8px 2px 3px;
+  border: 1px solid rgba(255, 211, 107, .6); border-image: none; border-radius: 13px; background: rgba(36, 22, 58, .85);
+  box-shadow: 0 2px 0 rgba(10, 4, 20, .45); color: #FFE7A3; font: 800 11px var(--body), system-ui, sans-serif; white-space: nowrap; cursor: pointer; }
+.wallet .effects .chip .chip-ico { width: 20px; height: 20px; margin: 0; }
+.wallet .effects .chip b { color: #FFE7A3; font-weight: 900; }
+.wallet .effects .chip span { color: #F3E8FF; font-variant-numeric: tabular-nums; }
+.wallet .effects .chip.more { padding: 2px 9px; }
+.wallet .effects .chip:active { transform: scale(.95); }
+/* сообщение-табличка больше не закрывает доход и эффекты: висит внизу, над прилавком */
+body:not(.has-modal) #toast { top: auto; bottom: calc(var(--safe-bottom) + 156px); }
+body:not(.has-modal) #toast::before, body:not(.has-modal) #toast::after { display: none; }
+
+/* ---------- 0.20.3: зельеварня - ингредиенты видно сразу ----------
+   Ячейки котла и «Сварить» - одна строка, прилипает к верху; сетка ингредиентов сразу под ней.
+   Все четыре вкладки помещаются в строку. */
+.brew-modal .sheet-top .seg-btn { flex: 1 1 0; min-width: 0; padding-left: 2px; padding-right: 2px; font-size: 13px; }
+.brew-modal .brew-head { min-height: 0; }
+.brew-modal .brew-head-ico { width: 38px; height: 38px; }
+.brew-bench { position: sticky; top: 0; z-index: 2; margin: 0 -8px 4px; padding: 6px 8px 4px; background: var(--plum); box-shadow: 0 8px 10px -8px rgba(10, 4, 20, .7); }
+.brew-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.brew-bench .brew-slots { margin: 0; gap: 6px; }
+.brew-bench .brew-slot { width: 60px; height: 60px; padding: 6px; }
+.brew-bench .brew-go { flex: 1; min-width: 0; max-width: 150px; margin: 0; padding: 0 8px; min-height: 52px; font-size: 16px; }
+.brew-bench .brew-go .btn-ico { width: 24px; height: 24px; }
+.brew-bench .brew-preview { min-height: 0; margin: 4px 0 0; }
+.brew-bench { margin: 0 -4px 4px; border-radius: 14px; background: rgba(36, 22, 58, .96); }
+.brew-bench .brew-go .btn-ico { display: none; }
+.brew-bench .brew-go { white-space: nowrap; }
+.brew .ing-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+.brew .ing { min-width: 0; }
+.brew .ing { border-width: 8px; border-image-width: 8px; padding: 2px 0 1px; }
+.brew .ing .pic { width: 38px; height: 38px; }
+.brew .ing-name { max-width: 100%; font-size: 10.5px; letter-spacing: -.2px; overflow-wrap: normal; word-break: normal; hyphens: manual; }
+.brew .ing-n { top: 0; right: 2px; }
+/* прилипшая строка котла не должна просвечивать: у зельеварни затухание только снизу */
+.brew.fade-edges { -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - var(--fb, 0px)), transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - var(--fb, 0px)), transparent 100%); }
+.brew-bench { top: -10px; padding-top: 14px; background: #24163A; }
