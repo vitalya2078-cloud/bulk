@@ -43,7 +43,7 @@
     window.open(u, '_blank');
   }
   let ME = { id: 0, role: null, perms: [] };
-  const ADM_V = '0.19';
+  const ADM_V = '0.23';
   const can = (p) => ME.perms.includes(p);
 
   // ---------- значки ----------
@@ -64,7 +64,13 @@
     bolt: 'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
     plus: 'M12 5v14M5 12h14',
     send: 'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
-    help: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01'
+    help: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01',
+    chev: 'M9 6l6 6-6 6',
+    flag: 'M4 22V4M4 4h13l-2 4 2 4H4',
+    eye: 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+    lock: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4',
+    megaphone: 'M3 11v2a1 1 0 0 0 1 1h3l6 5V5L7 10H4a1 1 0 0 0-1 1zM17 8a5 5 0 0 1 0 8',
+    sword: 'M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2'
   };
   function icon(name, cls) {
     const NS = 'http://www.w3.org/2000/svg';
@@ -124,7 +130,7 @@
   const avatarSrc = (p) => /^[a-z]\d\d$/.test(p || '') ? AVA(p) : /^https:\/\//.test(p || '') ? p : AVA('a01');
   const word = (n, a, b, c) => { n = Math.abs(n) % 100; const d = n % 10; return n > 10 && n < 20 ? c : d === 1 ? a : d >= 2 && d <= 4 ? b : c; };
   const ava = (photo, on, lg) => h('span', { class: 'ava' + (lg ? ' lg' : ''), style: { backgroundImage: 'url("' + avatarSrc(photo) + '")' } }, on ? h('i', { class: 'on' }) : null);
-  const sec = (title, right) => h('div', { class: 'sec' }, h('span', null, title), right ? h('span', { class: 'r' }, right) : null);
+  const sec = (title, right) => h('h2', { class: 'h sec' }, h('span', null, title), right ? h('span', { class: 'r' }, right) : null);
   const kv = (k, v) => h('div', { class: 'kv' }, h('span', null, k), h('b', null, v));
   const field = (label, input) => h('label', { class: 'field' }, h('span', null, label), input);
   const roleTag = (r) => r ? h('span', { class: 'tag ' + (ROLE_TAG[r] || '') }, ROLES[r] || r) : null;
@@ -195,9 +201,9 @@
     if (!tgData) return;
     try {
       tg.ready(); tg.expand();
-      if (tg.setHeaderColor) tg.setHeaderColor('#08090C');
-      if (tg.setBackgroundColor) tg.setBackgroundColor('#08090C');
-      if (tg.setBottomBarColor) tg.setBottomBarColor('#08090C');
+      if (tg.setHeaderColor) tg.setHeaderColor('#141B2D');
+      if (tg.setBackgroundColor) tg.setBackgroundColor('#141B2D');
+      if (tg.setBottomBarColor) tg.setBottomBarColor('#141B2D');
       if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
       const safe = () => {
         const s = tg.safeAreaInset || {}, c = tg.contentSafeAreaInset || {};
@@ -215,48 +221,62 @@
     const d = document.querySelector('.dlg');
     if (d) { d.dispatchEvent(new MouseEvent('click', { bubbles: true })); return true; }
     if (sheetEl) { closeSheet(); return true; }
-    if (tab !== 'home' && $('app').querySelector('.nav')) { const b = $('app').querySelector('.nav button[data-t="home"]'); if (b) { b.click(); return true; } }
+    if (tab !== 'home' && navEl) { goTo('home'); return true; }
     return false;
   };
 
-  // ---------- каркас ----------
+  // ---------- каркас: 4 вкладки, внутри - разделы; поиск игрока из шапки ----------
   const ALL_TABS = [
-    { id: 'home', label: 'Обзор', icon: 'pulse', ok: () => true },
-    { id: 'players', label: 'Игроки', icon: 'users', ok: () => true },
-    { id: 'support', label: 'Помощь', icon: 'help', ok: () => can('mail') },
-    { id: 'mail', label: 'Почта', icon: 'mail', ok: () => can('mail') || can('mail_all') },
-    { id: 'shop', label: 'Лавка', icon: 'sliders', ok: () => can('settings') || can('maint') },
-    { id: 'team', label: 'Команда', icon: 'shield', ok: () => true }
+    { id: 'home', label: 'Пульт', icon: 'pulse', subs: [] },
+    { id: 'players', label: 'Игроки', icon: 'users', subs: [['players', 'Игроки', () => true], ['covens', 'Ковены', () => true], ['sus', 'Проверка', () => can('ban')]] },
+    { id: 'talk', label: 'Связь', icon: 'mail', subs: [['support', 'Поддержка', () => can('mail')], ['reports', 'Жалобы', () => can('ban')], ['mail', 'Почта', () => can('mail') || can('mail_all')]] },
+    { id: 'game', label: 'Игра', icon: 'sliders', subs: [['live', 'Настройки', () => can('settings') || can('maint')], ['team', 'Команда', () => true]] }
   ];
   let TABS = [];
   let tab = 'home';
-  try { tab = sessionStorage.getItem('adm_tab') || 'home'; } catch (e) { /* ignore */ }
-  let body, refreshBtn;
-
+  const SUB = { players: 'players', talk: 'support', game: 'live' };
+  try { const v = JSON.parse(sessionStorage.getItem('adm_nav') || 'null'); if (v) { tab = v.tab || 'home'; Object.assign(SUB, v.sub || {}); } } catch (e) { /* ignore */ }
+  let body, refreshBtn, subBar, navEl;
+  const subsOf = (t) => (ALL_TABS.find((x) => x.id === t) || { subs: [] }).subs.filter((x) => x[2]());
+  const saveNav = () => { try { sessionStorage.setItem('adm_nav', JSON.stringify({ tab, sub: SUB })); } catch (e) { /* ignore */ } };
+  // перейти в раздел: с пульта, из карточек, кнопкой «Назад»
+  function goTo(t, sub) {
+    if (!TABS.some((x) => x.id === t)) return;
+    if (sub && subsOf(t).some((x) => x[0] === sub)) SUB[t] = sub;
+    tab = t; saveNav();
+    navEl.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.t === tab));
+    drawSub(); window.scrollTo(0, 0); render();
+  }
+  function drawSub() {
+    const subs = subsOf(tab);
+    if (subs.length && !subs.some((x) => x[0] === SUB[tab])) SUB[tab] = subs[0][0];
+    subBar.hidden = subs.length < 2;
+    subBar.replaceChildren(...subs.map(([v, l]) => h('button', { class: v === SUB[tab] ? 'on' : '', onclick: () => {
+      if (SUB[tab] === v) return; SUB[tab] = v; saveNav(); haptic(); drawSub(); window.scrollTo(0, 0); render();
+    } }, l)));
+  }
   function shell() {
-    TABS = ALL_TABS.filter((t) => t.ok());
+    TABS = ALL_TABS.filter((t) => !t.subs.length || subsOf(t.id).length);
     if (!TABS.some((t) => t.id === tab)) tab = 'home';
     refreshBtn = h('button', { class: 'ib', 'aria-label': 'Обновить', onclick: () => { haptic(); render(); } }, icon('refresh'));
     body = h('main');
-    const nav = h('div', { class: 'nav-in' }, TABS.map((t) => h('button', {
+    subBar = h('div', { class: 'subbar' });
+    navEl = h('div', { class: 'nav-in' }, TABS.map((t) => h('button', {
       class: t.id === tab ? 'on' : '', 'data-t': t.id,
-      onclick: () => {
-        if (tab === t.id) return;
-        haptic(); tab = t.id;
-        try { sessionStorage.setItem('adm_tab', tab); } catch (e) { /* ignore */ }
-        nav.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.t === tab));
-        window.scrollTo(0, 0); render();
-      }
-    }, icon(t.icon), t.label)));
+      onclick: () => { if (tab === t.id) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; } haptic(); goTo(t.id); }
+    }, h('span', { class: 'ni' }, icon(t.icon)), h('span', null, t.label))));
     $('app').replaceChildren(
-      h('div', { class: 'top' }, h('div', { class: 'top-in' },
+      h('header', { class: 'top' }, h('div', { class: 'top-in' },
         h('div', { class: 'mark' }, glyph()),
-        h('div', { class: 'title' }, h('b', null, 'Бульк · Админ'), h('small', null, (ROLES[ME.role] || '') + (ME.name ? ' · ' + ME.name : tgUser ? ' · ' + (tgUser.username ? '@' + tgUser.username : tgUser.first_name) : ''))),
+        h('div', { class: 'title' }, h('b', null, 'Пульт лавки'), h('small', null, (ROLES[ME.role] || '') + (ME.name ? ', ' + ME.name : tgUser ? ', ' + (tgUser.username ? '@' + tgUser.username : tgUser.first_name) : ''))),
+        h('button', { class: 'ib', 'aria-label': 'Найти игрока', onclick: () => { haptic(); openSearch(); } }, icon('search')),
         refreshBtn,
-        tokenMode() ? null : h('button', { class: 'ib', 'aria-label': 'В игру', onclick: () => { location.href = '../' + (vkData ? location.search : ''); } }, icon('play')))),
+        tokenMode() ? null : h('button', { class: 'ib', 'aria-label': 'В игру', onclick: () => { location.href = '../' + (vkData ? location.search : ''); } }, icon('play'))),
+        subBar),
       ptr,
       body,
-      h('div', { class: 'nav' }, nav));
+      h('nav', { class: 'nav' }, navEl));
+    drawSub();
   }
   const skeleton = (n) => h('div', { class: 'panel list' }, Array.from({ length: n || 4 }, () => h('div', { class: 'skel' })));
   let renderId = 0;
@@ -264,12 +284,11 @@
     const id = ++renderId;
     refreshBtn.classList.add('spin');
     try {
+      const sub = SUB[tab];
       if (tab === 'home') await renderHome(id);
-      else if (tab === 'players') await renderPlayers(id);
-      else if (tab === 'support') await renderSupport(id);
-      else if (tab === 'mail') await renderMail(id);
-      else if (tab === 'shop') await renderShop(id);
-      else if (tab === 'team') await renderTeam(id);
+      else if (tab === 'players') await (sub === 'covens' ? renderCovens(id) : sub === 'sus' ? renderSus(id) : renderPlayers(id));
+      else if (tab === 'talk') await (sub === 'reports' ? renderReports(id) : sub === 'mail' ? renderMail(id) : renderSupport(id));
+      else if (tab === 'game') await (sub === 'team' ? renderTeam(id) : renderShop(id));
     } finally { if (id === renderId) refreshBtn.classList.remove('spin'); }
   }
   const stale = (id) => id !== renderId;
@@ -284,7 +303,7 @@
     try { r = await api('adm_support_list', { p_status: supFilter }); } catch (e) { if (!stale(id)) body.replaceChildren(failBox(e)); return; }
     if (stale(id)) return;
     const c = r.counts || {};
-    const seg = h('div', { class: 'seg' }, Object.keys(SUP_ST).map((k) => h('button', { class: k === supFilter ? 'on' : '',
+    const seg = h('div', { class: 'chips' }, Object.keys(SUP_ST).map((k) => h('button', { class: 'chip' + (k === supFilter ? ' on' : ''),
       onclick: () => { if (supFilter === k) return; supFilter = k; haptic(); render(); } }, SUP_ST[k] + (k !== 'all' && c[k] ? ' ' + c[k] : ''))));
     const rows = r.rows || [];
     body.replaceChildren(sec('Обращения', c.open ? c.open + ' ждут' : ''), seg, h('div', { style: { height: '10px' } }),
@@ -302,7 +321,7 @@
     const inner = h('main', null, h('div', { style: { height: '14px' } }), skeleton(4));
     sheetEl = h('div', { class: 'sheet' },
       h('div', { class: 'top' }, h('div', { class: 'top-in' },
-        h('button', { class: 'ib', 'aria-label': 'Назад', onclick: () => { closeSheet(); if (tab === 'support') render(); } }, icon('back')),
+        h('button', { class: 'ib', 'aria-label': 'Назад', onclick: () => { closeSheet(); if (tab === 'talk' && SUB.talk === 'support') render(); } }, icon('back')),
         h('div', { class: 'title' }, h('b', null, 'Обращение №' + tid), h('small', null, 'Поддержка')),
         h('button', { class: 'ib', 'aria-label': 'Обновить', onclick: () => openTicket(tid) }, icon('refresh')))),
       inner);
@@ -338,72 +357,160 @@
     requestAnimationFrame(() => { const last = msgs.lastElementChild; if (last) last.scrollIntoView({ block: 'nearest' }); });
   }
 
-  // ---------- обзор ----------
-  const pct = (a, b) => b ? Math.round(100 * a / b) : 0;
-  let gradN = 0;
-  // кольцо-индикатор: доля в процентах, градиентная дуга
-  function ring(v, label, sub, g) {
+  // ---------- пульт ----------
+  const pct = (a, b) => b ? Math.round(100 * a / b) : null;
+  const left = (iso) => { const m = Math.max(0, (Date.parse(iso) - Date.now()) / 60000); return m < 60 ? Math.round(m) + ' мин' : m < 2880 ? Math.round(m / 60) + ' ч' : Math.round(m / 1440) + ' дн'; };
+  const quiet = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+  // колба: доля в процентах - уровень эликсира; наливается один раз при открытии пульта
+  let vialN = 0;
+  function vial(v, label, tone) {
     const NS = 'http://www.w3.org/2000/svg';
-    const id = 'rg' + (++gradN), R = 30, L = 2 * Math.PI * R, f = Math.max(0, Math.min(100, v || 0)) / 100;
+    const id = 'vc' + (++vialN), f = v == null ? 0 : Math.max(0, Math.min(100, v)) / 100;
+    const top = 80 - 54 * f;
     const svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('viewBox', '0 0 76 76');
-    svg.innerHTML = '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + g[0] + '"/><stop offset="1" stop-color="' + g[1] + '"/></linearGradient></defs>' +
-      '<circle cx="38" cy="38" r="' + R + '" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="7"/>' +
-      '<circle class="arc" cx="38" cy="38" r="' + R + '" fill="none" stroke="url(#' + id + ')" stroke-width="7" stroke-linecap="round" transform="rotate(-90 38 38)" ' +
-      'stroke-dasharray="' + (L * f).toFixed(1) + ' ' + L.toFixed(1) + '" opacity="' + (f ? 1 : 0) + '" style="filter: drop-shadow(0 0 5px ' + g[1] + '88)"/>';
-    return h('div', { class: 'ring' }, h('div', { class: 'ring-c' }, svg, h('b', { class: 'mono' }, v == null ? '-' : v + '%')), h('span', null, label), sub ? h('small', null, sub) : null);
+    svg.setAttribute('viewBox', '0 0 60 86');
+    svg.setAttribute('class', 'vial-svg');
+    const flask = 'M23 5h14v20c10 4 17 13 17 25 0 17-11 31-24 31S6 67 6 50c0-12 7-21 17-25z';
+    svg.innerHTML = '<defs><clipPath id="' + id + '"><path d="' + flask + '"/></clipPath></defs>' +
+      '<g clip-path="url(#' + id + ')"><rect class="liq" x="0" width="60" height="90" y="' + top.toFixed(1) + '">' +
+      (quiet() ? '' : '<animate attributeName="y" from="86" to="' + top.toFixed(1) + '" dur="1.2s" calcMode="spline" keyTimes="0;1" keySplines=".2 .8 .2 1"/>') + '</rect>' +
+      '<circle class="bub" cx="24" cy="70" r="2.2"/><circle class="bub" cx="35" cy="62" r="1.5"/><circle class="bub" cx="30" cy="74" r="1.2"/></g>' +
+      '<path class="glass" d="' + flask + '"/><path class="shine" d="M16 44c-2 4-2 10 0 15"/><rect class="cork" x="20.5" y="1" width="19" height="6" rx="2"/>';
+    return h('div', { class: 'vial ' + tone }, svg, h('b', null, v == null ? 'нет' : v + '%'), h('span', null, label));
   }
+  function spark(days) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const W = 300, H = 46;
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.setAttribute('preserveAspectRatio', 'none'); svg.setAttribute('class', 'spark');
+    if (days.length < 2) return svg;
+    const max = Math.max(1, ...days.map((d) => d.act));
+    const pts = days.map((d, i) => [i * W / (days.length - 1), H - 4 - (H - 10) * d.act / max]);
+    const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('');
+    svg.innerHTML = '<path class="sp-area" d="' + line + 'L' + W + ' ' + H + 'L0 ' + H + 'Z"/><path class="sp-line" d="' + line + '" vector-effect="non-scaling-stroke"/>';
+    return svg;
+  }
+  const todo = (n, title, hint, tone, onclick) => h('button', { class: 'todo ' + tone, onclick: () => { haptic(); onclick(); } },
+    h('b', { class: 'todo-n' }, num(n)), h('span', { class: 'todo-t' }, h('b', null, title), hint ? h('small', null, hint) : null), icon('chev'));
+  const liveRow = (ic, name, state, on, tone) => h('button', { class: 'live-row' + (on ? ' on ' + (tone || '') : ''), onclick: () => { haptic(); goTo('game', 'live'); } },
+    h('span', { class: 'lr-ic' }, icon(ic)), h('span', { class: 'lr-n' }, name), h('span', { class: 'lr-s' }, state));
+
   async function renderHome(id) {
-    body.replaceChildren(sec('Сейчас'), h('div', { class: 'hero-card skel-card' }), skeleton(3));
-    let s;
-    try { s = await api('adm_stats'); } catch (e) { if (!stale(id)) body.replaceChildren(failBox(e)); return; }
+    body.replaceChildren(h('div', { class: 'pulse loading' }), skeleton(3));
+    const soft = (p) => p.catch(() => null);
+    const [s, sup, rep, sus, hl, st] = await Promise.all([
+      api('adm_stats').catch((e) => ({ __err: e })),
+      can('mail') ? soft(api('adm_support_list', { p_status: 'open' })) : null,
+      can('ban') ? soft(api('adm_reports')) : null,
+      can('ban') ? soft(api('adm_sus')) : null,
+      soft(api('adm_health')),
+      can('settings') || can('maint') ? soft(api('adm_settings')) : null]);
     if (stale(id)) return;
-    const k = (v, label, g) => h('div', { class: 'kpi kg' + (g || 1) }, h('b', null, v), h('span', null, label));
-    const total = s.total || 0;
+    if (s.__err) { body.replaceChildren(failBox(s.__err)); return; }
+    const total = s.total || 0, days = s.days || [];
     const vTotal = Object.values(s.versions || {}).reduce((a, b) => a + b, 0);
-    const days = s.days || [];
+    const out = [];
+
+    out.push(h('section', { class: 'pulse' },
+      h('div', { class: 'p-head' }, h('i', { class: 'live' }), 'в игре прямо сейчас', h('span', { class: 'p-time' }, new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }))),
+      h('div', { class: 'p-row' },
+        h('b', { class: 'p-num' }, num(s.online)),
+        h('div', { class: 'p-facts' },
+          h('span', null, h('b', null, num(s.dau)), ' заходили сегодня'),
+          h('span', null, h('b', null, '+' + num(s.new_today)), ' ' + word(s.new_today, 'новичок', 'новичка', 'новичков')),
+          h('span', null, h('b', null, num(total)), ' всего в лавке'))),
+      spark(days),
+      h('div', { class: 'vials' },
+        vial(s.ret1, 'вернулись на 2-й день', 'mint'),
+        vial(pct(s.wau, total), 'играли за неделю', 'amber'),
+        vial(pct(s.dau, s.mau), 'заходят каждый день', 'lilac'))));
+
+    // что ждёт команду
+    const items = [];
+    const openN = sup && sup.counts ? sup.counts.open || 0 : 0;
+    if (openN) items.push(todo(openN, word(openN, 'обращение ждёт ответа', 'обращения ждут ответа', 'обращений ждут ответа'), 'Игроки написали в поддержку', 'coral', () => goTo('talk', 'support')));
+    if (rep && rep.length) items.push(todo(rep.length, word(rep.length, 'жалоба', 'жалобы', 'жалоб') + ' на сообщения', 'Чаты ковенов', 'coral', () => goTo('talk', 'reports')));
+    if (sus && sus.length) items.push(todo(sus.length, word(sus.length, 'игрок', 'игрока', 'игроков') + ' на проверке', 'Слишком быстрый рост, пока вне топов', 'amber', () => goTo('players', 'sus')));
+    if (hl && hl.boot_fresh_old) items.push(todo(hl.boot_fresh_old, word(hl.boot_fresh_old, 'старый игрок начал', 'старых игрока начали', 'старых игроков начали') + ' с нуля', 'За 7 дней. Проверь их сохранения', 'coral', () => { const el = $('rel'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }));
+    if (st && st.maint && st.maint.on) items.push(todo('!', 'Игра закрыта на техработы', 'Игроки видят «Лавка на ремонте»', 'coral', () => goTo('game', 'live')));
+    out.push(h('h2', { class: 'h' }, 'Нужно внимание'),
+      items.length ? h('div', { class: 'todos' }, items) : h('div', { class: 'calm' }, h('b', null, 'Всё спокойно'), h('span', null, 'Новых обращений, жалоб и сбоев нет')));
+
+    // что сейчас включено в игре
+    if (st) {
+      const b = st.boost, bOn = b && +b.mult > 1 && Date.parse(b.until) > Date.now();
+      out.push(h('h2', { class: 'h' }, 'В игре сейчас'), h('div', { class: 'lives' },
+        can('settings') ? liveRow('bolt', 'Бонус дохода', bOn ? 'x' + String(b.mult).replace('.', ',') + ', ещё ' + left(b.until) : 'выключен', bOn, 'amber') : null,
+        can('settings') ? liveRow('megaphone', 'Объявление', st.announce ? 'висит с ' + date(new Date(+st.announce.id).toISOString()) : 'нет', !!st.announce, 'lilac') : null,
+        can('settings') ? liveRow('sword', 'Босс ковенов', st.boss_test && st.boss_test.on ? 'открыт и в будни' : 'по выходным', !!(st.boss_test && st.boss_test.on), 'lilac') : null,
+        can('maint') ? liveRow('lock', 'Техработы', st.maint && st.maint.on ? 'игра закрыта' : 'игра открыта', !!(st.maint && st.maint.on), 'coral') : null));
+    }
+
+    const acts = [];
+    if (can('mail_all')) acts.push(h('button', { class: 'qa', onclick: () => goTo('talk', 'mail') }, icon('send'), 'Письмо всем'));
+    if (can('settings')) acts.push(h('button', { class: 'qa', onclick: () => goTo('game', 'live') }, icon('bolt'), 'Бонус'));
+    acts.push(h('button', { class: 'qa', onclick: openSearch }, icon('search'), 'Найти игрока'));
+    out.push(h('div', { class: 'qas' }, acts));
+
+    // цифры подробно
+    const m = (v, l) => h('div', { class: 'm' }, h('b', null, v), h('span', null, l));
     const wk = days.slice(-7).reduce((a, d) => a + (d.new || 0), 0), wk0 = days.slice(-14, -7).reduce((a, d) => a + (d.new || 0), 0);
-    const trend = wk0 ? Math.round(100 * (wk - wk0) / wk0) : null;
-    body.replaceChildren(
-      sec('Сейчас', new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })),
-      h('div', { class: 'hero-card' },
-        h('div', { class: 'hc-top' },
-          h('div', null, h('span', { class: 'hc-l' }, h('i', { class: 'live' }), 'Онлайн сейчас'), h('b', { class: 'hc-n' }, num(s.online))),
-          h('div', { class: 'hc-side' },
-            h('div', null, h('b', null, num(s.dau)), h('span', null, 'сегодня')),
-            h('div', null, h('b', null, num(total)), h('span', null, 'всего')))),
-        h('div', { class: 'rings' },
-          ring(s.ret1, 'вернулись', 'на 2-й день', ['#22D3EE', '#7B61FF']),
-          ring(pct(s.wau, total), 'активны', 'за 7 дней', ['#C84BFF', '#FF6FB1']),
-          ring(pct(s.dau, s.mau), 'липкость', 'день / месяц', ['#34E0A1', '#B8F35A']))),
-      h('div', { class: 'kpis' },
-        k('+' + num(s.new_today), 'новых сегодня', 1),
-        k('+' + num(s.new_week), 'новых за неделю', 2),
-        k(num(s.mau), 'за 30 дней', 3),
-        k(num(s.refs), 'по приглашению', 4),
-        k(s.avg_sessions == null ? '-' : String(s.avg_sessions).replace('.', ','), 'заходов на игрока', 2),
-        k(s.avg_play_min == null ? '-' : num(s.avg_play_min) + 'м', 'в игре на игрока', 1),
-        k(num(s.wau), 'за 7 дней', 4),
-        k(num(s.banned), 'заблокировано', 5),
-        k(trend == null ? '-' : (trend > 0 ? '+' : '') + trend + '%', 'новых к прошлой неделе', trend != null && trend < 0 ? 5 : 3)),
-      sec('14 дней'),
-      h('div', { class: 'panel pad chart' }, chart(days),
+    out.push(h('h2', { class: 'h' }, 'Цифры'),
+      h('div', { class: 'card metrics' },
+        m('+' + num(s.new_week), 'новых за неделю' + (wk0 ? ' (' + (wk >= wk0 ? '+' : '') + Math.round(100 * (wk - wk0) / wk0) + '% к прошлой)' : '')),
+        m(num(s.wau), 'играли за 7 дней'), m(num(s.mau), 'играли за 30 дней'),
+        m(num(s.refs), 'пришли по приглашению'),
+        m(s.avg_sessions == null ? 'нет' : String(s.avg_sessions).replace('.', ','), 'заходов на игрока'),
+        m(s.avg_play_min == null ? 'нет' : num(s.avg_play_min) + ' мин', 'в игре на игрока'),
+        m(num(s.banned), 'заблокировано')),
+      h('h2', { class: 'h' }, 'Две недели'),
+      h('div', { class: 'card chart' }, chart(days),
         h('div', { class: 'legend' }, h('span', null, h('i', { class: 'lg-new' }), 'новые'), h('span', null, h('i', { class: 'lg-act' }), 'активные'))),
-      sec('Ранги лавок'),
-      h('div', { class: 'panel pad' }, bars(RANKS.map((n, i) => [n, (s.ranks || {})[i] || 0]), total)),
-      sec('Версии за неделю'),
-      h('div', { class: 'panel pad' }, bars(Object.entries(s.versions || {}).sort((a, b) => b[1] - a[1]), vTotal)),
-      sec('Надёжность', '7 дней'),
-      healthBox(id));
+      h('h2', { class: 'h' }, 'Ранги лавок'),
+      h('div', { class: 'card' }, bars(RANKS.map((n, i) => [n, (s.ranks || {})[i] || 0]), total)),
+      h('h2', { class: 'h' }, 'Версии игры за неделю'),
+      h('div', { class: 'card' }, bars(Object.entries(s.versions || {}).sort((a, b) => b[1] - a[1]), vTotal)),
+      h('h2', { class: 'h', id: 'rel' }, 'Надёжность за 7 дней'),
+      healthBox(id, hl));
+    body.replaceChildren(...out);
+  }
+
+  // поиск игрока с любого экрана
+  function openSearch() {
+    if (!sheetEl) sheetScroll = window.scrollY;
+    if (sheetEl) sheetEl.remove();
+    const res = h('div', null);
+    const inp = h('input', { type: 'search', placeholder: 'Имя, @ник или ID', enterkeyhint: 'search', 'aria-label': 'Найти игрока' });
+    let t = 0, n = 0;
+    const load = async () => {
+      const my = ++n;
+      res.replaceChildren(skeleton(4));
+      let r;
+      try { r = await api('adm_players', { p_q: inp.value.trim(), p_sort: 'seen', p_filter: '', p_limit: 30, p_offset: 0 }); } catch (e) { if (my === n) res.replaceChildren(failBox(e)); return; }
+      if (my !== n) return;
+      const rows = r.rows || [];
+      res.replaceChildren(h('p', { class: 'hint' }, inp.value.trim() ? 'Нашлось: ' + num(r.total || 0) : 'Недавно заходили'),
+        rows.length ? h('div', { class: 'card list' }, rows.map(playerRow)) : h('div', { class: 'card empty' }, 'Никого с таким именем или ID'));
+    };
+    inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(load, 300); });
+    sheetEl = h('div', { class: 'sheet' },
+      h('header', { class: 'top' }, h('div', { class: 'top-in' },
+        h('button', { class: 'ib', 'aria-label': 'Назад', onclick: closeSheet }, icon('back')),
+        h('label', { class: 'search grow' }, icon('search'), inp))),
+      h('main', null, res));
+    document.body.append(sheetEl);
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => inp.focus(), 60);
+    load();
   }
 
   // сбои загрузки сохранения у игроков и сохранения, которые база не приняла (защита сработала)
   const BOOT_SRC = { ok: 'ответила', ok2: 'ответила со 2-й попытки', empty: 'пусто', fail: 'не ответила', fail2: 'не ответила дважды', broken: 'ошибка', none: '-' };
-  function healthBox(id) {
-    const box = h('div', { class: 'panel pad' }, h('p', { class: 'hint' }, 'Загружаю...'));
-    api('adm_health').then((r) => {
+  function healthBox(id, pre) {
+    const box = h('div', { class: 'card' }, h('p', { class: 'hint' }, 'Загружаю...'));
+    (pre ? Promise.resolve(pre) : api('adm_health')).then((r) => {
       if (stale(id)) return;
-      const k = (v, label, bad) => h('div', { class: 'kpi' + (bad && v ? ' acc' : '') }, h('b', null, num(v)), h('span', null, label));
+      const k = (v, label, bad) => h('div', { class: 'm' + (bad && v ? ' bad' : '') }, h('b', null, num(v)), h('span', null, label));
       const rows = (r.last || []).map((x) => {
         const i = x.info || {};
         return h('button', { class: 'row', onclick: () => { haptic(); openPlayer(x.uid); } },
@@ -412,7 +519,7 @@
           h('span', { class: 'mut mono', style: { fontSize: '11px', whiteSpace: 'nowrap' } }, ago(x.at)));
       });
       box.replaceChildren(
-        h('div', { class: 'kpis' }, k(r.rejected, 'спасено сохранений', true), k(r.boot_fail, 'база не ответила при запуске', true),
+        h('div', { class: 'metrics' }, k(r.rejected, 'спасено сохранений'), k(r.boot_fail, 'база не ответила при запуске', true),
           k(r.boot_fresh_old, 'старт с нуля у старых игроков', true), k(r.boot_total, 'отчётов о сбоях')),
         h('p', { class: 'hint' }, '«Спасено» - игра открылась без сохранения или с чужой копией, база не дала затереть прогресс и вернула настоящий. Отчёты приходят только при сбоях.'),
         rows.length ? h('div', { class: 'list', style: { marginTop: '8px' } }, rows) : h('p', { class: 'hint' }, 'Сбоев загрузки не было.'));
@@ -435,13 +542,13 @@
     const n = days.length || 1, step = (W - P) / n, bw = Math.min(10, step * 0.42);
     const el = (t, a) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); svg.append(e); return e; };
     const defs = el('defs', {});
-    defs.innerHTML = '<linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C84BFF" stop-opacity=".38"/><stop offset="1" stop-color="#7B61FF" stop-opacity="0"/></linearGradient>' +
-      '<linearGradient id="gl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7B61FF"/><stop offset=".6" stop-color="#C84BFF"/><stop offset="1" stop-color="#FF6FB1"/></linearGradient>' +
-      '<linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22D3EE"/><stop offset="1" stop-color="#34E0A1" stop-opacity=".55"/></linearGradient>';
+    defs.innerHTML = '<linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A58CFF" stop-opacity=".32"/><stop offset="1" stop-color="#A58CFF" stop-opacity="0"/></linearGradient>' +
+      '<linearGradient id="gl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#A58CFF"/><stop offset="1" stop-color="#A58CFF"/></linearGradient>' +
+      '<linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4FD1A1"/><stop offset="1" stop-color="#4FD1A1" stop-opacity=".45"/></linearGradient>';
     [0, 0.5, 1].forEach((f) => {
       const y = H - (H - 10) * f;
-      el('line', { x1: P, x2: W, y1: y, y2: y, stroke: 'rgba(255,255,255,.07)', 'stroke-dasharray': f ? '3 4' : '' });
-      const t = el('text', { x: 0, y: y + 3.5, fill: '#6E6990', 'font-size': 9.5, 'font-family': 'ui-monospace, monospace' }); t.textContent = Math.round(max * f);
+      el('line', { x1: P, x2: W, y1: y, y2: y, stroke: '#2A3554', 'stroke-dasharray': f ? '3 4' : '' });
+      const t = el('text', { x: 0, y: y + 3.5, fill: '#7D88A6', 'font-size': 9.5, 'font-family': 'ui-monospace, monospace' }); t.textContent = Math.round(max * f);
     });
     let path = '';
     const xs = days.map((d, i) => P + step * i + step / 2);
@@ -450,14 +557,13 @@
       const bh = (H - 10) * d.new / max;
       if (d.new) el('rect', { x: x - bw / 2, y: H - bh, width: bw, height: Math.max(bh, 2), rx: 3, fill: 'url(#gb)' });
       path += (i ? 'L' : 'M') + x.toFixed(1) + ' ' + (H - (H - 10) * d.act / max).toFixed(1);
-      if (i % 2 === (n - 1) % 2) { const t = el('text', { x, y: H + 14, fill: '#6E6990', 'font-size': 9, 'font-family': 'ui-monospace, monospace', 'text-anchor': 'middle' }); t.textContent = d.d.slice(0, 5); }
+      if (i % 2 === (n - 1) % 2) { const t = el('text', { x, y: H + 14, fill: '#7D88A6', 'font-size': 9, 'font-family': 'ui-monospace, monospace', 'text-anchor': 'middle' }); t.textContent = d.d.slice(0, 5); }
     });
     if (days.length) {
       el('path', { d: path + 'L' + xs[n - 1] + ' ' + H + 'L' + xs[0] + ' ' + H + 'Z', fill: 'url(#ga)' });
-      el('path', { d: path, fill: 'none', stroke: 'url(#gl)', 'stroke-width': 2.4, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', style: 'filter: drop-shadow(0 3px 6px rgba(200,75,255,.55))' });
+      el('path', { d: path, fill: 'none', stroke: 'url(#gl)', 'stroke-width': 2.4, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' });
       const cy = H - (H - 10) * days[n - 1].act / max;
-      el('circle', { cx: xs[n - 1], cy, r: 7, fill: '#FF6FB1', opacity: .25 });
-      el('circle', { cx: xs[n - 1], cy, r: 3.6, fill: '#FFF', stroke: '#FF6FB1', 'stroke-width': 2 });
+      el('circle', { cx: xs[n - 1], cy, r: 3.6, fill: '#141B2D', stroke: '#A58CFF', 'stroke-width': 2 });
     }
     return svg;
   }
@@ -467,15 +573,7 @@
   const FILTERS = [['', 'Все'], ['online', 'Онлайн'], ['new', 'Новые'], ['tg', 'Telegram'], ['vk', 'ВК'], ['limited', 'С ограничениями'], ['banned', 'Баны']];
   const SORTS = [['seen', 'Последний вход'], ['le', 'Больше сварили'], ['cr', 'Больше кристаллов'], ['lvl', 'Выше уровень'], ['play', 'Дольше играют'], ['new', 'Новые сначала']];
   let searchT = 0;
-  let PMODE = 'players';
-  function modeSeg() {
-    const opts = [['players', 'Игроки'], ['covens', 'Ковены']].concat(can('ban') ? [['reports', 'Жалобы'], ['sus', 'Проверка']] : []);
-    return h('div', { class: 'seg', style: { margin: '12px 0 0' } }, opts.map(([v, l]) => h('button', { class: v === PMODE ? 'on' : '', onclick: () => { if (PMODE !== v) { PMODE = v; haptic(); render(); } } }, l)));
-  }
   async function renderPlayers(id) {
-    if (PMODE === 'covens') return renderCovens(id);
-    if (PMODE === 'sus') return renderSus(id);
-    if (PMODE === 'reports') return renderReports(id);
     const list = h('div', null, skeleton(6));
     const count = h('span', { class: 'n' }, '');
     const search = h('input', { type: 'search', placeholder: 'Имя, @ник или ID', value: PL.q, enterkeyhint: 'search' });
@@ -484,7 +582,7 @@
       PL.filter = v; chips.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c === e.currentTarget)); haptic(); loadPlayers(list, count, true);
     } }, l)));
     const sort = h('select', { onchange: () => { PL.sort = sort.value; loadPlayers(list, count, true); } }, SORTS.map(([v, l]) => h('option', { value: v, selected: PL.sort === v }, l)));
-    body.replaceChildren(modeSeg(), h('div', { style: { height: '10px' } }), h('label', { class: 'search' }, icon('search'), search), chips, h('div', { class: 'bar-line' }, count, sort), list);
+    body.replaceChildren(h('label', { class: 'search' }, icon('search'), search), chips, h('div', { class: 'bar-line' }, count, sort), list);
     await loadPlayers(list, count, true, id);
   }
   async function loadPlayers(list, count, reset, id) {
@@ -517,11 +615,11 @@
 
   const COV_COLORS = { purple: '#8E5BE8', red: '#E5484D', orange: '#F28C28', gold: '#E8B923', green: '#3FAE5A', teal: '#22A3A3', blue: '#3D7BE0', pink: '#E46AB3' };
   async function renderCovens(id) {
-    body.replaceChildren(modeSeg(), h('div', { style: { height: '10px' } }), skeleton(4));
+    body.replaceChildren(skeleton(4));
     let rows;
-    try { rows = await api('adm_covens'); } catch (e) { if (!stale(id)) body.replaceChildren(modeSeg(), failBox(e)); return; }
+    try { rows = await api('adm_covens'); } catch (e) { if (!stale(id)) body.replaceChildren(failBox(e)); return; }
     if (stale(id)) return;
-    body.replaceChildren(modeSeg(), sec('Ковены', String((rows || []).length)),
+    body.replaceChildren(sec('Ковены', String((rows || []).length)),
       !rows || !rows.length ? h('div', { class: 'panel empty' }, 'Ковенов пока нет') :
       h('div', { class: 'panel list' }, rows.map((c) => h('button', { class: 'row', onclick: () => { haptic(); openCoven(c.id); } },
         covAva(c),
@@ -541,7 +639,7 @@
     const inner = h('main', null, h('div', { style: { height: '14px' } }), skeleton(5));
     sheetEl = h('div', { class: 'sheet' },
       h('div', { class: 'top' }, h('div', { class: 'top-in' },
-        h('button', { class: 'ib', 'aria-label': 'Назад', onclick: () => { closeSheet(); if (tab === 'players' && PMODE === 'covens') render(); } }, icon('back')),
+        h('button', { class: 'ib', 'aria-label': 'Назад', onclick: () => { closeSheet(); if (tab === 'players' && SUB.players === 'covens') render(); } }, icon('back')),
         h('div', { class: 'title' }, h('b', null, 'Ковен'), h('small', null, '#' + cid)),
         h('button', { class: 'ib', 'aria-label': 'Обновить', onclick: () => openCoven(cid) }, icon('refresh')))),
       inner);
@@ -550,7 +648,7 @@
     let c;
     try { c = await api('adm_coven', { p_coven: cid }); } catch (e) { inner.replaceChildren(h('div', { style: { height: '14px' } }), failBox(e)); return; }
     if (!c) { inner.replaceChildren(h('div', { class: 'empty' }, 'Ковен не найден')); return; }
-    inner.replaceChildren(...covenView(c));
+    inner.replaceChildren(...covenView(c)); jumpBar(inner);
     if (can('ban')) loadCovenChat(cid);
   }
 
@@ -660,11 +758,11 @@
   }
   // подозрительный рост прогресса: игрок временно вне топов, решение за командой
   async function renderSus(id) {
-    body.replaceChildren(modeSeg(), h('div', { style: { height: '10px' } }), skeleton(3));
+    body.replaceChildren(skeleton(3));
     let rows;
-    try { rows = await api('adm_sus'); } catch (e) { if (!stale(id)) body.replaceChildren(modeSeg(), failBox(e)); return; }
+    try { rows = await api('adm_sus'); } catch (e) { if (!stale(id)) body.replaceChildren(failBox(e)); return; }
     if (stale(id)) return;
-    body.replaceChildren(modeSeg(), sec('На проверке', String((rows || []).length)),
+    body.replaceChildren(sec('На проверке', String((rows || []).length)),
       !rows || !rows.length ? h('div', { class: 'panel empty' }, 'Подозрительных нет') :
       h('div', { class: 'panel' }, rows.map((r) => h('div', { class: 'log' },
         h('div', { class: 'member', style: { padding: 0 } }, ava(r.photo, online(r.last_seen)),
@@ -677,11 +775,11 @@
           h('button', { class: 'btn danger sm', onclick: async () => { if (await act('adm_sus_done', { p_id: r.id, p_ok: false }, 'Убран из топов')) render(); } }, 'Накрутка'))))));
   }
   async function renderReports(id) {
-    body.replaceChildren(modeSeg(), h('div', { style: { height: '10px' } }), skeleton(3));
+    body.replaceChildren(skeleton(3));
     let rows;
-    try { rows = await api('adm_reports'); } catch (e) { if (!stale(id)) body.replaceChildren(modeSeg(), failBox(e)); return; }
+    try { rows = await api('adm_reports'); } catch (e) { if (!stale(id)) body.replaceChildren(failBox(e)); return; }
     if (stale(id)) return;
-    body.replaceChildren(modeSeg(), sec('Жалобы на сообщения', String((rows || []).length)),
+    body.replaceChildren(sec('Жалобы на сообщения', String((rows || []).length)),
       !rows || !rows.length ? h('div', { class: 'panel empty' }, 'Жалоб нет') :
       h('div', { class: 'panel' }, rows.map((r) => h('div', { class: 'item' },
         h('span', { class: 'ic' }, icon('alert')),
@@ -718,6 +816,15 @@
     try { p = await api('adm_player', { p_id: pid }); } catch (e) { inner.replaceChildren(h('div', { style: { height: '14px' } }), failBox(e)); return; }
     if (!p) { inner.replaceChildren(h('div', { class: 'empty' }, 'Игрок ещё не заходил в игру')); return; }
     inner.replaceChildren(...playerView(p));
+    jumpBar(inner);
+  }
+  // быстрые переходы по разделам длинной карточки
+  function jumpBar(inner) {
+    const hs = [...inner.querySelectorAll('.sec')].slice(1);
+    if (hs.length < 3) return;
+    const hero = inner.querySelector('.hero');
+    const bar = h('div', { class: 'jump' }, hs.map((el) => h('button', { onclick: () => { haptic(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, el.firstChild.textContent)));
+    if (hero) hero.after(bar); else inner.prepend(bar);
   }
 
   function playerView(p) {
@@ -742,7 +849,7 @@
 
     out.push(sec('Прогресс'),
       h('div', { class: 'stats' },
-        st('Ранг', RANKS[p.rnk] || '-'), st('Уровень', p.lvl),
+        h('div', { class: 'stat wide' }, h('span', null, 'Ранг и уровень'), h('b', null, (RANKS[p.rnk] || '-') + ', ' + p.lvl + ' ур')),
         st('Эссенция', num(p.ess)), st('Сварено всего', num(p.le)),
         st('Доход / час', num(p.ph)), st('Кристаллы', num(p.cr)),
         st('Мастерство', num(p.mastery)), st('Время в игре', dur(p.play_sec)),
@@ -992,7 +1099,7 @@
       const g = [];
       if (can('gift') && +cr.value > 0) g.push(Math.floor(+cr.value) + ' ' + word(+cr.value, 'кристалл', 'кристалла', 'кристаллов'));
       if (can('gift') && +hrs.value > 0) g.push(hrs.value + ' ч дохода');
-      prev.replaceChildren(h('div', { class: 'meta', style: { marginBottom: '8px', letterSpacing: '.1em' } }, 'ПРЕВЬЮ · ' + (to.all ? 'ВСЕМ' : 'ИГРОКУ')),
+      prev.replaceChildren(h('div', { class: 'meta', style: { marginBottom: '10px' } }, to.all ? 'Так письмо увидит каждый игрок' : 'Так письмо увидит игрок'),
         h('div', { class: 'item', style: { padding: 0 } }, h('span', { class: 'ic' + (g.length ? ' acc' : '') }, icon(g.length ? 'gift' : 'mail')),
           h('div', { class: 't' }, h('b', null, title.value || 'Заголовок'), h('p', null, text.value || 'Текст письма'), g.length ? h('div', { class: 'meta' }, h('b', null, 'Подарок: '), g.join(' + ')) : null)));
     }
@@ -1022,7 +1129,7 @@
     async function loadSent() {
       let rows;
       try { rows = await api('adm_mail_list'); } catch (e) { sent.replaceChildren(failBox(e)); return; }
-      if (tab !== 'mail') return;
+      if (tab !== 'talk' || SUB.talk !== 'mail') return;
       if (!rows || !rows.length) { sent.replaceChildren(h('div', { class: 'panel empty' }, 'Писем ещё не было')); return; }
       sent.replaceChildren(h('div', { class: 'panel' }, rows.map((m) => {
         const gift = m.gift && Object.keys(m.gift).length;
@@ -1292,7 +1399,7 @@
     btn.addEventListener('click', go);
     $('app').replaceChildren(h('div', { class: 'state login' }, h('div', null,
       h('div', { class: 'mark big' }, glyph()),
-      h('h2', null, 'Бульк · Админ'),
+      h('h2', null, 'Пульт лавки «Бульк»'),
       h('p', null, 'Вход по коду из игры'),
       inp, btn, err,
       h('ol', { class: 'steps' },
