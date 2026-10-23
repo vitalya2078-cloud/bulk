@@ -40,7 +40,9 @@ const Games = (() => {
   // ---------- меню ----------
   function open() {
     const m = st();
-    const list = h('div', { class: 'games-list' }, D.games.map((g) => {
+    // во ВКонтакте карточки «Скоро» не показываем: каталог ВК не любит заглушки
+    const shown = Platform.kind() === 'vk' ? D.games.filter((g) => g.ready) : D.games;
+    const list = h('div', { class: 'games-list' }, shown.map((g) => {
       const best = m.best[g.id];
       const b = h('button', { class: 'game-card' + (g.ready ? '' : ' soon'), type: 'button' },
         pic(g.icon, 'game-ico'),

@@ -675,7 +675,7 @@ const UI = (() => {
             fill.style.width = (100 * q.p / q.n) + '%';
             setText(rewardM.v, ess(Econ.questReward(q)));
             if (q.c === 2) { if (!btn.querySelector('.ok-ico')) btn.replaceChildren(pic('hud/check', 'ok-ico')); } else if (q.c !== 1 && btn.classList.contains('quest-state')) setText(btn, Fmt.num(q.p) + '/' + Fmt.num(q.n));
-            if (q.c === 0) setText(cnt, ' · сделано ' + Fmt.num(q.p) + ' из ' + Fmt.num(q.n));
+            if (q.c === 0) setText(cnt, 'сделано ' + Fmt.num(q.p) + ' из ' + Fmt.num(q.n));
           });
         });
         const timer = h('p', { class: 'note' });
