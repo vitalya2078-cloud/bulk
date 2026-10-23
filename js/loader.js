@@ -71,7 +71,7 @@ const Loader = (() => {
   const cssVar = (k) => '--i-' + k.replace(/^images\//, '').replace(/\.\w+$/, '').replace(/[^a-z0-9]+/gi, '-');
   function setCssVars() {
     const st = document.documentElement.style;
-    Object.keys(files).filter((k) => k.startsWith('images/hud/') || k.startsWith('images/backgrounds/')).forEach((k) => {
+    Object.keys(files).filter((k) => k.startsWith('images/hud/') || k.startsWith('images/backgrounds/') || k.startsWith('images/r2/')).forEach((k) => {
       const u = ASSET_BLOBS[k] || new URL('assets/' + k + '?v=' + ASSET_V, location.href).href;
       st.setProperty(cssVar(k), 'url("' + u + '")');
     });

@@ -185,7 +185,7 @@ function createCauldron() {
   function init(canvas) {
     cv = canvas;
     ctx = cv.getContext('2d');
-    setBackground('backgrounds/room');
+    setBackground('r2/room');
     use('pot', 'cauldron/pot', () => { layout(); tintPot(); });
     use('liquid', 'cauldron/liquid', () => { tintLiquid(); tintPot(); });
     use('bubble', 'cauldron/bubble');
@@ -225,7 +225,7 @@ function createCauldron() {
     const meta = bgMeta();
     if (S.bg && meta.room) {
       fitBg();
-      g.r = Math.min(bgGeom.dw * 0.155, H * 0.17);
+      g.r = Math.min(bgGeom.dw * 0.125, H * 0.145);
       const potW = g.r * POT_WK, potH = potW / POT_ASPECT;
       const sw = potW * STAND.w, sh = sw * STAND.aspect;
       g.foot = bgY(DATA.room.platform.y);
@@ -356,6 +356,12 @@ function createCauldron() {
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
     c.imageSmoothingEnabled = true;
     c.imageSmoothingQuality = 'high';
+    // 0.29: в комнате окно прозрачное - сначала небо за ним
+    const sky = bgMeta().sky && bgMeta().window ? Sprites.get(bgMeta().sky, () => { bgDirty = true; }) : null;
+    if (sky) {
+      const wn = bgMeta().window, R = wn.r * bgGeom.dw * 1.15;
+      c.drawImage(sky, bgX(wn.x) - R, bgY(wn.y) - R, R * 2, R * 2);
+    }
     c.drawImage(im, bgGeom.ox, bgGeom.oy, bgGeom.dw, bgGeom.dh);
     if (bgMeta().room) buildRoom(c);
     // комната чуть ярче и сочнее - в тон заставке

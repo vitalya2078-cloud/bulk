@@ -162,7 +162,7 @@
 
   // ---------- старт ----------
   // Заранее загружаем все картинки, чтобы вкладки не «мигали» пустыми иконками
-  const preload = new Set(['backgrounds/room', 'stands/iron', 'ui/padlock', 'ui/hooded', 'ui/essence', 'ui/gear', 'ui/gift', 'ui/book', 'ui/rune',
+  const preload = new Set(['r2/room', 'stands/iron', 'ui/padlock', 'ui/hooded', 'ui/essence', 'ui/gear', 'ui/gift', 'ui/book', 'ui/rune',
     'ui/cauldron', 'cards/window', 'ui/checklist', 'ui/envelope', 'ui/sparkle', 'ui/wind', 'ui/wardrobe', 'ui/crystal',
     'ui/camera', 'ui/banner', 'ui/ladle']);
   [D.cards, D.visitors, D.ingredients, D.ranks, D.achievements, D.quests, Object.values(D.effects), [D.scoop, D.pantry], D.friendship, D.avatars, D.ingr, D.brews, D.props]
@@ -320,7 +320,7 @@
     requestAnimationFrame(frame);
   }
   // экран загрузки: ждём только то, что видно на главном экране
-  const critical = new Set(['backgrounds/room', 'cauldron/pot', 'cauldron/liquid', 'cauldron/bubble', 'scene/counter']);
+  const critical = new Set(['r2/room', 'cauldron/pot', 'cauldron/liquid', 'cauldron/bubble', 'scene/counter']);
   const wear = Econ.s.wear;
   const wearImg = (id) => { const w = D.wardrobe.find((x) => x.id === id); return w && (w.img || 'wardrobe/' + w.id); };
   [wearImg(wear.stand || 'stand_iron'), wearImg(wear.spoon), wearImg(wear.face), wearImg(wear.bed)].forEach((n) => n && critical.add(n));

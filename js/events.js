@@ -16,7 +16,7 @@ DATA.eventDefs = {
     name: 'Ночь тыкв',
     currency: { forms: ['конфета', 'конфеты', 'конфет'], img: 'events/halloween/candy' },
     icon: 'events/halloween/candy_bucket',
-    bg: 'backgrounds/room',         // та же комната, украшения события - в DATA.room
+    bg: 'r2/room',         // та же комната, украшения события - в DATA.room
     liquid: '#FF9A3D',                // зелье «по рангу» на время события становится тыквенным
     ambient: 'events/halloween/bat',  // летучие мыши над котлом
     lantern: 'events/halloween/lantern_pumpkin',
@@ -467,7 +467,7 @@ const Events = (() => {
     init, check, update, active, def, candyWord, addCandy,
     onTap, onServe, pickVisitor, refreshButton, openSheet, finishedModal,
     claimable, claimableQuests,
-    bg: () => (active() ? cur.def.bg : 'backgrounds/room'),
+    bg: () => (active() ? cur.def.bg : 'r2/room'),
     liquid: () => (active() ? cur.def.liquid : null),
     ambient: () => (active() ? cur.def.ambient : null),
     phrase: () => (active() && Math.random() < 0.5 ? cur.def.phrases[Math.floor(Math.random() * cur.def.phrases.length)] : null)

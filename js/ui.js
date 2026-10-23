@@ -290,10 +290,10 @@ const UI = (() => {
   let key = '';
 
   const SCREENS = {
-    main:    { label: 'Котёл',   img: 'ui/cauldron' },
-    shop:    { label: 'Лавка',   img: 'cards/window' },
-    tasks:   { label: 'Задания', img: 'ui/checklist' },
-    friends: { label: 'Сообщество', img: 'ui/envelope' }
+    main:    { label: 'Котёл',   img: 'r2/tab_main' },
+    shop:    { label: 'Лавка',   img: 'r2/tab_shop' },
+    tasks:   { label: 'Задания', img: 'r2/tab_tasks' },
+    friends: { label: 'Сообщество', img: 'r2/tab_friends' }
   };
   const badges = {};
 
