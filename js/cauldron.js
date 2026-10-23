@@ -1233,7 +1233,7 @@ function createCauldron() {
   }
   function geom() {
     const L = logsRect();
-    return { W, H, cx: g.cx, cy: g.cy, r: g.r, liq: g.liq, pot: g.pot, ground: bgMeta().room ? footY() : L.y + L.h * 0.86, t, squash, potBottom: g.pot.y + g.pot.h, liquid };
+    return { W, H, cx: g.cx, cy: g.cy, r: g.r, liq: g.liq, pot: g.pot, ground: bgMeta().room ? footY() : L.y + L.h * 0.86, front: bgMeta().counter && showCounter() ? counterTop() : null, t, squash, potBottom: g.pot.y + g.pot.h, liquid };
   }
   function render() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

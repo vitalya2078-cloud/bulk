@@ -367,20 +367,27 @@ const Pets = (() => {
   }
   function setState(a, s, dur) { a.st = s; a.t = 0; a.dur = dur || rand(1.5, 3.5); }
 
-  function floorY(a) { return G.ground + a.depth * G.r * 0.32; }
-  function petH() { return G.r * 0.72; }
+  // Пол: depth 0 - у котла, 1 - у прилавка. В глубокой комнате пол длинный, и питомец
+  // плавно растёт, когда идёт к зрителю, и уменьшается, когда уходит вглубь.
+  const PET_H = 0.95, GROW = 0.65;
+  function floorFront() { return G.front ? Math.max(G.ground + G.r * 0.4, G.front - G.r * 0.14) : G.ground + G.r * 0.32; }
+  function floorY(a) { return G.ground + a.depth * (floorFront() - G.ground); }
+  function depthScale(y) { return G.front ? 1 + GROW * clamp((y - G.ground) / (floorFront() - G.ground), 0, 1) : 1; }
+  function petH(a) { return G.r * PET_H * (a && !a.perch ? depthScale(a.jump ? Math.max(a.y, Math.min(a.jump.y0, a.jump.y1)) : a.y) : 1); }
   // Углубление лежанки (доли картинки: центр x, y, полуоси) или дверь домика (x, верх, низ, полуширина)
   const BEDS = {
     bed_cushion: { hole: [0.5, 0.46, 0.27, 0.16] },
     bed_basket:  { hole: [0.51, 0.38, 0.36, 0.2] },
     bed_house:   { door: [0.4, 0.44, 0.74, 0.155] }
   };
+  const BED_D = 0.62;
   function bedPos() {
     const id = S().wear.bed, item = id && D.wardrobe.find((x) => x.id === id);
     const im = item ? Sprites.get(item.img) : null;
-    const w = G.r * (id === 'bed_house' ? 1.0 : 1.05);
+    const y = G.front ? G.ground + BED_D * (floorFront() - G.ground) : G.ground + G.r * 0.2;
+    const w = G.r * (G.front ? 1.3 : 1) * (id === 'bed_house' ? 1.0 : 1.05) * depthScale(y);
     const hh = im ? w * im.naturalHeight / im.naturalWidth : w * 0.7;
-    const x = clamp(G.cx - G.r * 1.6, w * 0.55, G.W - w * 0.55), y = G.ground + G.r * 0.2;
+    const x = G.front ? clamp(G.W * 0.22, w * 0.55, G.cx - w * 0.6) : clamp(G.cx - G.r * 1.6, w * 0.55, G.W - w * 0.55);
     return { x, y, w, h: hh, left: x - w / 2, top: y - hh, im, spec: BEDS[id] || BEDS.bed_cushion, house: id === 'bed_house' };
   }
   // куда ложится питомец в лежанке
@@ -392,7 +399,7 @@ const Pets = (() => {
     const hl = b.spec.hole; return { x: b.left + b.w * hl[0], y: b.top + b.h * (hl[1] + hl[3] * 0.45), scale: 0.95, maxW: b.w * hl[2] * 2 * 1.05 };
   }
   const bedTaken = (a) => actors.some((q) => q !== a && (q.inBed || q.then === 'tobed' || (q.jump && q.jump.perch === 'bed')));
-  function nestPos() { const w = G.r * 0.72; return { x: clamp(G.cx + G.r * 1.6, w * 0.55, G.W - w * 0.55), y: G.ground + G.r * 0.14, w }; }
+  function nestPos() { const w = G.r * 0.84; return { x: clamp(G.cx + G.r * 1.6, w * 0.55, G.W - w * 0.55), y: G.ground + G.r * 0.14, w }; }
   // в котле питомец «купается»: поверхность зелья - линия воды, ниже неё тело скрыто
   const waterY = () => G.liq.cy + G.liq.ry * 0.12;
   function rimPos(side) { return { x: G.liq.cx + side * G.liq.rx * 0.42, y: waterY() + petH() * 0.3 }; }
@@ -402,7 +409,7 @@ const Pets = (() => {
     const idle = (performance.now() - lastInput) / 1000;
     const bedOk = !!S().wear.bed;
     if (idle > 30 && a.st !== 'sleep') {
-      if (bedOk && !a.perch && !bedTaken(a)) { const b = bedPos(); return goTo(a, clamp(b.x + b.w * 0.55, 0, G.W), 0.55, 'tobed'); }
+      if (bedOk && !a.perch && !bedTaken(a)) { const b = bedPos(); return goTo(a, clamp(b.x + b.w * 0.6, 0, G.W), G.front ? BED_D + 0.04 : 0.55, 'tobed'); }
       if (a.perch) return jumpDown(a);
       return setState(a, 'sleep', 999);
     }
@@ -415,10 +422,10 @@ const Pets = (() => {
       // место подальше от других питомцев
       let tx = 0;
       for (let k = 0; k < 6; k++) {
-        tx = clamp(G.cx + rand(-1, 1) * G.r * 1.9, G.W * 0.08, G.W * 0.92);
+        tx = G.front ? rand(G.W * 0.1, G.W * 0.9) : clamp(G.cx + rand(-1, 1) * G.r * 1.9, G.W * 0.08, G.W * 0.92);
         if (!actors.some((q) => q !== a && Math.abs((q.tx !== undefined && q.st === 'walk' ? q.tx : q.x) - tx) < G.r * 0.55)) break;
       }
-      return goTo(a, tx, rand(0.1, 1));
+      return goTo(a, tx, G.front ? rand(0, 1) : rand(0.1, 1));
     }
     if (r < 0.58 && !actors.some((q) => q !== a && q.perch)) return jumpUp(a);
     if (r < 0.66 && S().wear.toy === 'yarn') return setState(a, 'play', rand(2, 3));
@@ -455,7 +462,7 @@ const Pets = (() => {
     say(a, 'Ой! Я не сплю!', 1600);
     if (a.inBed) {
       a.inBed = false;
-      a.depth = rand(0.4, 0.8);
+      a.depth = G.front ? clamp(BED_D + rand(-0.1, 0.2), 0, 1) : rand(0.4, 0.8);
       const b = bedPos();
       startJump(a, clamp(b.x + b.w * 0.75, 0, G.W - 10), floorY(a), 0);
     } else setState(a, 'happy', 0.8);
@@ -488,12 +495,13 @@ const Pets = (() => {
           if (a.t > a.dur) setState(a, 'idle', rand(1, 2));
           break;
         case 'walk': {
-          const dx = a.tx - a.x;
-          a.face = dx >= 0 ? 1 : -1;
-          a.x += a.face * Math.min(Math.abs(dx), G.r * 0.95 * dt);
-          a.depth += (a.tdepth - a.depth) * Math.min(1, dt * 2);
+          const dx = a.tx - a.x, dd = a.tdepth - a.depth;
+          const span = Math.max(1, floorFront() - G.ground), sp = G.r * 0.95 * depthScale(a.y) * dt;
+          if (Math.abs(dx) >= 2) a.face = dx >= 0 ? 1 : -1;
+          a.x += Math.sign(dx) * Math.min(Math.abs(dx), sp);
+          a.depth += Math.sign(dd) * Math.min(Math.abs(dd), sp * 0.7 / span);
           a.frame = F.walk[Math.floor(a.t * 8) % 4];
-          if (Math.abs(dx) < 2) {
+          if (Math.abs(dx) < 2 && Math.abs(a.tdepth - a.depth) < 0.01) {
             const then = a.then; a.then = null;
             if (then && then.startsWith('jumpup:')) { const side = +then.split(':')[1]; const p = rimPos(side); startJump(a, p.x, p.y, side); }
             else if (then === 'tobed') {
@@ -575,7 +583,7 @@ const Pets = (() => {
   function drawPet(ctx, a) {
     const im = sprite(a.id, a.frame);
     if (!im) return;
-    let hh = petH() * (a.inBed ? bedSpot().scale : 1);
+    let hh = (a.inBed ? petH({ y: bedPos().y }) * bedSpot().scale : petH(a));
     if (a.inBed) hh = Math.min(hh, bedSpot().maxW * im.naturalHeight / im.naturalWidth);
     const w = hh * im.naturalWidth / im.naturalHeight;
     const o = st().own[a.id];
@@ -664,12 +672,8 @@ const Pets = (() => {
   function drawBack(ctx, g) {
     G = g;
     // лежанка и гнездо стоят на полу за питомцами
-    const b = S().wear.bed && owned().length ? bedPos() : null;
-    if (b && b.im) {
-      ctx.drawImage(b.im, b.left, b.top, b.w, b.h);
-      const sleepers = actors.filter((a) => a.inBed);
-      sleepers.forEach((a) => drawPet(ctx, a));
-    }
+    // в глубокой комнате лежанка стоит на полу среди питомцев - её рисует drawFront по глубине
+    if (!G.front) drawBed(ctx);
     const n = st().nest;
     if (n) {
       const nim = Sprites.get('pets/nest'), eim = Sprites.get(D.eggs[n.t].img);
@@ -712,10 +716,23 @@ const Pets = (() => {
     for (let i = 1; i <= 4; i++) ctx.lineTo(x + (w / 4) * i, y + (i % 2 ? 1 : -1) * w * 0.12 * dir);
     ctx.stroke();
   }
+  function drawBed(ctx) {
+    const b = S().wear.bed && owned().length ? bedPos() : null;
+    if (!b || !b.im) return;
+    ctx.drawImage(b.im, b.left, b.top, b.w, b.h);
+    actors.filter((a) => a.inBed).forEach((a) => drawPet(ctx, a));
+  }
   function drawFront(ctx, g) {
     G = g;
     const list = actors.filter((a) => !a.inBed).sort((a, b) => (a.perch ? 1 : 0) - (b.perch ? 1 : 0) || a.y - b.y);
-    list.forEach((a) => drawPet(ctx, a));
+    // кто ближе к зрителю, тот рисуется поверх лежанки
+    const bedY = G.front && S().wear.bed && owned().length ? bedPos().y : null;
+    let bedDone = bedY === null;
+    list.forEach((a) => {
+      if (!bedDone && (a.perch || a.y > bedY)) { drawBed(ctx); bedDone = true; }
+      drawPet(ctx, a);
+    });
+    if (!bedDone) drawBed(ctx);
     list.forEach((a) => bubble(ctx, a));
   }
 
