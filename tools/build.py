@@ -27,7 +27,10 @@ ad = os.path.join(root, 'admin'); af = {}
 # адрес admin.js / admin.css с версией по содержимому - иначе ВК держит старую копию
 ab = hashlib.sha256(open(os.path.join(ad, 'admin.js'), 'rb').read() + open(os.path.join(ad, 'admin.css'), 'rb').read()).hexdigest()[:10]
 ai = open(os.path.join(ad, 'index.html'), encoding='utf-8').read()
-open(os.path.join(ad, 'index.html'), 'w', encoding='utf-8').write(re.sub(r"var ADM_BUILD = '[^']*';", "var ADM_BUILD = '%s';" % ab, ai))
+# версия прямо в адресе файла (без document.write: встроенный браузер ВК такие вставки может пропускать);
+# в приложении «Бульк Админ» запрос с ?v= отдаётся из локальных файлов - путь тот же
+ai = re.sub(r'(href|src)="admin\.(css|js)(\?v=[^"]*)?"', lambda m: '%s="admin.%s?v=%s"' % (m.group(1), m.group(2), ab), ai)
+open(os.path.join(ad, 'index.html'), 'w', encoding='utf-8').write(ai)
 for f in sorted(os.listdir(ad)):
     if f == 'bundle.json' or f.startswith('.'): continue
     b = open(os.path.join(ad, f), 'rb').read()

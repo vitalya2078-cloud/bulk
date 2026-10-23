@@ -1,5 +1,5 @@
 {
- "v": "1849f6ca0a9f",
+ "v": "aeba9cbe82d9",
  "files": {
   "admin.css": {
    "size": 30709,
@@ -10,8 +10,8 @@
    "sha256": "348858d999f88123c37a53e9f6219040205eceb6486faa10d6185eb44e881993"
   },
   "index.html": {
-   "size": 1277,
-   "sha256": "fdeda15e537ac9e60807bfd78caff79e7504b224a2a4aff4fc9b8ee375595dd6"
+   "size": 860,
+   "sha256": "a0cf4f4c88eb1f447cac558adb6d805de243c008aba5b2241fcf23bbd3fcc563"
   }
  }
 }
