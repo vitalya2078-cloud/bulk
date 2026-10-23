@@ -1162,9 +1162,9 @@ function createCauldron() {
     Visitors.draw(ctx, { W, H, t, size: g.r, potLeft: g.cx - g.r * 1.35, counterTop: counterTop() });
   }
   function counterTop() {
-    const im = Sprites.get('scene/counter');
+    const im = Sprites.get('r2/counter');
     const w = W * 1.06, hh = im ? w * im.naturalHeight / im.naturalWidth : W * 0.33;
-    return H - hh * 0.94 + hh * 0.36;
+    return H - hh * 0.94 + hh * 0.3;
   }
   // на низком холсте (превью в гардеробе) прилавок не рисуем
   const showCounter = () => H > W * 0.9;
@@ -1172,7 +1172,7 @@ function createCauldron() {
   function drawCounter() {
     const m = bgMeta();
     if (!m.counter || !showCounter()) return;
-    const im = Sprites.get('scene/counter');
+    const im = Sprites.get('r2/counter');
     if (!im) return;
     const w = W * 1.06, hh = w * im.naturalHeight / im.naturalWidth;
     ctx.save(); ctx.translate(par.x * 6, par.y * 2);

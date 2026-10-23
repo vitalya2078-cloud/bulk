@@ -2558,3 +2558,16 @@ body:not(.has-modal) #toast { bottom: calc(var(--safe-bottom) + 216px); }
 .wheel-cap { width: 19%; height: 19%; }
 .wheel-pointer { width: 11%; margin-left: -5.5%; top: -5%; }
 .wheel-modal .modal-body { overflow-x: visible; }
+/* 0.29: панели «Сегодня» заметнее - лежат на новом прилавке */
+.daily-row { bottom: 10px; gap: 6px; padding: 0 10px; }
+.daily { min-height: 46px; padding: 4px 10px 4px 4px; border: 2px solid var(--gold); background: var(--glass-hi);
+  box-shadow: 0 5px 12px rgba(10,4,20,.6), 0 0 0 1px rgba(26,14,44,.9), inset 0 1px 0 rgba(255,255,255,.2); }
+.daily .d-ico { width: 36px; height: 36px; margin-top: -8px; filter: drop-shadow(0 3px 2px rgba(10,4,20,.6)); }
+.daily b { color: #FFFFFF; font-size: 12px; text-shadow: 0 1px 2px rgba(10,4,20,.8); }
+.daily small { color: #FFE48A; font-size: 10.5px; }
+.daily .dot { width: 16px; height: 16px; top: -5px; right: 4px; }
+.daily { gap: 3px; padding: 4px 7px 4px 3px; }
+.daily .d-ico { width: 32px; height: 32px; }
+.daily b { font-size: 11px; letter-spacing: -.1px; }
+.daily small { font-size: 10px; }
+@media (max-width: 370px) { .daily-row { gap: 4px; padding: 0 6px; } .daily .d-ico { width: 28px; height: 28px; margin-top: -6px; } .daily b { font-size: 10.5px; } }

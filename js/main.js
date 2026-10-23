@@ -175,7 +175,7 @@
   (D.pets || []).forEach((pt) => { for (let i = 0; i < 16; i++) preload.add('pets/' + pt.id + '/' + String(i).padStart(2, '0')); });
   Object.values(D.eggs || {}).forEach((e) => e.img && preload.add(e.img));
   (D.locations || []).forEach((l) => l.img && preload.add(l.img));
-  ['pets/nest', 'pets/shell', 'pets/bowl', 'cauldron/pot', 'cauldron/liquid', 'cauldron/bubble', 'scene/counter', 'ui/paw_heart', 'ui/steam', 'ui/heat'].forEach((n) => preload.add(n));
+  ['pets/nest', 'pets/shell', 'pets/bowl', 'cauldron/pot', 'cauldron/liquid', 'cauldron/bubble', 'r2/counter', 'ui/paw_heart', 'ui/steam', 'ui/heat'].forEach((n) => preload.add(n));
 
   Cauldron.init(canvas);
   UI.init({
@@ -320,7 +320,7 @@
     requestAnimationFrame(frame);
   }
   // экран загрузки: ждём только то, что видно на главном экране
-  const critical = new Set(['r2/room', 'cauldron/pot', 'cauldron/liquid', 'cauldron/bubble', 'scene/counter']);
+  const critical = new Set(['r2/room', 'cauldron/pot', 'cauldron/liquid', 'cauldron/bubble', 'r2/counter']);
   const wear = Econ.s.wear;
   const wearImg = (id) => { const w = D.wardrobe.find((x) => x.id === id); return w && (w.img || 'wardrobe/' + w.id); };
   [wearImg(wear.stand || 'stand_iron'), wearImg(wear.spoon), wearImg(wear.face), wearImg(wear.bed)].forEach((n) => n && critical.add(n));
