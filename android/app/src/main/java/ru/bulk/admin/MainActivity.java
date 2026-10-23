@@ -18,7 +18,10 @@ import android.os.Vibrator;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.content.ClipData;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -60,6 +63,9 @@ public class MainActivity extends Activity {
     final Handler ui = new Handler(Looper.getMainLooper());
     long pausedAt = 0;
     volatile boolean checking = false;
+    // выбор файла для страницы (вложения рассылок): без своего WebChromeClient WebView кнопку выбора файла игнорирует
+    static final int PICK_FILE = 41;
+    ValueCallback<Uri[]> filePick;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -77,11 +83,12 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setTextZoom(100);
         s.setAllowFileAccess(false);
-        s.setAllowContentAccess(false);
+        s.setAllowContentAccess(true); // файлы из галереи приходят как content://
         s.setMediaPlaybackRequiresUserGesture(true);
         s.setCacheMode(WebSettings.LOAD_DEFAULT);
         web.addJavascriptInterface(new Bridge(), "BulkApp");
         web.setWebViewClient(new Client());
+        web.setWebChromeClient(new Chrome());
         root.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         splash = buildSplash();
@@ -317,6 +324,53 @@ public class MainActivity extends Activity {
             web.setVisibility(View.VISIBLE);
             splash.animate().alpha(0f).setDuration(180).withEndAction(() -> { splash.setVisibility(View.GONE); splash.setAlpha(1f); }).start();
         }
+    }
+
+    /** Открывает галерею или файлы телефона, когда страница просит выбрать файл. */
+    class Chrome extends WebChromeClient {
+        @Override
+        public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
+            if (filePick != null) filePick.onReceiveValue(null);
+            filePick = callback;
+            String[] types = params.getAcceptTypes();
+            java.util.ArrayList<String> mimes = new java.util.ArrayList<>();
+            if (types != null) for (String t : types) for (String x : t.split(",")) { x = x.trim(); if (x.contains("/")) mimes.add(x); }
+            Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+            i.addCategory(Intent.CATEGORY_OPENABLE);
+            if (mimes.size() == 1) i.setType(mimes.get(0));
+            else { i.setType("*/*"); if (!mimes.isEmpty()) i.putExtra(Intent.EXTRA_MIME_TYPES, mimes.toArray(new String[0])); }
+            if (params.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE) i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+            try {
+                startActivityForResult(Intent.createChooser(i, "Выбери файл"), PICK_FILE);
+            } catch (Exception e) {
+                filePick = null;
+                callback.onReceiveValue(null);
+                return false;
+            }
+            return true;
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == PICK_FILE) {
+            ValueCallback<Uri[]> cb = filePick;
+            filePick = null;
+            if (cb == null) return;
+            Uri[] res = null;
+            if (resultCode == RESULT_OK && data != null) {
+                ClipData clip = data.getClipData();
+                if (clip != null && clip.getItemCount() > 0) {
+                    res = new Uri[clip.getItemCount()];
+                    for (int k = 0; k < clip.getItemCount(); k++) res[k] = clip.getItemAt(k).getUri();
+                } else if (data.getData() != null) {
+                    res = new Uri[] { data.getData() };
+                }
+            }
+            cb.onReceiveValue(res);
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     void openExternal(String url) {
