@@ -37,12 +37,12 @@ const Online = (() => {
   }
 
   // ---------- отчёт о себе ----------
-  function stats(start) {
+  function stats(start, claim) {
     const s = Econ.s;
     let saveObj = null;
     try { saveObj = JSON.parse(Econ.serialize()); } catch (e) { /* ignore */ }
     return {
-      start: start ? '1' : '0', claim: start ? '1' : '0', sess: SESS, ver: CONFIG.version,
+      start: start ? '1' : '0', claim: claim ? '1' : '0', sess: SESS, ver: CONFIG.version,
       name: (s.prof.name || '').trim(), avatar: s.prof.avatar === 'photo' ? '' : s.prof.avatar, photo: platPhoto,
       lvl: s.lvl, rank: Econ.rank(), le: Math.floor(s.le), e: Math.floor(s.e), ph: Math.floor(Econ.basePerHour()),
       cr: s.cr, mastery: Econ.mastery(), play: Math.floor(s.stat.play || 0),
@@ -50,16 +50,20 @@ const Online = (() => {
     };
   }
 
-  let lastHello = 0;
+  // claimed - база подтвердила, что играем здесь. Пока нет - каждый отчёт снова заявляет сессию:
+  // иначе после оборванного первого отчёта база считала этот же телефон «другим местом».
+  let lastHello = 0, claimed = false;
   async function hello(start, force) {
     if (!on() || kicked) return;
     if (!start && Date.now() - lastHello < (force ? 5000 : 45000)) return;
     lastHello = Date.now();
     let r;
-    try { r = await rpc('hello', { init_data: initData(), p: stats(start) }); } catch (e) { console.warn('online', e); return; }
+    const claim = !claimed;
+    try { r = await rpc('hello', { init_data: initData(), p: stats(start, claim) }); } catch (e) { console.warn('online', e); return; }
     if (!r) return;
     if (r.uid) { uid = r.uid; Platform.setUid(uid); }
     if (r.kicked) { kickScreen(); return; }
+    if (claim) claimed = true;
     if (r.restore && adopt(r.restore, true)) {
       restoredModal('Лавка нашлась!', 'Игра открылась без твоего сохранения, но котёл всё помнит. Возвращаем твой прогресс.');
       return;
@@ -92,7 +96,7 @@ const Online = (() => {
       h('div', { class: 'ban-box' },
         pic('ui/phone', 'ban-ico'),
         h('h2', null, 'Лавка открыта в другом месте'),
-        h('p', null, 'Ты сейчас играешь на другом устройстве или в другом приложении. Играть сразу в двух местах нельзя, чтобы прогресс не перепутался.'),
+        h('p', null, 'Игру открыли ещё раз: на другом устройстве, в другом приложении или в соседнем окне. Играть сразу в двух местах нельзя, чтобы прогресс не перепутался.'),
         h('button', { class: 'btn', type: 'button', onclick: () => { location.reload(); } }, 'Играть здесь')));
     document.body.append(box);
   }

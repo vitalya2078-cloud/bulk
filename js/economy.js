@@ -9,9 +9,9 @@ const Econ = (() => {
   // ---------- даты по местному времени ----------
   const pad = (n) => (n < 10 ? '0' + n : '' + n);
   const dateKey = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-  const today = () => dateKey(new Date());
-  function yesterday() { const d = new Date(); d.setDate(d.getDate() - 1); return dateKey(d); }
-  function secToMidnight() { const n = new Date(); const m = new Date(n); m.setHours(24, 0, 0, 0); return (m - n) / 1000; }
+  const today = () => dateKey(new Date(Date.now()));
+  function yesterday() { const d = new Date(Date.now()); d.setDate(d.getDate() - 1); return dateKey(d); }
+  function secToMidnight() { const n = new Date(Date.now()); const m = new Date(n); m.setHours(24, 0, 0, 0); return (m - n) / 1000; }
 
   function rngFrom(str) {
     let h = 1779033703 ^ str.length;

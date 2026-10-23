@@ -128,7 +128,7 @@ const Events = (() => {
   // Включает и выключает событие. Возвращает итог закончившегося события, если он есть.
   function check() {
     const s = S();
-    cur = find(new Date());
+    cur = find(new Date(Date.now()));
     let finished = null;
     if (s.ev && (!cur || s.ev.id !== cur.key) && !s.evDone.includes(s.ev.id)) finished = finish();
     if (cur && (!s.ev || s.ev.id !== cur.key) && !s.evDone.includes(cur.key)) {

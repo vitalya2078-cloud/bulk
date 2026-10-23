@@ -2,6 +2,7 @@
 (async () => {
   'use strict';
   const C = CONFIG, D = DATA;
+  if (typeof Clock !== 'undefined') Clock.sync(); // время базы - параллельно с загрузкой
   const canvas = document.getElementById('cauldron');
   const rand = (a, b) => a + Math.random() * (b - a);
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -50,6 +51,16 @@
     }
     UI.offlineModal(amount, sec);
     if (slept) setTimeout(() => UI.toast('Сонное зелье удвоило доход, пока тебя не было'), 600);
+  }
+
+  // вернулся в игру: доход за время отсутствия - только после сверки времени с базой,
+  // иначе переведённые вперёд часы телефона дали бы лишний доход
+  let resuming = false;
+  function resumeGap(from) {
+    if (resuming) return;
+    resuming = true;
+    const done = () => { resuming = false; const sec = (Date.now() - from) / 1000; if (sec > 5) handleGap(sec, true); lastWall = Date.now(); };
+    if (typeof Clock !== 'undefined') Clock.ready().then(done); else done();
   }
 
   // ---------- тапы по котлу ----------
@@ -167,7 +178,7 @@
   };
 
   await Platform.init();
-  const saved = await loadSave();
+  const [saved] = await Promise.all([loadSave(), typeof Clock !== 'undefined' ? Clock.ready() : null]);
   if (saved) Econ.load(saved);
   UI.applySettings();
   Econ.countDay();
@@ -213,7 +224,7 @@
     lastWall = wall;
     let dt = (now - last) / 1000;
     last = now;
-    if (gap > 5) { handleGap(gap, true); dt = 0; } // вкладка была скрыта или телефон спал
+    if (gap > 5) { resumeGap(wall - gap * 1000); dt = 0; } // вкладка была скрыта или телефон спал
     dt = Math.max(0, Math.min(dt, 0.1));
 
     Econ.tick(dt);
