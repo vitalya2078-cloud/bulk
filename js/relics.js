@@ -45,38 +45,38 @@ const Relics = (() => {
     { id: 'candle',    r: 'c', k: 'pantry',  img: 'relics/candle',    name: 'Восковая свеча',       d: 'Пока она горит, в кладовой ничего не портится.' },
     { id: 'abacus',    r: 'c', k: 'card',    img: 'relics/abacus',    name: 'Счёты травницы',       d: 'Бусины сами щёлкают, когда торговец завышает цену.' },
     { id: 'bell',      r: 'c', k: 'order',   img: 'relics/bell',      name: 'Дверной колокольчик',  d: 'Звенит так приветливо, что гости оставляют чаевые.' },
-    { id: 'mortar',    r: 'c', k: 'drop',    img: 'ui/mortar',        name: 'Ступка знахаря',       d: 'Из одной травинки выжимает две.' },
-    { id: 'hourglass', r: 'r', k: 'offline', img: 'ui/hourglass',     name: 'Песочные часы',        d: 'Песок течёт медленнее, когда хозяина нет дома.' },
-    { id: 'lens',      r: 'r', k: 'xp',      img: 'ui/lens',          name: 'Лупа алхимика',        d: 'В неё видно то, что пропустил бы даже Бульк.' },
-    { id: 'flask',     r: 'r', k: 'inc',     img: 'ui/flask',         name: 'Хрустальная склянка',  d: 'Любое зелье в ней стоит вдвое дороже. Ну, почти.' },
-    { id: 'map',       r: 'r', k: 'quest',   img: 'ui/map',           name: 'Карта поручений',      d: 'Крестиком отмечено, где ждёт награда.' },
-    { id: 'key',       r: 'r', k: 'pantry',  img: 'ui/key',           name: 'Ключ от погреба',      d: 'Открывает погреб, о котором не знал даже прежний хозяин.' },
-    { id: 'watch',     r: 'r', k: 'tap',     img: 'ui/pocket_watch',  name: 'Карманные часы',       d: 'Тикают в такт котлу и ускоряют помешивание.' },
-    { id: 'dragoneye', r: 'e', k: 'tap',     x: 'crit',    img: 'ui/stone',        name: 'Глаз дракона',          d: 'Тёплый камень. Иногда моргает.' },
-    { id: 'skull',     r: 'e', k: 'order',   x: 'xp',      img: 'decor/skull_shelf', name: 'Говорящий череп',     d: 'Болтун. Зато гости от него в восторге.' },
-    { id: 'compass',   r: 'e', k: 'drop',    x: 'quest',   img: 'ui/compass',      name: 'Лунный компас',         d: 'Показывает не на север, а туда, где растёт нужная трава.' },
-    { id: 'mirror',    r: 'e', k: 'inc',     x: 'card',    img: 'decor/mirror',    name: 'Зеркало ведьмы',        d: 'Покупатель видит в нём себя счастливым и платит щедрее.' },
-    { id: 'orb',       r: 'e', k: 'xp',      x: 'inc',     img: 'ui/crystal_ball', name: 'Хрустальный шар',       d: 'Знает рецепты, которые ты ещё не открыл.' },
-    { id: 'flame',     r: 'e', k: 'offline', x: 'pantry',  img: 'ui/flame',        name: 'Вечный огонь',          d: 'Греет котёл, даже когда в лавке никого.' },
-    { id: 'crown',     r: 'l', k: 'inc',     x: 'tap',     img: 'ui/crown',        name: 'Корона Первой Ведьмы',  d: 'Та, что основала первую лавку зелий, носила её сто лет.' },
-    { id: 'wishstar',  r: 'l', k: 'crit',    x: 'order',   img: 'ui/quality',      name: 'Звезда желаний',        d: 'Упала прямо в котёл. Бульк до сих пор этим гордится.' },
-    { id: 'tablet',    r: 'l', k: 'quest',   x: 'xp',      img: 'decor/rune_tablet', name: 'Скрижаль рун',        d: 'На ней записаны все поручения мира. И ответы к ним.' },
-    { id: 'ancient',   r: 'l', k: 'drop',    x: 'inc',     img: 'ui/rune',         name: 'Руна древних',          d: 'Травы сами тянутся к тому, кто её носит.' },
-    { id: 'pouch',     r: 'l', k: 'offline', x: 'card',    img: 'ui/crystal_pouch', name: 'Мешочек звездочёта',   d: 'В нём звёзды, которые приносят доход даже ночью.' },
-    { id: 'portrait',  r: 'l', k: 'order',   x: 'pantry',  img: 'decor/portrait',  name: 'Портрет Первого Алхимика', d: 'Старик на портрете подмигивает лучшим покупателям.' }
+    { id: 'mortar',    r: 'c', k: 'drop',    img: 'relics/mortar',        name: 'Ступка знахаря',       d: 'Из одной травинки выжимает две.' },
+    { id: 'hourglass', r: 'r', k: 'offline', img: 'relics/hourglass',     name: 'Песочные часы',        d: 'Песок течёт медленнее, когда хозяина нет дома.' },
+    { id: 'lens',      r: 'r', k: 'xp',      img: 'relics/lens',          name: 'Лупа алхимика',        d: 'В неё видно то, что пропустил бы даже Бульк.' },
+    { id: 'flask',     r: 'r', k: 'inc',     img: 'relics/flask',         name: 'Хрустальная склянка',  d: 'Любое зелье в ней стоит вдвое дороже. Ну, почти.' },
+    { id: 'map',       r: 'r', k: 'quest',   img: 'relics/map',           name: 'Карта поручений',      d: 'Крестиком отмечено, где ждёт награда.' },
+    { id: 'key',       r: 'r', k: 'pantry',  img: 'relics/key',           name: 'Ключ от погреба',      d: 'Открывает погреб, о котором не знал даже прежний хозяин.' },
+    { id: 'watch',     r: 'r', k: 'tap',     img: 'relics/watch',  name: 'Карманные часы',       d: 'Тикают в такт котлу и ускоряют помешивание.' },
+    { id: 'dragoneye', r: 'e', k: 'tap',     x: 'crit',    img: 'relics/dragoneye',        name: 'Глаз дракона',          d: 'Тёплый камень. Иногда моргает.' },
+    { id: 'skull',     r: 'e', k: 'order',   x: 'xp',      img: 'relics/skull', name: 'Говорящий череп',     d: 'Болтун. Зато гости от него в восторге.' },
+    { id: 'compass',   r: 'e', k: 'drop',    x: 'quest',   img: 'relics/compass',      name: 'Лунный компас',         d: 'Показывает не на север, а туда, где растёт нужная трава.' },
+    { id: 'mirror',    r: 'e', k: 'inc',     x: 'card',    img: 'relics/mirror',    name: 'Зеркало ведьмы',        d: 'Покупатель видит в нём себя счастливым и платит щедрее.' },
+    { id: 'orb',       r: 'e', k: 'xp',      x: 'inc',     img: 'relics/orb', name: 'Хрустальный шар',       d: 'Знает рецепты, которые ты ещё не открыл.' },
+    { id: 'flame',     r: 'e', k: 'offline', x: 'pantry',  img: 'relics/flame',        name: 'Вечный огонь',          d: 'Греет котёл, даже когда в лавке никого.' },
+    { id: 'crown',     r: 'l', k: 'inc',     x: 'tap',     img: 'relics/crown',        name: 'Корона Первой Ведьмы',  d: 'Та, что основала первую лавку зелий, носила её сто лет.' },
+    { id: 'wishstar',  r: 'l', k: 'crit',    x: 'order',   img: 'relics/wishstar',      name: 'Звезда желаний',        d: 'Упала прямо в котёл. Бульк до сих пор этим гордится.' },
+    { id: 'tablet',    r: 'l', k: 'quest',   x: 'xp',      img: 'relics/tablet', name: 'Скрижаль рун',        d: 'На ней записаны все поручения мира. И ответы к ним.' },
+    { id: 'ancient',   r: 'l', k: 'drop',    x: 'inc',     img: 'relics/ancient',         name: 'Руна древних',          d: 'Травы сами тянутся к тому, кто её носит.' },
+    { id: 'pouch',     r: 'l', k: 'offline', x: 'card',    img: 'relics/pouch', name: 'Мешочек звездочёта',   d: 'В нём звёзды, которые приносят доход даже ночью.' },
+    { id: 'portrait',  r: 'l', k: 'order',   x: 'pantry',  img: 'relics/portrait',  name: 'Портрет Первого Алхимика', d: 'Старик на портрете подмигивает лучшим покупателям.' }
   ];
   const ITEM = Object.fromEntries(ITEMS.map((x) => [x.id, x]));
   const EXTRA_KINDS = Object.keys(KIND);
 
   // сундуки: что выпадает. relic - сколько диковинок и с какими весами редкости
   const CHEST = {
-    w: { name: 'Деревянный сундук', img: 'ui/chest', open: 'ui/chest', cls: 'ch-w', cost: 15,
+    w: { name: 'Деревянный сундук', img: 'relics/chest_w', open: 'relics/chest_w_open', cls: 'ch-w', cost: 15,
          relic: [{ p: 0.35, w: { c: 85, r: 14, e: 1 } }], ess: 0.5, ing: 2, cr: 0 },
-    s: { name: 'Серебряный сундук', img: 'ui/chest', open: 'ui/chest', cls: 'ch-s', cost: 60,
+    s: { name: 'Серебряный сундук', img: 'relics/chest_s', open: 'relics/chest_s_open', cls: 'ch-s', cost: 60,
          relic: [{ p: 1, w: { r: 78, e: 19, l: 3 } }], ess: 1, ing: 0, cr: 2, pity: 10 },
-    g: { name: 'Золотой сундук', img: 'ui/chest', open: 'ui/chest', cls: 'ch-g', cost: 180,
+    g: { name: 'Золотой сундук', img: 'relics/chest_g', open: 'relics/chest_g_open', cls: 'ch-g', cost: 180,
          relic: [{ p: 1, w: { e: 85, l: 15 } }, { p: 1, w: { c: 50, r: 50 } }], ess: 2, ing: 0, cr: 5 },
-    t: { name: 'Звёздный сундук', img: 'ui/crystal_chest', open: 'ui/crystal_chest', cls: 'ch-t', cost: 0,
+    t: { name: 'Звёздный сундук', img: 'relics/chest_t', open: 'relics/chest_t_open', cls: 'ch-t', cost: 0,
          relic: [{ p: 1, w: { l: 100 } }, { p: 1, w: { e: 100 } }], ess: 0, ing: 0, cr: 10 }
   };
   const CHEST_ORDER = ['w', 's', 'g', 't'];
@@ -86,11 +86,11 @@ const Relics = (() => {
     { id: 'ess1', w: 20, img: 'ui/essence', label: 'Эссенция', sub: '30 мин дохода' },
     { id: 'cr3', w: 16, img: 'ui/crystal', label: '3 кристалла' },
     { id: 'ing', w: 15, img: 'ui/basket', label: '3 ингредиента' },
-    { id: 'chw', w: 18, img: 'ui/chest', label: 'Деревянный сундук', cls: 'ch-w' },
+    { id: 'chw', w: 18, img: 'relics/chest_w', label: 'Деревянный сундук' },
     { id: 'ess2', w: 10, img: 'ui/essence', label: 'Много эссенции', sub: '2 ч дохода' },
     { id: 'sh', w: 10, img: 'ui/shards', label: '15 осколков' },
-    { id: 'chs', w: 8, img: 'ui/chest', label: 'Серебряный сундук', cls: 'ch-s' },
-    { id: 'rel', w: 3, img: 'ui/quality', label: 'Редкая диковинка' }
+    { id: 'chs', w: 8, img: 'relics/chest_s', label: 'Серебряный сундук' },
+    { id: 'rel', w: 3, img: 'relics/wishstar', label: 'Редкая диковинка' }
   ];
 
   // ---------- состояние ----------
@@ -366,7 +366,7 @@ const Relics = (() => {
     const r = st();
     const top = h('div', { class: 'sheet-top' });
     body.append(top);
-    top.append(h('div', { class: 'brew-head' }, pic('ui/chest', 'brew-head-ico'),
+    top.append(h('div', { class: 'brew-head' }, pic('relics/chest_g', 'brew-head-ico'),
       h('div', { class: 'brew-head-text' }, h('b', null, 'Диковинки'),
         h('small', null, 'Полка ' + r.shelf.length + '/' + slots() + ' · собрано ' + Object.keys(r.own).length + '/' + ITEMS.length),
         h('small', { class: 'rel-shards' }, pic('ui/shards', 'rel-sh-ico'), 'Осколки: ', h('b', null, Fmt.num(r.sh))))));
@@ -560,13 +560,41 @@ const Relics = (() => {
   }
 
   // ---------- окно колеса ----------
+  // лампочки на рамке (в процентах картинки wheel/ring)
+  const BULBS = [[71.3, 14.7], [85.6, 29.1], [85.7, 70.5], [71.2, 84.5], [28.8, 84.5], [14, 70.5], [14, 29.3], [28.9, 14.8]];
   function wheel() {
     if (!unlocked()) { UI.toast('Колесо Булька появится на ранге «' + D().ranks[1].name + '»'); return; }
     st();
     const N = WHEEL.length, seg = 360 / N;
-    const disc = h('div', { class: 'wheel-disc' }, WHEEL.map((w, i) => h('div', { class: 'wheel-seg', style: '--a:' + (i * seg) + 'deg' },
-      pic(w.img, 'wheel-ico' + (w.cls ? ' ' + w.cls : '')))));
+    // крутится только диск с призами; рамка с лампочками, шапка и стрелка стоят на месте
+    const disc = h('div', { class: 'wheel-disc' }, pic('wheel/disc', 'wheel-disc-img'), WHEEL.map((w, i) => h('div', { class: 'wheel-seg', style: '--a:' + (i * seg) + 'deg' },
+      pic(w.img, 'wheel-ico'))));
+    const pointer = pic('wheel/pointer', 'wheel-pointer');
+    const bulbs = h('div', { class: 'wheel-bulbs' }, BULBS.map(([x, y], i) => h('i', { style: 'left:' + x + '%;top:' + y + '%;--d:' + (i % 2 ? 0.5 : 0) + 's' })));
+    const wheelEl = h('div', { class: 'wheel' }, disc, pic('wheel/ring', 'wheel-ring'), bulbs, pic('wheel/cap', 'wheel-cap'), pointer);
     let angle = 0, busy = false;
+    // стрелка щёлкает, когда под ней проходит граница сектора
+    const discAngle = () => {
+      const t = getComputedStyle(disc).transform;
+      if (!t || t === 'none') return 0;
+      const m = t.match(/matrix\(([^)]+)\)/); if (!m) return 0;
+      const v = m[1].split(',').map(Number);
+      return Math.atan2(v[1], v[0]) * 180 / Math.PI;
+    };
+    function watchTicks(ms) {
+      let last = null, total = 0, prev = discAngle();
+      const end = performance.now() + ms;
+      const step = () => {
+        const a = discAngle();
+        let d = a - prev; if (d < -180) d += 360; if (d > 180) d -= 360;
+        total += d; prev = a;
+        const k = Math.floor((total + seg / 2) / seg);
+        if (last !== null && k !== last && pointer.animate) pointer.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(-24deg)' }, { transform: 'rotate(0)' }], { duration: 140, easing: 'ease-out' });
+        last = k;
+        if (performance.now() < end) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }
     const result = h('div', { class: 'wheel-res' }, 'Крути колесо - приз точно будет!');
     const btns = h('div', { class: 'rel-acts' });
     const legend = h('ul', { class: 'rel-odds wheel-odds' }, WHEEL.map((w) => h('li', null, w.label + (w.sub ? ' (' + w.sub + ')' : '') + ' - ' + Math.round(w.w) + '%')));
@@ -605,9 +633,12 @@ const Relics = (() => {
       const target = 360 * 5 + (360 - i * seg) - (Math.random() * 0.6 - 0.3) * seg;
       angle = angle - (angle % 360) + target;
       disc.style.transform = 'rotate(' + angle + 'deg)';
+      wheelEl.classList.add('spinning'); wheelEl.classList.remove('won');
+      watchTicks(4300);
       result.textContent = '...';
       setTimeout(() => {
         busy = false; Sound.coin();
+        wheelEl.classList.remove('spinning'); wheelEl.classList.add('won');
         result.textContent = 'Приз: ' + text;
         result.classList.add('win');
         UI.refresh(true); drawBtns();
@@ -615,7 +646,7 @@ const Relics = (() => {
     }
     drawBtns();
     UI.modal({ title: 'Колесо Булька', cls: 'wheel-modal', body: h('div', { class: 'wheel-box' },
-      h('div', { class: 'wheel' }, disc, h('div', { class: 'wheel-hub' }, pic('ui/cauldron', 'wheel-hub-ico')), h('div', { class: 'wheel-arrow' })),
+      wheelEl,
       result, btns,
       h('details', { class: 'wheel-more' }, h('summary', null, 'Шансы призов'), legend)), onClose: refreshButton });
   }
