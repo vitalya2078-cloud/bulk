@@ -1428,6 +1428,61 @@
   const BC_ST = { scheduled: 'запланирована', sending: 'отправляется', done: 'готово', canceled: 'отменена' };
   const kick = () => { try { fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'tick', init_data: initData }), keepalive: true }).catch(() => {}); } catch (e) { /* ignore */ } };
   let bcDraft = null; // «Повторить» кладёт сюда прошлую рассылку
+  // ---------- вложения: с телефона, из моих фото ВК, по ссылке ----------
+  const fnCall = async (b) => {
+    const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ init_data: initData }, b)) });
+    const x = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(x.error || 'ошибка ' + r.status);
+    return x;
+  };
+  async function pickUrl(onItem, photosOnly) {
+    const inp = h('input', { class: 'input mono', type: 'url', placeholder: 'https://...jpg' });
+    const ok = await dialog('Картинка по ссылке', 'Вставь прямую ссылку на картинку' + (photosOnly ? '' : ' или видео') + '. Сервер скачает её сам.', inp, [{ label: 'Отмена', cls: 'ghost', v: false }, { label: 'Добавить', v: true }]);
+    const u = inp.value.trim();
+    if (!ok || !u) return;
+    toast('Скачиваю...');
+    try {
+      const r = await fnCall({ action: 'from_url', url: u });
+      if (photosOnly && r.kind !== 'photo') { toast('Нужна картинка (jpg, png, webp)', true); return; }
+      onItem({ url: r.url, kind: r.kind, name: r.name });
+      toast('Добавлено');
+    } catch (e) { toast('Не получилось: ' + e.message, true); }
+  }
+  async function pickVkPhotos(onItem, left) {
+    const grid = h('div', { class: 'vkp' }, h('p', { class: 'hint' }, 'Загружаю твои фото ВК...'));
+    const chosen = new Map();
+    let offset = 0, total = 0;
+    async function more() {
+      try {
+        const r = await fnCall({ action: 'vk_photos', offset });
+        total = r.total || 0;
+        if (!offset) grid.replaceChildren();
+        (r.items || []).forEach((x) => {
+          const b = h('button', { type: 'button', class: 'vkp-i', style: { backgroundImage: 'url("' + x.thumb + '")' }, onclick: () => {
+            if (chosen.has(x.vk)) chosen.delete(x.vk); else if (chosen.size < left) chosen.set(x.vk, x); else { toast('Не больше ' + left, true); return; }
+            b.classList.toggle('on', chosen.has(x.vk));
+          } });
+          grid.append(b);
+        });
+        offset += (r.items || []).length;
+        const old = grid.parentNode && grid.parentNode.querySelector('.vkp-more'); if (old) old.remove();
+        if (offset < total) grid.after(h('button', { type: 'button', class: 'btn ghost sm wide vkp-more', onclick: more }, 'Ещё фото'));
+        if (!offset) grid.replaceChildren(h('p', { class: 'hint' }, 'В альбомах пока нет фото. Загрузи картинку во ВК (например, в «Сохранённые»), и она появится здесь.'));
+      } catch (e) {
+        grid.replaceChildren(h('p', { class: 'hint' }, /no token/.test(e.message) ? 'Нужен ключ ВК: получи его во вкладке «Посты в группы ВК».' : 'Не загрузилось: ' + e.message));
+      }
+    }
+    more();
+    const ok = await dialog('Мои фото ВКонтакте', 'Отметь картинки - они прикрепятся к посту.', h('div', null, grid), [{ label: 'Отмена', cls: 'ghost', v: false }, { label: 'Добавить', v: true }]);
+    if (!ok) return;
+    chosen.forEach((x) => onItem({ url: x.url, thumb: x.thumb, kind: 'photo', name: 'photo.jpg', vk: x.vk }));
+  }
+  // плитки добавления: «С телефона» (выбор файла), «Из ВК», «По ссылке»
+  const addTiles = (fileIn, onItem, left, photosOnly) => [
+    h('label', { class: 'mi add' }, icon('image'), h('small', null, 'С телефона'), fileIn),
+    h('button', { type: 'button', class: 'mi add', onclick: () => pickVkPhotos(onItem, left) }, icon('users'), h('small', null, 'Из ВК')),
+    h('button', { type: 'button', class: 'mi add', onclick: () => pickUrl(onItem, photosOnly) }, icon('link'), h('small', null, 'По ссылке'))];
+
   // ---------- рассылка: игрокам или постами в группы ВК ----------
   let BMODE = 'players';
   function bcastHost() {
@@ -1470,12 +1525,7 @@
     if (stale(id)) return;
     const j = w.job || {};
     const reload = () => render();
-    const callFn = async (b) => {
-      const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ init_data: initData }, b)) });
-      const x = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(x.error || 'ошибка ' + r.status);
-      return x;
-    };
+    const callFn = fnCall;
     const out = [];
 
     // ключ
@@ -1575,10 +1625,11 @@
     const mediaBox = h('div', { class: 'media' });
     // поле выбора файла лежит прямо на плитке «Добавить»: нажатие из кода встроенный браузер ВК не пропускает
     const fileIn = h('input', { type: 'file', multiple: true, accept: 'image/*', class: 'file-hit', 'aria-label': 'Добавить фото' });
-    const drawMedia = () => mediaBox.replaceChildren(...media.map((x, i) => h('div', { class: 'mi' + (x.busy ? ' busy' : '') }, h('img', { src: x.local || x.url, alt: '' }),
+    const drawMedia = () => mediaBox.replaceChildren(...media.map((x, i) => h('div', { class: 'mi' + (x.busy ? ' busy' : '') }, h('img', { src: x.local || x.thumb || x.url, alt: '' }),
       h('button', { type: 'button', class: 'mi-x', 'aria-label': 'Убрать', onclick: () => { media.splice(i, 1); drawMedia(); } }, icon('x')))),
-      media.length < 10 ? h('label', { class: 'mi add' }, icon('image'), h('small', null, 'Добавить'), fileIn) : null);
+      ...(media.length < 10 ? addTiles(fileIn, (it) => { if (media.length < 10) { media.push(it); drawMedia(); } }, 10 - media.length, true) : []));
     fileIn.addEventListener('change', async () => {
+      if (fileIn.files.length) toast('Загружаю: ' + fileIn.files.length);
       for (const f of [...fileIn.files]) {
         if (media.length >= 10) break;
         const it = { name: f.name, kind: 'photo', local: URL.createObjectURL(f), busy: true }; media.push(it); drawMedia();
@@ -1611,7 +1662,7 @@
       h('button', { class: 'btn wide', style: { marginTop: '12px' }, onclick: async () => {
         if (media.some((x) => x.busy)) { toast('Дождись загрузки фото', true); return; }
         if (!text.value.trim() && !media.length) { toast('Напиши текст поста', true); return; }
-        const ok = await act('adm_wall_save', { p: { msg: { text: text.value.trim(), link: link.value.trim(), media: media.map((x) => ({ url: x.url, kind: 'photo', name: x.name })) },
+        const ok = await act('adm_wall_save', { p: { msg: { text: text.value.trim(), link: link.value.trim(), media: media.map((x) => Object.assign({ url: x.url, kind: 'photo', name: x.name }, x.vk ? { vk: x.vk, thumb: x.thumb } : {})) },
           every_min: every, per_group: Math.max(1, Math.min(24, Math.floor(+perG.value || 12))), per_day: Math.max(1, Math.min(100, Math.floor(+perD.value || 60))), replace_prev: replOn } }, 'Пост и настройки сохранены');
         if (ok) reload();
       } }, icon('check'), 'Сохранить'),
@@ -1667,6 +1718,7 @@
     const fileIn = h('input', { type: 'file', multiple: true, class: 'file-hit', 'aria-label': 'Добавить вложение' });
     fileIn.addEventListener('change', async () => {
       const files = [...fileIn.files]; fileIn.value = '';
+      if (files.length) toast('Загружаю: ' + files.length);
       for (const f of files) {
         if (st.media.length >= 10) { toast('Не больше 10 вложений', true); break; }
         if (f.size > 50 * 1024 * 1024) { toast(f.name + ': больше 50 МБ', true); continue; }
@@ -1683,9 +1735,9 @@
     });
     function drawMedia() {
       mediaBox.replaceChildren(...st.media.map((m, i) => h('div', { class: 'mi' + (m.busy ? ' busy' : '') },
-        m.kind === 'photo' || m.kind === 'animation' ? h('img', { src: m.local || m.url, alt: '' }) : h('span', { class: 'mi-ic' }, icon(m.kind === 'video' ? 'play' : 'file'), h('small', null, m.name || '')),
+        m.kind === 'photo' || m.kind === 'animation' ? h('img', { src: m.local || m.thumb || m.url, alt: '' }) : h('span', { class: 'mi-ic' }, icon(m.kind === 'video' ? 'play' : 'file'), h('small', null, m.name || '')),
         h('button', { type: 'button', class: 'mi-x', 'aria-label': 'Убрать', onclick: () => { st.media.splice(i, 1); drawMedia(); upd(); } }, icon('x')))),
-        st.media.length < 10 ? h('label', { class: 'mi add' }, icon('image'), h('small', null, 'Добавить'), fileIn) : null);
+        ...(st.media.length < 10 ? addTiles(fileIn, (it) => { if (st.media.length < 10) { st.media.push(it); drawMedia(); upd(); } }, 10 - st.media.length, false) : []));
     }
 
     // кнопки под сообщением
@@ -1781,7 +1833,7 @@
         if (!(await confirmBox((sendAt ? 'Запланировать' : 'Отправить') + ' ' + num(n) + ' ' + word(n, 'сообщение', 'сообщения', 'сообщений') + '?',
           ch.map((k) => CH[k] + ': ' + num(st.counts ? st.counts[k] : 0)).join('\n') + (sendAt ? '\nОтправка ' + dateTime(sendAt) : '\nТелеграм уходит ~25 сообщений в секунду.'), sendAt ? 'Запланировать' : 'Отправить'))) return;
       }
-      const msg = { text: m.text, html: m.html, vkfmt: m.vkfmt, media: st.media.map((x) => ({ url: x.url, kind: x.kind, name: x.name })),
+      const msg = { text: m.text, html: m.html, vkfmt: m.vkfmt, media: st.media.map((x) => Object.assign({ url: x.url, kind: x.kind, name: x.name }, x.vk ? { vk: x.vk, thumb: x.thumb } : {})),
         buttons: st.buttons.filter((b) => b.label).map((b) => ({ t: b.t, label: b.label, url: b.url || '', row: !!b.row })), opts: st.opts };
       const r = await act('adm_bcast_send', { p: { title: title.value.trim() || (self ? 'Проверка' : m.text.slice(0, 40)), ch, aud: a, msg, send_at: self ? null : sendAt, nodup: !!st.opts.nodup } });
       if (!r) return;

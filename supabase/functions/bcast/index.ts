@@ -5,6 +5,7 @@
 //    Будит база раз в минуту (заголовок x-bcast) и админка сразу после «Отправить» (init_data).
 //  * POST {action: "wall"} - пост в следующую по очереди группу ВК (цикл «Посты в группы», база будит раз в минуту).
 //  * POST {action: "wall_resolve", links} - проверить группы по ссылкам (открыта ли стена) и добавить в список.
+//  * POST {action: "from_url", url} - скачать картинку/видео по ссылке в хранилище; {action: "vk_photos"} - мои фото ВК для выбора.
 //  Ключи берутся из базы (private_secrets), сюда их никто не передаёт.
 //  Развернуть: supabase functions deploy bcast --no-verify-jwt
 // =====================================================================
@@ -45,6 +46,48 @@ function kindOf(type: string, name: string) {
   if (/^video\//.test(type)) return "video";
   return "document";
 }
+async function store(file: Blob, name: string, type: string) {
+  const ext = (name.match(/\.([A-Za-z0-9]{1,8})$/) || [, (type.split("/")[1] || "bin").replace(/[^a-z0-9]/gi, "").slice(0, 8)])[1]!.toLowerCase();
+  const path = `${new Date().toISOString().slice(0, 10)}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+  const r = await fetch(`${URL_DB}/storage/v1/object/bcast/${path}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${SRV}`, "Content-Type": type || "application/octet-stream", "x-upsert": "true" },
+    body: file,
+  });
+  if (!r.ok) return json({ error: "storage: " + (await r.text()).slice(0, 200) }, 500);
+  return json({ url: `${URL_DB}/storage/v1/object/public/bcast/${path}`, kind: kindOf(type, name), name, size: file.size, type });
+}
+// картинка по ссылке: сервер скачивает сам (во встроенном браузере ВК выбор файла бывает недоступен)
+async function fromUrl(u: string) {
+  if (!/^https?:\/\/\S+$/.test(u)) return json({ error: "bad url" }, 400);
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const r = await fetch(u, { signal: ctl.signal, redirect: "follow" });
+    if (!r.ok) return json({ error: "по ссылке ответили " + r.status }, 400);
+    const type = (r.headers.get("content-type") || "").split(";")[0].trim();
+    const len = +(r.headers.get("content-length") || 0);
+    if (len > 50 * 1024 * 1024) return json({ error: "too big" }, 400);
+    const blob = await r.blob();
+    if (blob.size > 50 * 1024 * 1024) return json({ error: "too big" }, 400);
+    if (!/^(image|video)\//.test(type) && !/\.(jpe?g|png|gif|webp|mp4|pdf)(\?|$)/i.test(u)) return json({ error: "по ссылке не картинка и не видео" }, 400);
+    const name = decodeURIComponent((u.split("?")[0].split("/").pop() || "file")).slice(0, 80) || "file";
+    return await store(blob, /\.[a-z0-9]{2,5}$/i.test(name) ? name : name + "." + (type.split("/")[1] || "jpg"), type || "image/jpeg");
+  } catch (e) { return json({ error: "не скачалось: " + String(e).slice(0, 100) }, 400); } finally { clearTimeout(t); }
+}
+// мои фото ВКонтакте (по ключу создателя) - выбрать картинку прямо из ВК
+async function vkPhotos(offset: number) {
+  const token = await rpc("wall_token", {});
+  if (!token) return json({ error: "no token" }, 400);
+  const r = await vk("photos.getAll", { count: 60, offset: Math.max(0, offset | 0), no_service_albums: 0, photo_sizes: 1 }, token);
+  if (r.error) return json({ error: `${r.error.error_code}: ${r.error.error_msg}` }, 400);
+  const pick = (sizes: any[], prefer: string[]) => { for (const t of prefer) { const x = sizes.find((s) => s.type === t); if (x) return x.url; } return sizes.length ? sizes[sizes.length - 1].url : ""; };
+  const items = (r.response?.items || []).map((p: any) => ({
+    vk: `photo${p.owner_id}_${p.id}${p.access_key ? "_" + p.access_key : ""}`,
+    url: pick(p.sizes || [], ["w", "z", "y", "x"]),
+    thumb: pick(p.sizes || [], ["q", "p", "m", "x"]),
+  })).filter((x: any) => x.url);
+  return json({ items, total: r.response?.count || 0 });
+}
 async function upload(req: Request) {
   const fd = await req.formData();
   const init = String(fd.get("init_data") || "");
@@ -52,15 +95,7 @@ async function upload(req: Request) {
   if (!(file instanceof File)) return json({ error: "no file" }, 400);
   if (!(await isAdmin(init))) return json({ error: "not admin" }, 403);
   if (file.size > 50 * 1024 * 1024) return json({ error: "too big" }, 400);
-  const ext = (file.name.match(/\.([A-Za-z0-9]{1,8})$/) || [, "bin"])[1]!.toLowerCase();
-  const path = `${new Date().toISOString().slice(0, 10)}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
-  const r = await fetch(`${URL_DB}/storage/v1/object/bcast/${path}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${SRV}`, "Content-Type": file.type || "application/octet-stream", "x-upsert": "true" },
-    body: file,
-  });
-  if (!r.ok) return json({ error: "storage: " + (await r.text()).slice(0, 200) }, 500);
-  return json({ url: `${URL_DB}/storage/v1/object/public/bcast/${path}`, kind: kindOf(file.type, file.name), name: file.name, size: file.size, type: file.type });
+  return await store(file, file.name, file.type);
 }
 
 // ---------- сообщение ----------
@@ -277,6 +312,8 @@ async function wallResolve(links: string[]) {
 async function wallPhotos(token: string, m: Msg) {
   const out: string[] = [];
   for (const x of (m.media || []).filter((y) => y.kind === "photo").slice(0, 10)) {
+    // фото уже во ВК - прикрепляем как есть
+    if ((x as any).vk) { out.push((x as any).vk); continue; }
     try {
       const file = await (await fetch(x.url)).blob();
       const s = await vk("photos.getWallUploadServer", {}, token);
@@ -320,10 +357,12 @@ Deno.serve(async (req) => {
   try {
     if ((req.headers.get("content-type") || "").startsWith("multipart/form-data")) return await upload(req);
     const body = await req.json().catch(() => ({}));
-    if (!["tick", "wall", "wall_resolve"].includes(body.action)) return json({ error: "unknown action" }, 400);
+    if (!["tick", "wall", "wall_resolve", "from_url", "vk_photos"].includes(body.action)) return json({ error: "unknown action" }, 400);
     const sec = await rpc("bcast_secrets", {});
     const cronOk = !!sec.bcast_cron && req.headers.get("x-bcast") === sec.bcast_cron;
     if (!cronOk && !(await isAdmin(String(body.init_data || "")))) return json({ error: "forbidden" }, 403);
+    if (body.action === "from_url") return cronOk ? json({ error: "forbidden" }, 403) : await fromUrl(String(body.url || "").trim());
+    if (body.action === "vk_photos") return cronOk ? json({ error: "forbidden" }, 403) : await vkPhotos(Number(body.offset) || 0);
     if (body.action === "wall_resolve") return cronOk ? json({ error: "forbidden" }, 403) : await wallResolve(Array.isArray(body.links) ? body.links.map(String) : []);
     if (body.action === "wall") return json(await wallPost());
     return json({ sent: await tick() });

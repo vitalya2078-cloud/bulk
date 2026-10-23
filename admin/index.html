@@ -11,11 +11,16 @@
   // Telegram-скрипт не нужен в приложении «Бульк Админ» и во ВКонтакте (там его не ждём)
   if (!window.BulkApp && !/[?&]vk_user_id=/.test(location.search)) document.write('<script src="https://telegram.org/js/telegram-web-app.js"><\/script>');
 </script>
-<link rel="stylesheet" href="admin.css">
+<script>
+  // номер версии в адресе, чтобы ВК и Telegram не показывали старую копию админки (в приложении файлы локальные - без него)
+  var ADM_BUILD = 'cbbb0a1e54';
+  window.__admV = /^https?:/.test(location.protocol) ? '?v=' + ADM_BUILD : '';
+  document.write('<link rel="stylesheet" href="admin.css' + window.__admV + '">');
+</script>
 </head>
 <body>
 <div id="app"></div>
 <div id="toast" class="toast"></div>
-<script src="admin.js"></script>
+<script>document.write('<script src="admin.js' + window.__admV + '"><\/script>');</script>
 </body>
 </html>

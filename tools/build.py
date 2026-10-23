@@ -24,6 +24,10 @@ open(os.path.join(root, 'version.json'), 'w').write(json.dumps({'v': V}))
 # админка для приложения: список файлов с отпечатками, версия = отпечаток содержимого
 import hashlib
 ad = os.path.join(root, 'admin'); af = {}
+# адрес admin.js / admin.css с версией по содержимому - иначе ВК держит старую копию
+ab = hashlib.sha256(open(os.path.join(ad, 'admin.js'), 'rb').read() + open(os.path.join(ad, 'admin.css'), 'rb').read()).hexdigest()[:10]
+ai = open(os.path.join(ad, 'index.html'), encoding='utf-8').read()
+open(os.path.join(ad, 'index.html'), 'w', encoding='utf-8').write(re.sub(r"var ADM_BUILD = '[^']*';", "var ADM_BUILD = '%s';" % ab, ai))
 for f in sorted(os.listdir(ad)):
     if f == 'bundle.json' or f.startswith('.'): continue
     b = open(os.path.join(ad, f), 'rb').read()
