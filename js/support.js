@@ -22,7 +22,7 @@ const Support = (() => {
     list.replaceChildren();
     const msgs = (t && t.msgs) || [];
     if (!msgs.length) {
-      list.append(h('div', { class: 'sup-empty' }, pic('ui/chat', 'sup-empty-ico'),
+      list.append(h('div', { class: 'sup-empty' }, pic('ui/support', 'sup-empty-ico'),
         h('b', null, 'Чем помочь?'),
         h('p', null, 'Опиши, что случилось: что делал и что пошло не так. Мы ответим здесь и письмом в почту. Номер твоей лавки команда увидит сама.')));
       return;

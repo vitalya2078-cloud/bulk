@@ -295,7 +295,7 @@ const UI = (() => {
     wardrobe: { label: 'Гардероб', img: 'ui/wardrobe' },
     tasks:   { label: 'Задания', img: 'ui/checklist' },
     friends: { label: 'Сообщество', img: 'ui/envelope' },
-    profile: { label: 'Профиль', img: 'ui/medal_crown' }
+    profile: { label: 'Профиль', img: 'ui/profile' }
   };
   const badges = {};
 
@@ -439,7 +439,7 @@ const UI = (() => {
     const g = Econ.globalMul();
     if (g > 1) {
       const b = (typeof Online !== 'undefined' && Online.boost) ? Online.boost() : null;
-      out.push({ key: 'g', img: 'ui/sparkle', label: 'Лавка ×' + mulText(g), name: 'Бонус лавки' + (b && b.label ? ': ' + b.label : ''), desc: 'Весь доход ×' + mulText(g) + ' для всех игроков',
+      out.push({ key: 'g', img: 'ui/boost', label: 'Лавка ×' + mulText(g), name: 'Бонус лавки' + (b && b.label ? ': ' + b.label : ''), desc: 'Весь доход ×' + mulText(g) + ' для всех игроков',
         left: b && b.until ? (Date.parse(b.until) - Date.now()) / 1000 : -1 });
     }
     const cm = Econ.covenMul();
@@ -678,7 +678,7 @@ const UI = (() => {
           box.append(h('div', { class: 'panel' },
             h('h3', { class: 'mini-title' }, 'Поддержка'),
             h('div', { class: 'soc-block' }, h('button', { class: 'soc-row hot', type: 'button', onclick: () => { Sound.tap(); Support.open(); } },
-              pic('ui/chat', 'soc-ico'), h('span', null, h('small', null, 'Ошибка, вопрос или идея'), h('b', null, 'Написать команде')), h('i', null, 'Написать'))),
+              pic('ui/support', 'soc-ico'), h('span', null, h('small', null, 'Ошибка, вопрос или идея'), h('b', null, 'Написать команде')), h('i', null, 'Написать'))),
             h('p', { class: 'note center' }, 'Отвечаем здесь же и письмом в почту.')));
         }
 
@@ -732,7 +732,7 @@ const UI = (() => {
           Online.team().then((t) => {
             if (!t || !t.length) { list.replaceChildren(h('p', { class: 'note center' }, 'Команду покажем, когда будет связь.')); return; }
             list.replaceChildren(...t.map((m) => h('div', { class: 'team-row' },
-              /^https:/.test(m.photo || '') ? h('img', { class: 'pic team-ava', src: m.photo, alt: '', referrerpolicy: 'no-referrer' }) : (m.photo ? pic('avatars/' + m.photo, 'team-ava') : pic('ui/hooded', 'team-ava')),
+              /^https:/.test(m.photo || '') ? h('img', { class: 'pic team-ava', src: m.photo, alt: '', referrerpolicy: 'no-referrer' }) : (m.photo ? pic('avatars/' + m.photo, 'team-ava') : pic('ui/team', 'team-ava')),
               h('span', null, h('b', null, m.name), h('small', null, ROLE[m.role] || 'Команда')))));
           });
         }
@@ -900,9 +900,9 @@ const UI = (() => {
           b.addEventListener('click', async () => { Sound.tap(); const v = !st.notif; if (await Social.setNotify(v)) { b.classList.toggle('on', v); b.setAttribute('aria-checked', v ? 'true' : 'false'); } });
           return h('div', { class: 'set-row' }, pic('ui/envelope', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Напоминания'), h('small', null, 'Лавка полна, питомец вернулся, пришёл босс')), b);
         })() : null,
-        (typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/key', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Один прогресс'), h('small', null, 'Играй в ВК и Telegram с одним сохранением')),
+        (typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/link', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Один прогресс'), h('small', null, 'Играй в ВК и Telegram с одним сохранением')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.linkDialog(), 0); } }, 'Связать')) : null,
-        (typeof Support !== 'undefined' && typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/chat', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Поддержка'), h('small', null, 'Ошибка, вопрос или идея - напиши команде')),
+        (typeof Support !== 'undefined' && typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/support', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Поддержка'), h('small', null, 'Ошибка, вопрос или идея - напиши команде')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Support.open(), 0); } }, 'Написать')) : null,
         (typeof Online !== 'undefined' && Online.isAdmin()) ? h('div', { class: 'set-row' }, pic('ui/key', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Приложение админки'), h('small', null, 'Код для входа, только для команды')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.admCode(), 0); } }, 'Код')) : null,
@@ -1095,7 +1095,7 @@ const UI = (() => {
         } }, pic('ui/key', 'soc-ico'), h('span', null, h('small', null, 'Номер лавки - назови его поддержке'), h('b', { class: 'mono' }, id)), h('i', null, 'Копировать')));
       }
       if (typeof Support !== 'undefined') soc.append(h('button', { class: 'soc-row', type: 'button', onclick: () => { Sound.tap(); Support.open(); } },
-        pic('ui/chat', 'soc-ico'), h('span', null, h('small', null, 'Что-то не так или есть идея?'), h('b', null, 'Написать в поддержку')), h('i', null, 'Написать')));
+        pic('ui/support', 'soc-ico'), h('span', null, h('small', null, 'Что-то не так или есть идея?'), h('b', null, 'Написать в поддержку')), h('i', null, 'Написать')));
     }
 
     // статистика
@@ -1136,7 +1136,7 @@ const UI = (() => {
     const ln = Online.linked() || {};
     const both = ln.tg && ln.vk;
     rows.push(h('button', { class: 'soc-row', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.linkDialog(), 0); } },
-      pic('ui/phone', 'soc-ico'), h('span', null, h('small', null, 'Один прогресс'),
+      pic('ui/link', 'soc-ico'), h('span', null, h('small', null, 'Один прогресс'),
         h('b', null, both ? 'ВКонтакте + Telegram' : 'Только ' + (ln.vk ? 'ВКонтакте' : 'Telegram'))), h('i', null, both ? 'Подробнее' : 'Привязать')));
     return h('div', { class: 'soc-block' }, rows);
   }
