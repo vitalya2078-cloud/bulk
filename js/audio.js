@@ -240,6 +240,16 @@ const Sound = (() => {
     deny() { if (!file('deny', 0.6)) tone(220, 180, 0.12, 'triangle', 0.07); },
     bell() { if (!file('bell', 0.55)) { tone(1568, 1568, 0.4, 'sine', 0.06); tone(2093, 2093, 0.5, 'sine', 0.04, 0.12); } },
     brew() { if (!file('brew', 0.8)) [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.2, 'triangle', 0.09, i * 0.09)); },
+    // 0.29: тап по мебели комнаты - у каждого материала свой звук
+    prop(kind) {
+      switch (kind) {
+        case 'glass': if (!file('bell', 0.28, 1.9 * vary(0.06))) tone(1800, 1700, 0.15, 'sine', 0.04); tone(2600, 2500, 0.08, 'sine', 0.015, 0.06); break;
+        case 'metal': if (!file('bell', 0.32, 1.15 * vary(0.05))) tone(1200, 1150, 0.25, 'sine', 0.04); break;
+        case 'magic': if (!file('pop', 0.5, 1.3 * vary(0.05))) tone(880, 1320, 0.2, 'sine', 0.05); break;
+        case 'paper': tone(900, 500, 0.07, 'sawtooth', 0.018); tone(700, 400, 0.06, 'sawtooth', 0.014, 0.06); break;
+        default: if (!file('tap', 0.65, 0.55 * vary(0.08))) tone(190, 120, 0.09, 'triangle', 0.09);
+      }
+    },
     hatch() { if (!file('hatch', 0.8)) [784, 988, 1175, 1568].forEach((f, i) => tone(f, f, 0.12, 'sine', 0.09, i * 0.05)); }
   };
 })();

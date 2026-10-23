@@ -145,14 +145,23 @@ const Guide = (() => {
     { sel: ['#balance-btn'], text: 'Вот твоя эссенция. На неё в лавке покупают всё самое нужное.', next: 'Дальше' },
     { sel: ['.tab[data-go="shop"]'], text: 'Загляни в Лавку - нажми сюда.', wait: () => UI.screen() === 'shop' || Econ.levels() > 0 },
     { sel: ['#shop-body .tile', '.tab[data-go="shop"]'], text: 'Грядка мяты будет варить эссенцию сама, даже когда тебя нет. Купи её!', wait: () => Econ.levels() > 0 },
+    { sel: [() => Cauldron.propRect('brew')], text: 'А это мой стол алхимика: нажми на него, и откроется зельеварня. По другим вещам в комнате тоже можно тапать - они отзываются.', next: 'Дальше' },
     { sel: ['.tab[data-go="tasks"]'], text: 'Дальше подскажет «Путь алхимика» в Заданиях. Кнопка «Перейти» сама приведёт куда нужно. Удачи!', next: 'Понятно' }
   ];
-  // 0.28: что нового для тех, кто уже играет (показываем, только если раздел открыт)
-  const NEWS = () => (typeof Relics !== 'undefined' && Relics.unlocked() ? [
-    { sel: ['#relic-btn'], text: 'Новое: Диковинки! Волшебные вещицы на полке лавки дают постоянные бонусы. Тебя уже ждут сундуки в подарок.', next: 'Дальше' },
-    { sel: ['#wheel-btn'], text: 'А это Колесо Булька: крути бесплатно каждый день. Приз будет точно!', next: 'Понятно' }
-  ] : []);
-  const TUT_V = 2;
+  // что нового для тех, кто уже играет: только то, чего игрок ещё не видел (v - версия его прошлого показа)
+  const NEWS = (v) => {
+    const out = [];
+    if (v < 2 && typeof Relics !== 'undefined' && Relics.unlocked()) out.push(
+      { sel: ['#relic-btn'], text: 'Новое: Диковинки! Волшебные вещицы на полке лавки дают постоянные бонусы. Тебя уже ждут сундуки в подарок.', next: 'Дальше' },
+      { sel: ['#wheel-btn'], text: 'А это Колесо Булька: крути бесплатно каждый день. Приз будет точно!', next: 'Дальше' });
+    // 0.29: живая комната
+    out.push({ sel: ['#stage'], text: 'Лавка обновилась! Комната стала объёмной, а в ней идут свои сутки: утро, день, вечер и ночь. Ночью я сонный, а за окном бывает дождь.', next: 'Дальше' });
+    out.push({ sel: [() => Cauldron.propRect('brew')], text: 'Стол алхимика теперь тоже кнопка: нажми на него, и откроется зельеварня.', next: 'Дальше' });
+    if (Pets.owned().length) out.push({ sel: [() => Cauldron.propRect('trips')], text: 'Карта на стене открывает походы питомцев, а лежанка - самих питомцев. Они теперь гуляют по всей комнате.', next: 'Дальше' });
+    out.push({ sel: ['#stage'], text: 'И потыкай по вещам в комнате: фонари качаются, ящики подпрыгивают, а иногда из них выпадает капелька эссенции.', next: 'Понятно' });
+    return out;
+  };
+  const TUT_V = 3;
   let tour = null, ti = 0, layer = null, ring = null, box = null, txt = null, nextBtn = null, loop = 0;
 
   function visible(el) {
@@ -162,7 +171,11 @@ const Guide = (() => {
     return r;
   }
   function target(sels) {
-    for (const q of sels) { for (const el of document.querySelectorAll(q)) { const r = visible(el); if (r) return r; } }
+    for (const q of sels) {
+      // функция - место на холсте комнаты (стол алхимика, карта)
+      if (typeof q === 'function') { const r = q(); if (r && r.width > 4) return r; continue; }
+      for (const el of document.querySelectorAll(q)) { const r = visible(el); if (r) return r; }
+    }
     return null;
   }
   function build() {
@@ -245,7 +258,7 @@ const Guide = (() => {
       if (window.Game) Game.save();
     }
     if (!s.tut || s.tut.v < TUT_V) {
-      const steps = isNew ? NEWBIE : NEWS();
+      const steps = isNew ? NEWBIE : NEWS(s.tut ? s.tut.v || 0 : 0);
       if (steps.length) setTimeout(() => run(steps), 1200);
       else s.tut = { v: TUT_V, done: true };
     }

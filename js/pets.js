@@ -390,6 +390,74 @@ const Pets = (() => {
     const x = G.front ? clamp(G.W * 0.22, w * 0.55, G.cx - w * 0.6) : clamp(G.cx - G.r * 1.6, w * 0.55, G.W - w * 0.55);
     return { x, y, w, h: hh, left: x - w / 2, top: y - hh, im, spec: BEDS[id] || BEDS.bed_cushion, house: id === 'bed_house' };
   }
+  // миска: стоит на полу рядом с лежанкой (без лежанки - на её месте)
+  function bowlPos() {
+    const d = G.front ? BED_D + 0.05 : 0.55, y = G.ground + d * (floorFront() - G.ground);
+    const w = G.r * 0.5 * depthScale(y);
+    let x;
+    if (S().wear.bed) { const b = bedPos(); x = b.x + b.w * 0.5 + w * 0.6; } else x = G.W * 0.24;
+    return { x: clamp(x, w, G.W - w), y, w, d };
+  }
+  function drawBowl(ctx) {
+    const im = Sprites.get('pets/bowl'), p = bowlPos();
+    if (!im) return;
+    const hh = p.w * im.naturalHeight / im.naturalWidth;
+    ctx.save(); ctx.globalAlpha = 0.3; ctx.fillStyle = '#12061F';
+    ctx.beginPath(); ctx.ellipse(p.x, p.y - 2, p.w * 0.45, hh * 0.08, 0, 0, TAU); ctx.fill(); ctx.restore();
+    ctx.drawImage(im, p.x - p.w / 2, p.y - hh, p.w, hh);
+  }
+
+  // Беспорядок: пока игрока не было, питомцы раскидали клубки и намело пыли.
+  // Тап - убрать (с маленькой наградой). Хранится только до перезапуска - это украшение, не прогресс.
+  let mess = [];
+  function onAway(sec) {
+    if (sec < 6 * 3600 || !owned().length) return;
+    const n = Math.min(5, 1 + Math.floor(sec / (6 * 3600)));
+    mess = [];
+    for (let i = 0; i < n; i++) mess.push({ kind: i % 2 && S().wear.toy === 'yarn' ? 'yarn' : 'dust', fx: rand(0.12, 0.88), d: rand(0.25, 0.95), ph: rand(0, TAU), gone: 0 });
+  }
+  function messPos(m) { const y = G.ground + m.d * (floorFront() - G.ground); return { x: G.W * m.fx, y, s: G.r * 0.3 * depthScale(y) }; }
+  function drawMess(ctx) {
+    mess.forEach((m) => {
+      const p = messPos(m), k = 1 - m.gone;
+      if (k <= 0) return;
+      ctx.save(); ctx.globalAlpha = k; ctx.translate(p.x, p.y - p.s * 0.5 * (1 + m.gone)); ctx.scale(k, k);
+      if (m.kind === 'yarn') {
+        const im = Sprites.get('pets/yarn');
+        if (im) { const w = p.s * 1.3, hh = w * im.naturalHeight / im.naturalWidth; ctx.drawImage(im, -w / 2, -hh / 2, w, hh); }
+      } else {
+        // комок пыли: серый пушок с глазками
+        ctx.fillStyle = 'rgba(150,140,170,.85)';
+        for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + m.ph; ctx.beginPath(); ctx.arc(Math.cos(a) * p.s * 0.28, Math.sin(a) * p.s * 0.2, p.s * 0.3, 0, TAU); ctx.fill(); }
+        ctx.fillStyle = '#1A0E2C';
+        const bl = Math.sin(G.t * 1.3 + m.ph) > 0.97 ? 0.2 : 1;
+        [-1, 1].forEach((sd) => { ctx.beginPath(); ctx.ellipse(sd * p.s * 0.12, -p.s * 0.02, p.s * 0.05, p.s * 0.07 * bl, 0, 0, TAU); ctx.fill(); });
+      }
+      ctx.restore();
+    });
+  }
+  function tickMess(dt) {
+    mess.forEach((m) => { if (m.gone > 0) m.gone = Math.min(1, m.gone + dt * 3); });
+    mess = mess.filter((m) => m.gone < 1);
+  }
+  // тап по беспорядку: true, если что-то убрали
+  function clean(x, y) {
+    for (const m of mess) {
+      if (m.gone) continue;
+      const p = messPos(m);
+      if (Math.abs(x - p.x) < p.s * 0.75 && y > p.y - p.s * 1.2 && y < p.y + p.s * 0.3) {
+        m.gone = 0.01;
+        const v = Math.max(1, Math.round(Econ.hoursOfIncome(0.05, 20)));
+        Econ.earn(v);
+        Cauldron.floatText(p.x, p.y - p.s, '+' + Fmt.num(v), '#FFE6A0', 20);
+        Sound.pop();
+        if (!mess.some((q) => !q.gone)) setTimeout(() => UI.say('Чисто! Спасибо, что прибрался', 2200), 300);
+        return true;
+      }
+    }
+    return false;
+  }
+
   // куда ложится питомец в лежанке
   function bedSpot() {
     const b = bedPos();
@@ -421,11 +489,21 @@ const Pets = (() => {
     if (r < 0.42) {
       // место подальше от других питомцев
       let tx = 0;
-      for (let k = 0; k < 6; k++) {
+      let td = G.front ? rand(0, 1) : rand(0.1, 1);
+      for (let k = 0; k < 8; k++) {
         tx = G.front ? rand(G.W * 0.1, G.W * 0.9) : clamp(G.cx + rand(-1, 1) * G.r * 1.9, G.W * 0.08, G.W * 0.92);
+        td = G.front ? rand(0, 1) : rand(0.1, 1);
+        // за шкафом или столом питомца не видно - туда не ходим
+        const ty = G.ground + td * (floorFront() - G.ground), pw = G.r * 0.5;
+        if ((G.props || []).some((p) => ty < p.y && tx > p.x0 - pw && tx < p.x1 + pw)) continue;
         if (!actors.some((q) => q !== a && Math.abs((q.tx !== undefined && q.st === 'walk' ? q.tx : q.x) - tx) < G.r * 0.55)) break;
       }
-      return goTo(a, tx, G.front ? rand(0, 1) : rand(0.1, 1));
+      return goTo(a, tx, td);
+    }
+    if (r < 0.5 && G.front && !actors.some((q) => q !== a && q.then === 'eat')) {
+      // перекусить у миски
+      const bw = bowlPos();
+      return goTo(a, clamp(bw.x + bw.w * 0.75, 0, G.W), bw.d, 'eat');
     }
     if (r < 0.58 && !actors.some((q) => q !== a && q.perch)) return jumpUp(a);
     if (r < 0.66 && S().wear.toy === 'yarn') return setState(a, 'play', rand(2, 3));
@@ -470,6 +548,7 @@ const Pets = (() => {
 
   function update(dt) {
     if (!G) return;
+    tickMess(dt);
     syncActors();
     const now = performance.now();
     actors.forEach((a) => {
@@ -509,6 +588,7 @@ const Pets = (() => {
               if (bedPos().house) { a.inBed = true; a.x = sp.x; a.y = sp.y; setState(a, 'sleep', 999); }
               else startJump(a, sp.x, sp.y, 'bed');
             }
+            else if (then === 'eat') { a.face = -1; setState(a, 'eat', rand(2, 3.2)); }
             else setState(a, 'idle', rand(1.5, 3));
           }
           break;
@@ -724,16 +804,17 @@ const Pets = (() => {
   }
   function drawFront(ctx, g) {
     G = g;
-    const list = actors.filter((a) => !a.inBed).sort((a, b) => (a.perch ? 1 : 0) - (b.perch ? 1 : 0) || a.y - b.y);
-    // кто ближе к зрителю, тот рисуется поверх лежанки
-    const bedY = G.front && S().wear.bed && owned().length ? bedPos().y : null;
-    let bedDone = bedY === null;
-    list.forEach((a) => {
-      if (!bedDone && (a.perch || a.y > bedY)) { drawBed(ctx); bedDone = true; }
-      drawPet(ctx, a);
-    });
-    if (!bedDone) drawBed(ctx);
-    list.forEach((a) => bubble(ctx, a));
+    // всё, что стоит на полу, рисуется по глубине: кто ближе к зрителю, тот поверх
+    // (питомцы, лежанка, миска, передний ряд мебели); питомцы в котле - последними
+    const floor = [];
+    actors.forEach((a) => { if (!a.inBed && !a.perch) floor.push({ y: a.jump ? Math.max(a.jump.y0, a.jump.y1) : a.y, draw: () => drawPet(ctx, a) }); });
+    if (G.front && S().wear.bed && owned().length) floor.push({ y: bedPos().y, draw: () => drawBed(ctx) });
+    if (G.front && owned().length) floor.push({ y: bowlPos().y, draw: () => drawBowl(ctx) });
+    (G.props || []).forEach((p) => floor.push({ y: p.y, draw: () => p.draw(ctx) }));
+    if (G.front) drawMess(ctx);
+    floor.sort((a, b) => a.y - b.y).forEach((e) => e.draw());
+    actors.filter((a) => a.perch && !a.inBed).forEach((a) => drawPet(ctx, a));
+    actors.filter((a) => !a.inBed).forEach((a) => bubble(ctx, a));
   }
 
   // нажатие на питомца или яйцо
@@ -751,6 +832,11 @@ const Pets = (() => {
     if (st().nest && G) {
       const p = nestPos();
       if (Math.abs(x - p.x) < p.w * 0.5 && y > p.y - p.w && y < p.y + 12) return 'egg';
+    }
+    if (G && G.front && clean(x, y)) return 'mess';
+    if (G && G.front && S().wear.bed && owned().length) {
+      const b = bedPos();
+      if (x > b.left && x < b.left + b.w && y > b.top && y < b.top + b.h) return 'bed';
     }
     return null;
   }
@@ -1145,5 +1231,5 @@ const Pets = (() => {
     const n = p.nest;
     return { pet: ends.length ? Math.min(...ends) : 0, egg: n && !eggReady() ? now + Math.max(0, eggNeed() - n.heat) * 1000 : 0 };
   }
-  return { init, tick, hit, onPotTap, poke, bonus, timers, _idle: () => { lastInput = -1e9; }, _perch: () => { const a = actors[0]; if (a && !a.perch) { a.x = G.cx - G.r * 1.15; jumpUp(a); } }, open, refreshButton, giveEgg, addPet, owned, inRoom, slots, feed, collect, hatch, sendTrip, st };
+  return { onAway, init, tick, hit, onPotTap, poke, bonus, timers, _idle: () => { lastInput = -1e9; }, _perch: () => { const a = actors[0]; if (a && !a.perch) { a.x = G.cx - G.r * 1.15; jumpUp(a); } }, open, refreshButton, giveEgg, addPet, owned, inRoom, slots, feed, collect, hatch, sendTrip, st };
 })();

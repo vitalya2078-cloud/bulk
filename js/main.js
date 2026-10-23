@@ -56,6 +56,7 @@
   // ---------- время вне игры ----------
   // resume - игру просто сворачивали (она оставалась открытой): начисляем молча, без окна
   function handleGap(sec, resume) {
+    Pets.onAway(sec);
     const amount = Econ.offlineEarnings(sec);
     if (!(amount > 0)) return;
     if (sec < 60) { Econ.earn(amount); return; }
@@ -136,14 +137,53 @@
     const ph = Pets.hit(x, y);
     if (ph === 'pet') { Cauldron.poke(); return; }
     if (ph === 'egg') { Pets.open('eggs'); return; }
+    if (ph === 'mess') return;
+    if (ph === 'bed') { Sound.tap(); seenProp('pets'); Pets.open(); return; }
     const wasSleepy = Cauldron.poke();
     const hit = Cauldron.hit(x, y);
     if (hit === 'golden') { if (e.isTrusted) popBubble(); return; }
     if (hit === 'pot') {
       tapAt(e, x, y);
-      if (wasSleepy) UI.say(pick(D.phrases.wake), 2000);
+      if (wasSleepy) UI.say(pick(wakePhrases()), 2000);
+      return;
     }
+    const it = Cauldron.tapProp(x, y);
+    if (it) onProp(it, x, y);
   });
+
+  // проснулся - фраза по времени суток
+  function wakePhrases() {
+    const n = typeof DayTime !== 'undefined' ? DayTime.name() : '';
+    if (n === 'dawn') return D.phrases.wakeDawn || D.phrases.wake;
+    if (n === 'night') return D.phrases.wakeNight || D.phrases.wake;
+    return D.phrases.wake;
+  }
+
+  // ---------- 0.29: мебель комнаты ----------
+  // Стол алхимика, карта и лежанка открывают свои разделы, остальное просто отзывается на тап.
+  // Изредка из предмета выпадает капля эссенции (не больше 5 в день).
+  const PROP_DROPS = 5;
+  function seenProp(k) { const r = Econ.s.room || (Econ.s.room = {}); r.seen = r.seen || {}; r.seen[k] = 1; }
+  function onProp(it, x, y) {
+    Sound.prop(it.snd);
+    if (Econ.s.set.vib) Platform.haptic();
+    if (it.open) {
+      seenProp(it.open);
+      // дать предмету качнуться, потом открыть
+      setTimeout(() => { if (UI.isModalOpen() || UI.screen() !== 'main') return; if (it.open === 'brew') Brew.open(); else if (it.open === 'trips') Pets.open('trips'); }, 260);
+      return;
+    }
+    const r = Econ.s.room || (Econ.s.room = {});
+    if (r.d !== Econ.today()) { r.d = Econ.today(); r.n = 0; }
+    if (r.n < PROP_DROPS && Math.random() < 0.07) {
+      r.n++;
+      const v = Math.max(1, Math.round(Econ.hoursOfIncome(0.08, 30)));
+      Econ.earn(v);
+      Cauldron.floatText(x, y - 12, '+' + Fmt.num(v), '#FFE6A0', 22);
+      setTimeout(() => Sound.coin(), 120);
+      if (r.n === 1) UI.say('Ого, там завалялась капелька эссенции!', 2200);
+    }
+  }
 
   // Пробел тоже помешивает (на компьютере). Зажатая клавиша не считается.
   document.addEventListener('keydown', (e) => {
@@ -175,7 +215,7 @@
   (D.pets || []).forEach((pt) => { for (let i = 0; i < 16; i++) preload.add('pets/' + pt.id + '/' + String(i).padStart(2, '0')); });
   Object.values(D.eggs || {}).forEach((e) => e.img && preload.add(e.img));
   (D.locations || []).forEach((l) => l.img && preload.add(l.img));
-  ['pets/nest', 'pets/shell', 'pets/bowl', 'cauldron/pot', 'cauldron/liquid', 'cauldron/bubble', 'r2/counter', 'ui/paw_heart', 'ui/steam', 'ui/heat'].forEach((n) => preload.add(n));
+  ['r2/sky', 'r2/sky_dawn', 'pets/nest', 'pets/shell', 'pets/bowl', 'cauldron/pot', 'cauldron/liquid', 'cauldron/bubble', 'r2/counter', 'ui/paw_heart', 'ui/steam', 'ui/heat'].forEach((n) => preload.add(n));
 
   Cauldron.init(canvas);
   UI.init({

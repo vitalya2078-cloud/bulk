@@ -2590,3 +2590,9 @@ body:not(.has-modal) #toast { bottom: calc(var(--safe-bottom) + 216px); }
 .wheel-cap { width: 17%; height: 17%; }
 .wheel-pointer { width: 9%; margin-left: -4.5%; top: -7%; transform-origin: 50% 12%; }
 .wheel-res { font-size: 13.5px; line-height: 1.35; padding: 0 6px; }
+/* 0.29: «Подарок, Рецепт, Руна» на такой же тёмной подложке, как плашки шапки */
+.daily, .daily:active { background: rgba(20,8,38,.55); border-radius: 999px; padding: 3px 10px 3px 3px; }
+.daily:active { background: rgba(20,8,38,.7); }
+.daily .d-ico { width: 34px; height: 34px; margin: -6px 0 -2px; }
+.daily .dot { left: 24px; }
+@media (max-width: 370px) { .daily, .daily:active { padding: 3px 7px 3px 2px; } .daily .d-ico { width: 30px; height: 30px; } }
