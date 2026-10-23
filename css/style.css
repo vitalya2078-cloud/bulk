@@ -2407,3 +2407,27 @@ body:not(.has-modal) #toast { bottom: calc(var(--safe-bottom) + 216px); }
 .brew-head-text .rel-shards b { display: inline; font-size: inherit; color: var(--gold); }
 .rel-sh-ico { width: 16px; height: 16px; }
 .rel-shelf .rel-tile { max-width: 110px; justify-self: center; width: 100%; }
+/* 0.28.1: анимация открытия сундука */
+.rel-burst.closed { border: 0; background: none; padding: 0; font: inherit; cursor: pointer; }
+.rel-burst.closed::before { opacity: .55; }
+.rel-burst.closed .rel-chest-ico { animation: chestIdle 1.4s ease-in-out infinite; }
+@keyframes chestIdle { 0%, 100% { transform: translateY(0) scale(1); } 40% { transform: translateY(-10px) scale(1.03, .97); } 55% { transform: translateY(0) scale(1.06, .94); } 70% { transform: translateY(-3px) scale(.98, 1.02); } }
+.rel-burst.shake .rel-chest-ico { animation: chestShake .65s linear both; }
+@keyframes chestShake {
+  0% { transform: rotate(0) scale(1); } 15% { transform: rotate(-7deg) scale(1.04); } 30% { transform: rotate(7deg) scale(1.07); } 45% { transform: rotate(-9deg) scale(1.1); }
+  60% { transform: rotate(9deg) scale(1.13); } 75% { transform: rotate(-5deg) scale(1.16); } 100% { transform: rotate(0) scale(1.2); } }
+.rel-burst.flash::after { content: ''; position: absolute; inset: -60px; border-radius: 50%; background: radial-gradient(circle, #fff 0%, rgba(255,255,255,.85) 30%, transparent 70%); animation: chestFlash .3s ease-out both; }
+@keyframes chestFlash { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1.3); } }
+.rel-burst.opened .rel-chest-ico { animation: chestOpen .55s cubic-bezier(.3,1.7,.5,1) both; }
+@keyframes chestOpen { 0% { transform: scale(1.25); filter: brightness(2.2); } 60% { transform: scale(.94) translateY(4px); } 100% { transform: none; } }
+.rel-rays { position: absolute; left: 50%; top: 50%; width: 230px; height: 230px; margin: -115px 0 0 -115px; border-radius: 50%; pointer-events: none;
+  background: repeating-conic-gradient(var(--rg, rgba(255,201,77,.5)) 0 10deg, transparent 10deg 30deg);
+  -webkit-mask: radial-gradient(circle, #000 25%, transparent 70%); mask: radial-gradient(circle, #000 25%, transparent 70%);
+  animation: chestRays 6s linear infinite, chestRaysIn .5s ease-out both; }
+@keyframes chestRays { to { transform: rotate(360deg); } }
+@keyframes chestRaysIn { from { opacity: 0; } to { opacity: 1; } }
+.rel-got-list .rel-got { animation-name: gotFly; }
+@keyframes gotFly { 0% { opacity: 0; transform: translateY(-70px) scale(.3); } 70% { opacity: 1; transform: translateY(4px) scale(1.05); } 100% { transform: none; } }
+.rel-got:nth-child(1) { animation-delay: .35s; } .rel-got:nth-child(2) { animation-delay: .55s; } .rel-got:nth-child(3) { animation-delay: .75s; } .rel-got:nth-child(4) { animation-delay: .95s; } .rel-got:nth-child(5) { animation-delay: 1.15s; }
+.rel-got.rar-l { box-shadow: 0 0 14px rgba(255,201,77,.7); } .rel-got.rar-e { box-shadow: 0 0 12px rgba(192,123,255,.6); }
+@media (prefers-reduced-motion: reduce) { .rel-burst .rel-chest-ico, .rel-rays, .rel-got { animation: none !important; } }

@@ -70,13 +70,13 @@ const Relics = (() => {
 
   // сундуки: что выпадает. relic - сколько диковинок и с какими весами редкости
   const CHEST = {
-    w: { name: 'Деревянный сундук', img: 'ui/chest', cls: 'ch-w', cost: 15,
+    w: { name: 'Деревянный сундук', img: 'ui/chest', open: 'ui/chest', cls: 'ch-w', cost: 15,
          relic: [{ p: 0.35, w: { c: 85, r: 14, e: 1 } }], ess: 0.5, ing: 2, cr: 0 },
-    s: { name: 'Серебряный сундук', img: 'ui/chest', cls: 'ch-s', cost: 60,
+    s: { name: 'Серебряный сундук', img: 'ui/chest', open: 'ui/chest', cls: 'ch-s', cost: 60,
          relic: [{ p: 1, w: { r: 78, e: 19, l: 3 } }], ess: 1, ing: 0, cr: 2, pity: 10 },
-    g: { name: 'Золотой сундук', img: 'ui/chest', cls: 'ch-g', cost: 180,
+    g: { name: 'Золотой сундук', img: 'ui/chest', open: 'ui/chest', cls: 'ch-g', cost: 180,
          relic: [{ p: 1, w: { e: 85, l: 15 } }, { p: 1, w: { c: 50, r: 50 } }], ess: 2, ing: 0, cr: 5 },
-    t: { name: 'Звёздный сундук', img: 'ui/crystal_chest', cls: 'ch-t', cost: 0,
+    t: { name: 'Звёздный сундук', img: 'ui/crystal_chest', open: 'ui/crystal_chest', cls: 'ch-t', cost: 0,
          relic: [{ p: 1, w: { l: 100 } }, { p: 1, w: { e: 100 } }], ess: 0, ing: 0, cr: 10 }
   };
   const CHEST_ORDER = ['w', 's', 'g', 't'];
@@ -472,7 +472,7 @@ const Relics = (() => {
       openB.addEventListener('click', () => {
         const got = openChest(k);
         if (!got) return;
-        Sound.coin(); reveal = { k, got }; UI.refresh(true); redraw(); body.scrollTop = 0;
+        Sound.tap(); reveal = { k, got, stage: 'closed' }; UI.refresh(true); redraw(); body.scrollTop = 0;
       });
       const buy = c.cost ? h('button', { type: 'button', class: 'pill-btn alt', disabled: S().cr < c.cost }, pic('ui/crystal', 'btn-ico'), ' ' + c.cost) : null;
       if (buy) buy.addEventListener('click', () => {
@@ -500,17 +500,37 @@ const Relics = (() => {
     if (g.t === 'cr') return h('div', { class: 'rel-got' }, pic('ui/crystal', 'rel-ico'), h('b', null, '+' + g.n), h('small', null, UI.crystalsWord(g.n)));
     return h('div', { class: 'rel-got' }, pic('ui/basket', 'rel-ico'), h('b', null, 'Ингредиенты'), h('small', null, g.l.map((x) => x.name).join(', ')));
   }
+  // открытие сундука: закрытый подпрыгивает и ждёт нажатия -> трясётся -> вспышка -> крышка открыта, лучи и награды
   function drawReveal(body, redraw) {
     const c = CHEST[reveal.k];
     const best = reveal.got.filter((g) => g.t === 'relic').map((g) => RAR[ITEM[g.id].r].i).reduce((a, b) => Math.max(a, b), -1);
-    const box = h('div', { class: 'rel-reveal ' + (best >= 0 ? RCLS(['c', 'r', 'e', 'l'][best]) : '') },
-      h('div', { class: 'rel-burst' }, pic(c.img, 'rel-chest-ico open ' + c.cls)),
-      h('b', { class: 'rel-name' }, c.name),
-      h('div', { class: 'rel-got-list' }, reveal.got.map(rewardCard)));
+    const rc = best >= 0 ? RCLS(['c', 'r', 'e', 'l'][best]) : '';
+    if (reveal.stage === 'closed') {
+      const chest = pic(c.img, 'rel-chest-ico ' + c.cls);
+      const stage = h('button', { type: 'button', class: 'rel-burst closed ' + rc }, chest);
+      const hint = h('small', { class: 'rel-hint center' }, 'Нажми на сундук, чтобы открыть');
+      let busy = false;
+      const go = () => {
+        if (busy) return;
+        busy = true; Sound.tap();
+        stage.classList.add('shake');
+        hint.textContent = '';
+        setTimeout(() => { stage.classList.add('flash'); }, 650);
+        setTimeout(() => { Sound.coin(); reveal.stage = 'open'; redraw(); }, 900);
+      };
+      stage.addEventListener('click', go);
+      body.append(h('div', { class: 'rel-reveal' }, stage, h('b', { class: 'rel-name' }, c.name), hint));
+      return;
+    }
+    const list = h('div', { class: 'rel-got-list' }, reveal.got.map(rewardCard));
+    const box = h('div', { class: 'rel-reveal ' + rc },
+      h('div', { class: 'rel-burst opened' }, h('i', { class: 'rel-rays' }), pic(c.open || c.img, 'rel-chest-ico open ' + c.cls)),
+      h('b', { class: 'rel-name' }, c.name), list);
+    setTimeout(() => { if (list.isConnected) list.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, 1300);
     const more = (st().ch[reveal.k] || 0) > 0;
     const again = h('button', { type: 'button', class: 'btn' }, more ? 'Открыть ещё (' + st().ch[reveal.k] + ')' : 'Готово');
     again.addEventListener('click', () => {
-      if (more) { const got = openChest(reveal.k); if (got) { Sound.coin(); reveal = { k: reveal.k, got }; } }
+      if (more) { const got = openChest(reveal.k); if (got) { Sound.tap(); reveal = { k: reveal.k, got, stage: 'closed' }; } }
       else reveal = null;
       UI.refresh(true); redraw();
     });
