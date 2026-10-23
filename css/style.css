@@ -2583,3 +2583,10 @@ body:not(.has-modal) #toast { bottom: calc(var(--safe-bottom) + 216px); }
 .daily .dot { top: -2px; right: auto; left: 28px; }
 .topbar .rank, .crystal-pill, #btn-settings { border-color: transparent; background: rgba(20,8,38,.55); box-shadow: none; }
 @media (max-width: 370px) { .daily .d-ico { width: 32px; height: 32px; } .daily b { font-size: 11px; } }
+/* 0.29: новое колесо - тонкий обод, 16 лампочек; диск чуть шире отверстия рамки */
+.wheel-disc { left: 9%; top: 9%; width: 82%; height: 82%; }
+.wheel-ico { top: 9%; width: 17%; height: 17%; }
+.wheel-bulbs i { width: 5.5%; height: 5.5%; margin: -2.75% 0 0 -2.75%; }
+.wheel-cap { width: 17%; height: 17%; }
+.wheel-pointer { width: 9%; margin-left: -4.5%; top: -7%; transform-origin: 50% 12%; }
+.wheel-res { font-size: 13.5px; line-height: 1.35; padding: 0 6px; }

@@ -82,16 +82,46 @@ const Relics = (() => {
   const CHEST_ORDER = ['w', 's', 'g', 't'];
 
   // колесо: 8 секторов
-  const WHEEL = [
-    { id: 'ess1', w: 20, img: 'ui/essence', label: 'Эссенция', sub: '30 мин дохода' },
-    { id: 'cr3', w: 16, img: 'ui/crystal', label: '3 кристалла' },
-    { id: 'ing', w: 15, img: 'ui/basket', label: '3 ингредиента' },
-    { id: 'chw', w: 18, img: 'relics/chest_w', label: 'Деревянный сундук' },
-    { id: 'ess2', w: 10, img: 'ui/essence', label: 'Много эссенции', sub: '2 ч дохода' },
-    { id: 'sh', w: 10, img: 'ui/shards', label: '15 осколков' },
-    { id: 'chs', w: 8, img: 'relics/chest_s', label: 'Серебряный сундук' },
-    { id: 'rel', w: 3, img: 'relics/wishstar', label: 'Редкая диковинка' }
+  // колесо: каждый день свой набор из 8 призов, одинаковый у всех игроков (выбор по дате)
+  // t: 0 - обычный, 1 - средний, 2 - крупный; в наборе 3 обычных, 3 средних, 2 крупных
+  const WPOOL = [
+    { id: 'ess1', t: 0, img: 'ui/essence', label: 'Эссенция', sub: '30 мин дохода', give: () => essGive(0.5) },
+    { id: 'cr3', t: 0, img: 'ui/crystal', label: '3 кристалла', give: () => crGive(3) },
+    { id: 'ing3', t: 0, img: 'ui/basket', label: '3 ингредиента', give: () => ingGive(3, 0.15) },
+    { id: 'chw', t: 0, img: 'relics/chest_w', label: 'Деревянный сундук', give: () => { addChest('w'); return 'Деревянный сундук'; } },
+    { id: 'sh15', t: 0, img: 'ui/shards', label: '15 осколков', give: () => shGive(15) },
+    { id: 'ess2', t: 1, img: 'ui/essence', label: 'Много эссенции', sub: '2 ч дохода', give: () => essGive(2) },
+    { id: 'cr10', t: 1, img: 'ui/crystal', label: '10 кристаллов', give: () => crGive(10) },
+    { id: 'ing6', t: 1, img: 'ui/basket', label: '6 ингредиентов', sub: 'выше шанс редких', give: () => ingGive(6, 0.35) },
+    { id: 'chs', t: 1, img: 'relics/chest_s', label: 'Серебряный сундук', give: () => { addChest('s'); return 'Серебряный сундук'; } },
+    { id: 'sh40', t: 1, img: 'ui/shards', label: '40 осколков', give: () => shGive(40) },
+    { id: 'relr', t: 1, img: 'r2/ic_relics', label: 'Редкая диковинка', give: () => relicGive(giveRarity('r')) },
+    { id: 'ess4', t: 2, img: 'ui/essence', label: 'Гора эссенции', sub: '4 ч дохода', give: () => essGive(4) },
+    { id: 'cr25', t: 2, img: 'ui/crystal', label: '25 кристаллов', give: () => crGive(25) },
+    { id: 'chg', t: 2, img: 'relics/chest_g', label: 'Золотой сундук', give: () => { addChest('g'); return 'Золотой сундук'; } },
+    { id: 'reld', t: 2, img: '', label: 'Диковинка дня', give: () => relicGive(giveRelic(dayRelic())) }
   ];
+  const WTW = [18, 11, 6.5];
+  // простой генератор по строке: один и тот же день - одна и та же последовательность
+  function seeded(str) {
+    let x = 2166136261;
+    for (let i = 0; i < str.length; i++) { x ^= str.charCodeAt(i); x = Math.imul(x, 16777619); }
+    return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return ((x >>> 0) % 100000) / 100000; };
+  }
+  const dayRelic = () => { const r = seeded('bulk:wheel-relic:' + Econ.today()); const ep = ITEMS.filter((x) => x.r === 'e'); return ep[Math.floor(r() * ep.length)].id; };
+  let wset = null, wsetDay = '';
+  function wheelSet() {
+    const d = Econ.today();
+    if (wset && wsetDay === d) return wset;
+    const r = seeded('bulk:wheel:' + d);
+    const pick = (t, n) => { const l = WPOOL.filter((x) => x.t === t).slice(); const out = []; while (out.length < n && l.length) out.push(l.splice(Math.floor(r() * l.length), 1)[0]); return out; };
+    const all = [...pick(0, 3), ...pick(1, 3), ...pick(2, 2)];
+    for (let i = all.length - 1; i > 0; i--) { const k = Math.floor(r() * (i + 1)); [all[i], all[k]] = [all[k], all[i]]; }
+    const rid = dayRelic();
+    wset = all.map((x) => Object.assign({}, x, { w: WTW[x.t] }, x.id === 'reld' ? { img: ITEM[rid].img, sub: ITEM[rid].name } : {}));
+    wsetDay = d;
+    return wset;
+  }
 
   // ---------- состояние ----------
   function norm() {
@@ -307,23 +337,18 @@ const Relics = (() => {
   // ---------- колесо ----------
   const wheelFree = () => st().wh.free < 1;
   const wheelAd = () => st().wh.ad < 1 && Platform.adsAvailable();
-  function wheelRoll() {
-    const tot = WHEEL.reduce((a, x) => a + x.w, 0);
+  function wheelRoll(set) {
+    const tot = set.reduce((a, x) => a + x.w, 0);
     let x = Math.random() * tot;
-    for (let i = 0; i < WHEEL.length; i++) { x -= WHEEL[i].w; if (x < 0) return i; }
+    for (let i = 0; i < set.length; i++) { x -= set[i].w; if (x < 0) return i; }
     return 0;
   }
-  function wheelGive(i) {
-    const w = WHEEL[i];
-    if (w.id === 'ess1' || w.id === 'ess2') { const v = Econ.hoursOfIncome(w.id === 'ess1' ? 0.5 : 2, 300); Econ.earn(v); return '+' + UI.ess(v) + ' эссенции'; }
-    if (w.id === 'cr3') { Econ.addCrystals(3); return '+3 кристалла'; }
-    if (w.id === 'ing') { const l = Brew.give(3, 0.2); return 'Ингредиенты: ' + l.map((x) => x.name).join(', '); }
-    if (w.id === 'chw') { addChest('w'); return 'Деревянный сундук'; }
-    if (w.id === 'chs') { addChest('s'); return 'Серебряный сундук'; }
-    if (w.id === 'sh') { st().sh += 15; return '+15 мерцающих осколков'; }
-    const g = giveRarity('r');
-    return (g.dup ? 'Повторка: ' : 'Новая диковинка: ') + ITEM[g.id].name;
-  }
+  const essGive = (h) => { const v = Econ.hoursOfIncome(h, 300); Econ.earn(v); return '+' + UI.ess(v) + ' эссенции'; };
+  const crGive = (n) => { Econ.addCrystals(n); return '+' + n + ' ' + UI.crystalsWord(n); };
+  const ingGive = (n, rare) => { const l = Brew.give(n, rare); return 'Ингредиенты: ' + l.map((x) => x.name).join(', '); };
+  const shGive = (n) => { st().sh += n; return '+' + n + ' мерцающих осколков'; };
+  const relicGive = (g) => (g.dup ? 'Повторка: ' : 'Новая диковинка: ') + ITEM[g.id].name;
+  const wheelGive = (set, i) => set[i].give();
 
   // ---------- кнопка на главном ----------
   const chestsCount = () => { const r = S().rel; return r && r.ch ? CHEST_ORDER.reduce((a, k) => a + (r.ch[k] || 0), 0) : 0; };
@@ -561,10 +586,11 @@ const Relics = (() => {
 
   // ---------- окно колеса ----------
   // лампочки на рамке (в процентах картинки wheel/ring)
-  const BULBS = [[71.3, 14.7], [85.6, 29.1], [85.7, 70.5], [71.2, 84.5], [28.8, 84.5], [14, 70.5], [14, 29.3], [28.9, 14.8]];
+  const BULBS = [[37.3, 9.1], [63.1, 9.1], [75, 14.9], [84.3, 23.8], [90.4, 34.8], [90.4, 65.6], [84.3, 76.1], [75, 84.9], [63, 90.6], [37, 90.5], [25.1, 84.9], [15.7, 76.1], [9.5, 65.6], [9.7, 34.8], [15.8, 23.7], [25.2, 14.9]]
   function wheel() {
     if (!unlocked()) { UI.toast('Колесо Булька появится на ранге «' + D().ranks[1].name + '»'); return; }
     st();
+    const WHEEL = wheelSet();
     const N = WHEEL.length, seg = 360 / N;
     // крутится только диск с призами; рамка с лампочками, шапка и стрелка стоят на месте
     const disc = h('div', { class: 'wheel-disc' }, pic('wheel/disc', 'wheel-disc-img'), WHEEL.map((w, i) => h('div', { class: 'wheel-seg', style: '--a:' + (i * seg) + 'deg' },
@@ -595,9 +621,10 @@ const Relics = (() => {
       };
       requestAnimationFrame(step);
     }
-    const result = h('div', { class: 'wheel-res' }, 'Крути колесо - приз точно будет!');
+    const big = WHEEL.filter((x) => x.t === 2).map((x) => x.label + (x.id === 'reld' ? ' (' + x.sub + ')' : ''));
+    const result = h('div', { class: 'wheel-res' }, 'Сегодня главные призы: ' + big.join(' и ') + '. Набор меняется каждый день!');
     const btns = h('div', { class: 'rel-acts' });
-    const legend = h('ul', { class: 'rel-odds wheel-odds' }, WHEEL.map((w) => h('li', null, w.label + (w.sub ? ' (' + w.sub + ')' : '') + ' - ' + Math.round(w.w) + '%')));
+    const legend = h('ul', { class: 'rel-odds wheel-odds' }, WHEEL.map((w) => h('li', null, w.label + (w.sub ? ' (' + w.sub + ')' : '') + ' - ' + (Math.round(w.w * 10) / 10).toString().replace('.', ',') + '%')));
     const drawBtns = () => {
       btns.replaceChildren();
       if (wheelFree()) {
@@ -624,8 +651,8 @@ const Relics = (() => {
       if (kind === 'ad' && r.wh.ad >= 1) return;
       busy = true;
       if (kind === 'free') r.wh.free++; else r.wh.ad++;
-      const i = wheelRoll();
-      const text = wheelGive(i);
+      const i = wheelRoll(WHEEL);
+      const text = wheelGive(WHEEL, i);
       save(); refreshButton();
       btns.replaceChildren();
       Sound.tap();
@@ -648,12 +675,12 @@ const Relics = (() => {
     UI.modal({ title: 'Колесо Булька', cls: 'wheel-modal', body: h('div', { class: 'wheel-box' },
       wheelEl,
       result, btns,
-      h('details', { class: 'wheel-more' }, h('summary', null, 'Шансы призов'), legend)), onClose: refreshButton });
+      h('details', { class: 'wheel-more' }, h('summary', null, 'Шансы призов сегодня'), legend)), onClose: refreshButton });
   }
 
   return {
     bonus, open, wheel, refreshButton, addChest, onQuestsDone, onRank, onLevel, onTrip, unlocked,
     // для проверок
-    _st: st, _items: ITEMS, _chest: CHEST, _wheel: WHEEL, _open: openChest, _odds: odds
+    _st: st, _items: ITEMS, _chest: CHEST, _wheel: wheelSet, _open: openChest, _odds: odds
   };
 })();
