@@ -34,6 +34,8 @@ async function rpc(fn: string, body: unknown) {
   if (!r.ok) throw new Error(t.slice(0, 300));
   return t ? JSON.parse(t) : null;
 }
+// хранилище: ключ нового вида (sb_secret_...) передаётся заголовком apikey, старый (JWT) - ещё и в Authorization
+const srvAuth: Record<string, string> = SRV.startsWith("eyJ") ? { apikey: SRV, Authorization: `Bearer ${SRV}` } : { apikey: SRV };
 const isAdmin = async (initData: string) => {
   if (initData.length < 20) return false;
   try { await rpc("adm_bcast_can", { init_data: initData }); return true; } catch { return false; }
@@ -51,7 +53,7 @@ async function store(file: Blob, name: string, type: string) {
   const path = `${new Date().toISOString().slice(0, 10)}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
   const r = await fetch(`${URL_DB}/storage/v1/object/bcast/${path}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${SRV}`, "Content-Type": type || "application/octet-stream", "x-upsert": "true" },
+    headers: { ...srvAuth, "Content-Type": type || "application/octet-stream", "x-upsert": "true" },
     body: file,
   });
   if (!r.ok) return json({ error: "storage: " + (await r.text()).slice(0, 200) }, 500);
