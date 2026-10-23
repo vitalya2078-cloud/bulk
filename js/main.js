@@ -19,21 +19,38 @@
   }
   window.Game = { save: () => saveNow(true) };
 
+  // как прошла загрузка: какие источники ответили и за сколько (для отчёта о сбоях, см. Online.bootReport)
+  const boot = { local: 'none', cloud: 'none', server: 'none', cloudMs: 0, serverMs: 0, retry: false, chosen: 'fresh' };
+  window.__boot = boot;
   async function loadSave() {
     let local = null, remote = null;
-    try { local = JSON.parse(localStorage.getItem(C.saveKey) || 'null'); } catch (e) { /* повреждено */ }
+    try { local = JSON.parse(localStorage.getItem(C.saveKey) || 'null'); boot.local = local ? 'ok' : 'empty'; } catch (e) { boot.local = 'broken'; }
     let server = null;
+    const t0 = performance.now();
     const srvP = typeof Online !== 'undefined' ? Online.loadServer() : Promise.resolve(null);
-    try { const v = await Platform.storageGet(C.saveKey); if (v) remote = JSON.parse(v); } catch (e) { /* повреждено */ }
+    try {
+      const v = await Platform.storageGet(C.saveKey);
+      if (v) remote = JSON.parse(v);
+      boot.cloud = remote ? 'ok' : 'empty';
+    } catch (e) { boot.cloud = 'broken'; }
+    boot.cloudMs = Math.round(performance.now() - t0);
     try { server = await srvP; } catch (e) { /* без сети */ }
+    boot.serverMs = Math.round(performance.now() - t0);
+    boot.server = server === undefined ? 'fail' : server ? 'ok' : 'empty';
     // база не ответила, а больше взять негде - пробуем ещё раз, чтобы не начать игру с нуля
-    if (server === undefined && !local && !remote && typeof Online !== 'undefined') server = await Online.loadServer(10000);
+    if (server === undefined && !local && !remote && typeof Online !== 'undefined') {
+      boot.retry = true;
+      server = await Online.loadServer(10000);
+      boot.server = server === undefined ? 'fail2' : server ? 'ok2' : 'empty';
+    }
     // самое свежее из трёх: этот телефон, облако платформы, наша база (общая для ВК и Telegram).
     // Копия другой игры (началась позже, а игрок сам не сбрасывал) не может перебить базу:
     // так случайный старт с нуля не затрёт настоящий прогресс.
     const born = (x) => (x.stat && x.stat.start) || 0, wipe = (x) => (x.stat && x.stat.wipe) || 0;
     const sameGame = (x) => !server || x === server || !born(server) || born(x) === born(server) || wipe(x) > wipe(server);
-    return [local, remote, server].filter((x) => x && typeof x === 'object' && sameGame(x)).sort((a, b) => (b.ts || 0) - (a.ts || 0))[0] || null;
+    const pick = [local, remote, server].filter((x) => x && typeof x === 'object' && sameGame(x)).sort((a, b) => (b.ts || 0) - (a.ts || 0))[0] || null;
+    boot.chosen = !pick ? 'fresh' : pick === server ? 'server' : pick === remote ? 'cloud' : 'local';
+    return pick;
   }
 
   // ---------- время вне игры ----------

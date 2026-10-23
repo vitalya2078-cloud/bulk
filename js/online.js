@@ -66,7 +66,7 @@ const Online = (() => {
     if (r.uid) { uid = r.uid; Platform.setUid(uid); }
     linked = { tg: !!r.tg, vk: !!r.vk };
     if (r.kicked) { kickScreen(); return; }
-    if (claim) claimed = true;
+    if (claim) { claimed = true; bootReport(); }
     if (r.restore && adopt(r.restore, true)) {
       restoredModal('Лавка нашлась!', 'Игра открылась без твоего сохранения, но котёл всё помнит. Возвращаем твой прогресс.');
       return;
@@ -113,6 +113,20 @@ const Online = (() => {
       if (r && r.uid) { uid = r.uid; Platform.setUid(uid); }
       return r && r.save && typeof r.save === 'object' ? r.save : null;
     } catch (e) { console.warn('online load', e); return undefined; }
+  }
+
+  // ---------- отчёт о сбое загрузки ----------
+  // Шлём в базу, только если что-то пошло не так: база или облако не ответили, или игра началась с нуля.
+  // По этим отчётам видно, почему у игроков не грузится сохранение (инцидент 21.10).
+  let bootSent = false;
+  function bootReport() {
+    const b = window.__boot;
+    if (bootSent || !b) return;
+    bootSent = true;
+    const bad = b.server !== 'ok' && b.server !== 'empty' || b.cloud === 'broken' || b.cloudMs > 4500 || b.chosen === 'fresh';
+    if (!bad) return;
+    rpc('boot_report', { init_data: initData(), p: Object.assign({ ver: CONFIG.version, plat: Platform.kind(), online: navigator.onLine !== false,
+      net: (navigator.connection && navigator.connection.effectiveType) || '' }, b) }, 8000).catch(() => {});
   }
 
   // ---------- возврат настоящего сохранения ----------
