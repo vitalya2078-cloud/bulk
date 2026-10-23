@@ -1270,6 +1270,7 @@
     if (l.action === 'Правка сохранения') return opsText(d);
     if (l.action === 'Рассылка') return '«' + (d.title || '') + '» · ' + num(d.n || 0) + ' сообщ.' + (d.at ? ' · на ' + dateTime(d.at) : '');
     if (l.action === 'Отменил рассылку') return 'рассылка №' + d.id;
+    if (l.action === 'Посты в группы') return ({ start: 'цикл запущен' + (d.text ? ': «' + d.text + '»' : ''), pause: 'цикл остановлен', stop: 'цикл остановлен', token: 'обновлён ключ ВК' })[d.cmd] || '';
     if (l.action === 'Промокод') return d.code + (d.active === false ? ' выключен' : d.active === true ? ' включён' : giftText(d.gift));
     if (l.action === 'Письмо группе') return '«' + (d.title || '') + '» · ' + num(d.n || 0) + ' игрокам' + giftText(d.gift);
     if (l.action === 'Скрыл сообщение') return 'сообщение в чате ковена';
@@ -1427,8 +1428,207 @@
   const BC_ST = { scheduled: 'запланирована', sending: 'отправляется', done: 'готово', canceled: 'отменена' };
   const kick = () => { try { fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'tick', init_data: initData }), keepalive: true }).catch(() => {}); } catch (e) { /* ignore */ } };
   let bcDraft = null; // «Повторить» кладёт сюда прошлую рассылку
+  // ---------- рассылка: игрокам или постами в группы ВК ----------
+  let BMODE = 'players';
+  function bcastHost() {
+    const outer = msgHost();
+    const seg = h('div', { class: 'chips' }, [['players', 'Игрокам'], ['wall', 'Посты в группы ВК']].map(([v, l]) => h('button', { class: 'chip' + (v === BMODE ? ' on' : ''), onclick: () => { if (BMODE !== v) { BMODE = v; haptic(); render(); } } }, l)));
+    const inner = h('div');
+    outer.replaceChildren(seg, inner);
+    return inner;
+  }
+  // свой мост к ВК (как в игре): нужен, чтобы получить ключ одной кнопкой
+  function vkSend(method, params) {
+    return new Promise((res, rej) => {
+      const rid = Date.now() % 1e9;
+      const A = window.AndroidBridge, I = window.webkit && window.webkit.messageHandlers;
+      const p = Object.assign({}, params || {}, { request_id: rid });
+      const done = (d) => {
+        if (!d || !d.type || !d.data || d.data.request_id !== rid) return;
+        window.removeEventListener('message', onMsg); window.removeEventListener('VKWebAppEvent', onEv);
+        if (/Failed$/.test(d.type)) rej(d.data); else res(d.data);
+      };
+      const onMsg = (e) => { const d = e.data; if (d && typeof d === 'object') done(d.data && d.data.type ? d.data : d); };
+      const onEv = (e) => done(e.detail);
+      window.addEventListener('message', onMsg); window.addEventListener('VKWebAppEvent', onEv);
+      setTimeout(() => { window.removeEventListener('message', onMsg); window.removeEventListener('VKWebAppEvent', onEv); rej(new Error('timeout')); }, 120000);
+      try {
+        if (A && typeof A[method] === 'function') A[method](JSON.stringify(p));
+        else if (I && I[method]) I[method].postMessage(p);
+        else if (window.parent !== window) window.parent.postMessage({ handler: method, params: p, type: 'vk-connect' }, '*');
+        else rej(new Error('no bridge'));
+      } catch (e) { rej(e); }
+    });
+  }
+  const EVERY = [[30, '30 минут'], [60, '1 час'], [120, '2 часа'], [180, '3 часа'], [360, '6 часов'], [720, '12 часов']];
+  const PAUSE = { captcha: 'ждёт капчу', limit: 'лимит ВК, продолжит завтра', token: 'ключ ВК не работает - обнови' };
+  const VK_APP_ID = 54828995;
+  async function renderWall(body, id) {
+    body.replaceChildren(skeleton(4));
+    let w;
+    try { w = await api('adm_wall_get'); } catch (e) { if (!stale(id)) body.replaceChildren(failBox(e)); return; }
+    if (stale(id)) return;
+    const j = w.job || {};
+    const reload = () => render();
+    const callFn = async (b) => {
+      const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ init_data: initData }, b)) });
+      const x = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(x.error || 'ошибка ' + r.status);
+      return x;
+    };
+    const out = [];
+
+    // ключ
+    const tk = w.token || {};
+    const tokBox = h('div', { class: 'panel pad' });
+    const paste = h('input', { class: 'input mono', placeholder: 'vk1.a....', autocomplete: 'off' });
+    const oauth = 'https://oauth.vk.com/authorize?client_id=' + VK_APP_ID + '&display=mobile&redirect_uri=https://oauth.vk.com/blank.html&scope=wall,photos,groups,offline&response_type=token&v=5.199';
+    tokBox.append(
+      h('div', { class: 'kv' }, h('span', null, 'Твой ключ ВК'), h('b', { style: { color: tk.set ? 'var(--green)' : 'var(--amber)' } }, tk.set ? 'есть' + (tk.until ? ', до ' + dateTime(tk.until) : '') : 'нет')),
+      w.creator ? h('div', null,
+        vkData ? h('button', { class: 'btn wide', style: { marginTop: '10px' }, onclick: async () => {
+          try {
+            const r = await vkSend('VKWebAppGetAuthToken', { app_id: VK_APP_ID, scope: 'wall,photos,groups' });
+            if (!r || !r.access_token) throw new Error('пусто');
+            if (r.scope && !/wall/.test(r.scope)) { toast('ВК не выдал право «стена». Попробуй вторым способом', true); return; }
+            if (await act('adm_wall_token', { p_token: r.access_token, p_expires: +r.expires || 0 }, 'Ключ сохранён')) reload();
+          } catch (e) { toast('ВК не выдал ключ. Попробуй вторым способом ниже', true); }
+        } }, icon('check'), 'Получить ключ одной кнопкой') : null,
+        h('details', { class: 'how' }, h('summary', null, vkData ? 'Второй способ: вручную' : 'Как получить ключ'),
+          h('ol', { class: 'steps' },
+            h('li', null, 'Открой ссылку ниже в браузере, где ты вошёл во ВКонтакте, и нажми «Разрешить».'),
+            h('li', null, 'Тебя перекинет на пустую страницу. Скопируй из адресной строки всё между «access_token=» и «&».'),
+            h('li', null, 'Вставь сюда и нажми «Сохранить». Ключ уходит прямо в базу, здесь он больше не показывается.')),
+          h('div', { class: 'btns', style: { marginTop: 0 } },
+            h('button', { class: 'btn ghost sm', onclick: () => openExt(oauth) }, 'Открыть ссылку'),
+            h('button', { class: 'btn ghost sm', onclick: () => { try { navigator.clipboard.writeText(oauth); toast('Ссылка скопирована'); } catch (e) { /* ignore */ } } }, 'Скопировать ссылку')),
+          h('div', { class: 'inline', style: { marginTop: '10px' } }, paste, h('button', { class: 'btn', onclick: async () => {
+            let t = paste.value.trim();
+            const m = t.match(/access_token=([^&\s]+)/); if (m) t = m[1];
+            const ex = (paste.value.match(/expires_in=(\d+)/) || [])[1];
+            if (t.length < 20) { toast('Это не похоже на ключ', true); return; }
+            if (await act('adm_wall_token', { p_token: t, p_expires: +ex || 0 }, 'Ключ сохранён')) reload();
+          } }, 'Сохранить')))) : h('p', { class: 'hint' }, 'Ключ ВК вставляет создатель.'),
+      h('p', { class: 'hint' }, 'Посты идут от твоей страницы. Ключ даёт доступ к стене и фото, хранится только в базе.'));
+    out.push(sec('Ключ ВК'), tokBox);
+
+    // состояние цикла
+    if (j.captcha_wait && j.captcha_img) {
+      const key = h('input', { class: 'input mono', placeholder: 'Буквы с картинки', autocomplete: 'off' });
+      out.push(sec('Капча'), h('div', { class: 'panel pad captcha' },
+        h('p', { class: 'mut', style: { margin: '0 0 10px' } }, 'ВК просит подтвердить, что ты человек. Введи буквы - цикл продолжится.'),
+        h('img', { src: j.captcha_img, alt: 'капча' }),
+        h('div', { class: 'inline', style: { marginTop: '10px' } }, key, h('button', { class: 'btn', onclick: async () => {
+          if (await act('adm_wall_cmd', { p_cmd: 'captcha', p_key: key.value }, 'Продолжаю')) { callFn({ action: 'wall' }).catch(() => {}); setTimeout(reload, 2500); }
+        } }, 'Продолжить'))));
+    }
+    const state = j.active ? (j.pause ? 'Пауза: ' + (PAUSE[j.pause] || j.pause) : 'Работает') : 'Остановлен';
+    out.push(sec('Цикл', state), h('div', { class: 'panel pad' },
+      h('div', { class: 'kv' }, h('span', null, 'Постов сегодня'), h('b', { class: 'mono' }, num(w.today) + ' из ' + num(j.per_day))),
+      h('div', { class: 'btns' },
+        j.active ? h('button', { class: 'btn ghost', onclick: async () => { if (await act('adm_wall_cmd', { p_cmd: 'pause' }, 'Цикл остановлен')) reload(); } }, 'Остановить')
+          : h('button', { class: 'btn', onclick: async () => {
+            if (!(await confirmBox('Запустить цикл?', 'Раз в минуту - пост в следующую группу. Каждая группа - не чаще, чем раз в ' + (EVERY.find((x) => x[0] === j.every_min) || [0, j.every_min + ' мин'])[1] + '.', 'Запустить'))) return;
+            if (await act('adm_wall_cmd', { p_cmd: 'start' }, 'Цикл запущен')) { callFn({ action: 'wall' }).catch(() => {}); setTimeout(reload, 3000); }
+          } }, icon('play'), 'Запустить'),
+        h('button', { class: 'btn ghost', disabled: !j.active || !!j.pause, onclick: async () => {
+          try { const r = await callFn({ action: 'wall' }); toast(r.idle ? 'Сейчас все группы на паузе по промежутку' : r.ok ? 'Опубликовано' : 'Не вышло: ' + (r.err || '')); } catch (e) { toast(errText(e), true); }
+          reload();
+        } }, 'Следующий пост сейчас'))));
+
+    // группы
+    const links = h('textarea', { class: 'input mono', rows: '3', placeholder: 'Ссылки на группы, каждая с новой строки:\nhttps://vk.com/piar_group\nvk.com/club123456' });
+    const groups = w.groups || [];
+    out.push(sec('Группы', groups.filter((g) => g.enabled).length + ' из ' + groups.length), h('div', { class: 'panel pad' },
+      links,
+      h('button', { class: 'btn wide', style: { marginTop: '8px' }, onclick: async (e) => {
+        const list = links.value.split(/[\s,]+/).filter(Boolean);
+        if (!list.length) { toast('Вставь ссылки', true); return; }
+        const b = e.currentTarget; b.disabled = true;
+        try {
+          const r = await callFn({ action: 'wall_resolve', links: list });
+          const open = (r.groups || []).filter((g) => g.can_post).length;
+          toast('Добавлено: ' + (r.groups || []).length + ', стена открыта у ' + open + ((r.missing || []).length ? '. Не найдены: ' + r.missing.join(', ') : ''));
+          links.value = ''; reload();
+        } catch (er) { toast(/no token/.test(er.message) ? 'Сначала сохрани ключ ВК' : 'Не получилось: ' + er.message, true); b.disabled = false; }
+      } }, icon('plus'), 'Проверить и добавить'),
+      groups.length ? h('div', { class: 'list wall-groups' }, groups.map((g) => {
+        const sw = h('button', { class: 'sw' + (g.enabled ? ' on' : ''), role: 'switch', 'aria-label': 'Постить в ' + g.name, onclick: async () => {
+          if (!g.enabled && g.can_post === false) { toast('Стена закрыта - туда не опубликовать', true); return; }
+          if (await act('adm_wall_group', { p_gid: g.gid, p_cmd: g.enabled ? 'off' : 'on' })) reload();
+        } });
+        return h('div', { class: 'row' }, h('span', { class: 'ava', style: { backgroundImage: g.photo ? 'url("' + g.photo + '")' : '' } }),
+          h('span', { class: 'who' },
+            h('b', null, h('em', null, g.name || ('club' + g.gid)), g.can_post === false ? h('span', { class: 'tag red' }, 'стена закрыта') : null),
+            h('small', { style: { whiteSpace: 'normal' } }, (g.last_at ? 'последний ' + ago(g.last_at) : 'ещё не постили') + ' · сегодня ' + g.day_n,
+              g.last_post ? [' · ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); openExt('https://vk.com/wall-' + g.gid + '_' + g.last_post); } }, 'пост')] : null),
+            g.err ? h('small', { style: { color: 'var(--red)', whiteSpace: 'normal' } }, g.err) : null),
+          sw,
+          h('button', { class: 'ib', 'aria-label': 'Убрать группу', onclick: async () => { if (await confirmBox('Убрать «' + g.name + '»?', 'Группа пропадёт из списка.', 'Убрать', true)) { if (await act('adm_wall_group', { p_gid: g.gid, p_cmd: 'remove' })) reload(); } } }, icon('trash')));
+      })) : h('p', { class: 'hint' }, 'Групп пока нет.')));
+
+    // пост и настройки цикла
+    const m = j.msg || {};
+    const text = h('textarea', { class: 'input', rows: '6', maxlength: '4000', placeholder: 'Текст поста. Эмодзи - с клавиатуры телефона.' }); text.value = m.text || '';
+    const link = h('input', { class: 'input mono', type: 'url', placeholder: 'https://vk.com/app' + VK_APP_ID + ' (ссылка с превью, необязательно)', value: m.link || '' });
+    const media = (m.media || []).slice();
+    const mediaBox = h('div', { class: 'media' });
+    const fileIn = h('input', { type: 'file', multiple: true, accept: 'image/*', style: { display: 'none' } });
+    const drawMedia = () => mediaBox.replaceChildren(...media.map((x, i) => h('div', { class: 'mi' + (x.busy ? ' busy' : '') }, h('img', { src: x.local || x.url, alt: '' }),
+      h('button', { type: 'button', class: 'mi-x', 'aria-label': 'Убрать', onclick: () => { media.splice(i, 1); drawMedia(); } }, icon('x')))),
+      media.length < 10 ? h('button', { type: 'button', class: 'mi add', onclick: () => fileIn.click() }, icon('image'), h('small', null, 'Фото')) : null);
+    fileIn.addEventListener('change', async () => {
+      for (const f of [...fileIn.files]) {
+        if (media.length >= 10) break;
+        const it = { name: f.name, kind: 'photo', local: URL.createObjectURL(f), busy: true }; media.push(it); drawMedia();
+        try {
+          const fd = new FormData(); fd.append('init_data', initData); fd.append('file', f);
+          const r = await (await fetch(FN, { method: 'POST', body: fd })).json();
+          if (!r.url) throw new Error(r.error || 'не загрузилось');
+          Object.assign(it, { url: r.url, busy: false });
+        } catch (e) { media.splice(media.indexOf(it), 1); toast('Фото не загрузилось', true); }
+        drawMedia();
+      }
+      fileIn.value = '';
+    });
+    drawMedia();
+    let every = j.every_min || 180;
+    const everySel = h('select', { class: 'input', onchange: () => { every = +everySel.value; repl.classList.toggle('on', every < 60 || replOn); replRow.style.opacity = every < 60 ? .5 : 1; } },
+      EVERY.map(([v, l]) => h('option', { value: String(v), selected: v === every }, 'каждые ' + l)));
+    const perG = h('input', { class: 'input mono', type: 'number', min: '1', max: '24', value: String(j.per_group || 12) });
+    const perD = h('input', { class: 'input mono', type: 'number', min: '1', max: '100', value: String(j.per_day || 60) });
+    let replOn = j.replace_prev !== false;
+    const repl = h('button', { class: 'sw' + (replOn || every < 60 ? ' on' : ''), role: 'switch', 'aria-label': 'Удалять прошлый пост', onclick: () => { if (every < 60) { toast('При 30 минутах прошлый пост удаляется всегда', true); return; } replOn = !replOn; repl.classList.toggle('on', replOn); } });
+    const replRow = h('div', { class: 'tog', style: { opacity: every < 60 ? .5 : 1 } }, h('div', { class: 't' }, h('b', null, 'Удалять прошлый пост'), h('small', null, 'В группе висит одна свежая запись, а не стопка копий')), repl);
+    out.push(sec('Пост'), h('div', { class: 'panel pad' },
+      field('Текст', text), field('Ссылка', link),
+      group('Фото', h('div', null, mediaBox, fileIn)),
+      h('p', { class: 'hint', style: { marginTop: '-4px' } }, 'На стенах ВК нет жирного и курсива - только текст, эмодзи, фото и ссылки.'),
+      group('Как часто в каждую группу', everySel),
+      h('div', { class: 'g2' }, field('Постов в группу за сутки', perG), field('Всего за сутки', perD)),
+      replRow,
+      h('button', { class: 'btn wide', style: { marginTop: '12px' }, onclick: async () => {
+        if (media.some((x) => x.busy)) { toast('Дождись загрузки фото', true); return; }
+        if (!text.value.trim() && !media.length) { toast('Напиши текст поста', true); return; }
+        const ok = await act('adm_wall_save', { p: { msg: { text: text.value.trim(), link: link.value.trim(), media: media.map((x) => ({ url: x.url, kind: 'photo', name: x.name })) },
+          every_min: every, per_group: Math.max(1, Math.min(24, Math.floor(+perG.value || 12))), per_day: Math.max(1, Math.min(100, Math.floor(+perD.value || 60))), replace_prev: replOn } }, 'Пост и настройки сохранены');
+        if (ok) reload();
+      } }, icon('check'), 'Сохранить'),
+      h('p', { class: 'hint' }, 'Новый текст подхватится со следующего поста, цикл перезапускать не нужно.')));
+
+    // журнал
+    const log = w.log || [];
+    out.push(sec('Журнал'), log.length ? h('div', { class: 'panel' }, log.map((l) => h('div', { class: 'log' },
+      h('div', null, h('b', { style: { color: l.ok ? 'var(--green)' : 'var(--red)' } }, l.ok ? 'опубликовано' : 'не вышло'), ' · ', l.name || ('club' + l.gid),
+        l.ok && l.post_id ? [' · ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); openExt('https://vk.com/wall-' + l.gid + '_' + l.post_id); } }, 'открыть')] : null),
+      l.err ? h('div', { class: 'd' }, l.err) : null,
+      h('div', { class: 'meta' }, dateTime(l.at))))) : h('div', { class: 'panel empty' }, 'Пока пусто'));
+    body.replaceChildren(...out);
+  }
+
   async function renderBcast(id) {
-    const body = msgHost();
+    const body = bcastHost();
+    if (BMODE === 'wall') return renderWall(body, id);
     const st = { ch: { tg: true, vk: true, vkn: false }, media: [], buttons: [{ t: 'play', label: 'Играть' }], opts: { nodup: true }, when: 'now', counts: null };
     const title = h('input', { class: 'input', maxlength: '80', placeholder: 'Например: выходные x2 (видит только команда)' });
     const rich = richEditor(() => upd());

@@ -3,6 +3,8 @@
 //  * POST multipart {init_data, file} - загрузить картинку/видео/файл для рассылки (только команда).
 //  * POST {action: "tick"} - отправить очередь: Telegram-бот, сообщения сообщества ВК, уведомления приложения ВК.
 //    Будит база раз в минуту (заголовок x-bcast) и админка сразу после «Отправить» (init_data).
+//  * POST {action: "wall"} - пост в следующую по очереди группу ВК (цикл «Посты в группы», база будит раз в минуту).
+//  * POST {action: "wall_resolve", links} - проверить группы по ссылкам (открыта ли стена) и добавить в список.
 //  Ключи берутся из базы (private_secrets), сюда их никто не передаёт.
 //  Развернуть: supabase functions deploy bcast --no-verify-jwt
 // =====================================================================
@@ -251,16 +253,79 @@ async function tick() {
   return total;
 }
 
+// ---------- посты в группы ВК (личный ключ создателя, одна группа за вызов) ----------
+function groupRef(s: string) {
+  const t = s.trim();
+  const m = t.match(/(?:vk\.com|vk\.ru|m\.vk\.com)\/([A-Za-z0-9_.]+)/i);
+  const k = (m ? m[1] : t).replace(/^@/, "");
+  const n = k.match(/^(?:club|public|event)(\d+)$/i);
+  return n ? n[1] : k;
+}
+async function wallResolve(links: string[]) {
+  const token = await rpc("wall_token", {});
+  if (!token) return json({ error: "no token" }, 400);
+  const refs = [...new Set(links.map(groupRef).filter(Boolean))].slice(0, 30);
+  if (!refs.length) return json({ error: "no links" }, 400);
+  const r = await vk("groups.getById", { group_ids: refs.join(","), fields: "can_post" }, token);
+  if (r.error) return json({ error: `${r.error.error_code}: ${r.error.error_msg}` }, 400);
+  const list = (Array.isArray(r.response) ? r.response : r.response?.groups || []).map((g: any) => ({
+    gid: g.id, name: g.name, screen: g.screen_name, photo: g.photo_100 || "", can_post: !!g.can_post,
+  }));
+  if (list.length) await rpc("wall_groups_put", { p: list });
+  return json({ groups: list, missing: refs.filter((x) => !list.some((g: any) => String(g.gid) === x || g.screen === x)) });
+}
+async function wallPhotos(token: string, m: Msg) {
+  const out: string[] = [];
+  for (const x of (m.media || []).filter((y) => y.kind === "photo").slice(0, 10)) {
+    try {
+      const file = await (await fetch(x.url)).blob();
+      const s = await vk("photos.getWallUploadServer", {}, token);
+      const fd = new FormData(); fd.append("photo", file, x.name || "photo.jpg");
+      const up = await (await fetch(s.response.upload_url, { method: "POST", body: fd })).json();
+      const sv = await vk("photos.saveWallPhoto", { photo: up.photo, server: up.server, hash: up.hash }, token);
+      const p = sv.response?.[0];
+      if (p) out.push(`photo${p.owner_id}_${p.id}`);
+    } catch (_) { /* без фото пост всё равно уйдёт */ }
+  }
+  return out.join(",");
+}
+async function wallPost() {
+  const next = await rpc("wall_next", {});
+  if (!next) return { idle: true };
+  const token = await rpc("wall_token", {});
+  const gid = Number(next.gid);
+  if (!token) { await rpc("wall_done", { p: { gid, ok: false, kind: "token", err: "нет ключа" } }); return { error: "no token" }; }
+  const m: Msg & { link?: string } = next.msg || {};
+  const done: Record<string, unknown> = { gid };
+  let att = next.att;
+  if (att === null || att === undefined) { att = await wallPhotos(token, m); done.att = att; }
+  // прошлый наш пост в этой группе убираем, чтобы на стене висела одна свежая запись
+  if (next.last_post) { try { await vk("wall.delete", { owner_id: -gid, post_id: next.last_post }, token); } catch (_) { /* уже удалён */ } }
+  const p: Record<string, string | number> = {
+    owner_id: -gid, from_group: 0, message: m.text || "",
+    attachments: [att, (m.link || "").trim()].filter(Boolean).join(","),
+  };
+  if (next.captcha && next.captcha.sid && next.captcha.key) { p.captcha_sid = next.captcha.sid; p.captcha_key = next.captcha.key; }
+  const r = await vk("wall.post", p, token);
+  if (!r.error) { await rpc("wall_done", { p: { ...done, ok: true, post_id: r.response?.post_id } }); return { ok: true, gid }; }
+  const c = r.error.error_code, d = `${c}: ${r.error.error_msg}`;
+  const kind = c === 14 ? "captcha" : c === 5 ? "token" : c === 9 ? "limit" : [15, 203, 214, 219, 222].includes(c) ? "group" : "other";
+  await rpc("wall_done", { p: { ...done, ok: false, kind, err: d, captcha: c === 14 ? { sid: r.error.captcha_sid, img: r.error.captcha_img } : undefined } });
+  return { ok: false, gid, err: d };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "method" }, 405);
   try {
     if ((req.headers.get("content-type") || "").startsWith("multipart/form-data")) return await upload(req);
     const body = await req.json().catch(() => ({}));
-    if (body.action !== "tick") return json({ error: "unknown action" }, 400);
+    if (!["tick", "wall", "wall_resolve"].includes(body.action)) return json({ error: "unknown action" }, 400);
     const sec = await rpc("bcast_secrets", {});
     const cronOk = !!sec.bcast_cron && req.headers.get("x-bcast") === sec.bcast_cron;
     if (!cronOk && !(await isAdmin(String(body.init_data || "")))) return json({ error: "forbidden" }, 403);
+    if (body.action === "wall_resolve") return cronOk ? json({ error: "forbidden" }, 403) : await wallResolve(Array.isArray(body.links) ? body.links.map(String) : []);
+    if (body.action === "wall") return json(await wallPost());
     return json({ sent: await tick() });
   } catch (e) {
     return json({ error: String(e).slice(0, 300) }, 500);
