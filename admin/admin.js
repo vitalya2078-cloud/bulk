@@ -339,32 +339,56 @@
   }
 
   // ---------- обзор ----------
+  const pct = (a, b) => b ? Math.round(100 * a / b) : 0;
+  let gradN = 0;
+  // кольцо-индикатор: доля в процентах, градиентная дуга
+  function ring(v, label, sub, g) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const id = 'rg' + (++gradN), R = 30, L = 2 * Math.PI * R, f = Math.max(0, Math.min(100, v || 0)) / 100;
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 76 76');
+    svg.innerHTML = '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + g[0] + '"/><stop offset="1" stop-color="' + g[1] + '"/></linearGradient></defs>' +
+      '<circle cx="38" cy="38" r="' + R + '" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="7"/>' +
+      '<circle class="arc" cx="38" cy="38" r="' + R + '" fill="none" stroke="url(#' + id + ')" stroke-width="7" stroke-linecap="round" transform="rotate(-90 38 38)" ' +
+      'stroke-dasharray="' + (L * f).toFixed(1) + ' ' + L.toFixed(1) + '" opacity="' + (f ? 1 : 0) + '" style="filter: drop-shadow(0 0 5px ' + g[1] + '88)"/>';
+    return h('div', { class: 'ring' }, h('div', { class: 'ring-c' }, svg, h('b', { class: 'mono' }, v == null ? '-' : v + '%')), h('span', null, label), sub ? h('small', null, sub) : null);
+  }
   async function renderHome(id) {
-    body.replaceChildren(sec('Сейчас'), skeleton(3));
+    body.replaceChildren(sec('Сейчас'), h('div', { class: 'hero-card skel-card' }), skeleton(3));
     let s;
     try { s = await api('adm_stats'); } catch (e) { if (!stale(id)) body.replaceChildren(failBox(e)); return; }
     if (stale(id)) return;
-    const k = (v, label, accent, live) => h('div', { class: 'kpi' + (accent ? ' acc' : '') }, live ? h('i', { class: 'dot' }) : null, h('b', null, v), h('span', null, label));
+    const k = (v, label, g) => h('div', { class: 'kpi kg' + (g || 1) }, h('b', null, v), h('span', null, label));
     const total = s.total || 0;
     const vTotal = Object.values(s.versions || {}).reduce((a, b) => a + b, 0);
+    const days = s.days || [];
+    const wk = days.slice(-7).reduce((a, d) => a + (d.new || 0), 0), wk0 = days.slice(-14, -7).reduce((a, d) => a + (d.new || 0), 0);
+    const trend = wk0 ? Math.round(100 * (wk - wk0) / wk0) : null;
     body.replaceChildren(
       sec('Сейчас', new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })),
+      h('div', { class: 'hero-card' },
+        h('div', { class: 'hc-top' },
+          h('div', null, h('span', { class: 'hc-l' }, h('i', { class: 'live' }), 'Онлайн сейчас'), h('b', { class: 'hc-n' }, num(s.online))),
+          h('div', { class: 'hc-side' },
+            h('div', null, h('b', null, num(s.dau)), h('span', null, 'сегодня')),
+            h('div', null, h('b', null, num(total)), h('span', null, 'всего')))),
+        h('div', { class: 'rings' },
+          ring(s.ret1, 'вернулись', 'на 2-й день', ['#22D3EE', '#7B61FF']),
+          ring(pct(s.wau, total), 'активны', 'за 7 дней', ['#C84BFF', '#FF6FB1']),
+          ring(pct(s.dau, s.mau), 'липкость', 'день / месяц', ['#34E0A1', '#B8F35A']))),
       h('div', { class: 'kpis' },
-        k(num(s.online), 'онлайн', true, true),
-        k(num(s.dau), 'сегодня', true),
-        k(num(total), 'всего игроков', true),
-        k(num(s.wau), 'за 7 дней'),
-        k(num(s.mau), 'за 30 дней'),
-        k('+' + num(s.new_today), 'новых сегодня'),
-        k('+' + num(s.new_week), 'новых за неделю'),
-        k(s.ret1 == null ? '-' : s.ret1 + '%', 'вернулись на 2-й день'),
-        k(num(s.refs), 'по приглашению'),
-        k(s.avg_sessions == null ? '-' : String(s.avg_sessions).replace('.', ','), 'заходов на игрока'),
-        k(s.avg_play_min == null ? '-' : num(s.avg_play_min) + 'м', 'в игре на игрока'),
-        k(num(s.banned), 'заблокировано')),
+        k('+' + num(s.new_today), 'новых сегодня', 1),
+        k('+' + num(s.new_week), 'новых за неделю', 2),
+        k(num(s.mau), 'за 30 дней', 3),
+        k(num(s.refs), 'по приглашению', 4),
+        k(s.avg_sessions == null ? '-' : String(s.avg_sessions).replace('.', ','), 'заходов на игрока', 2),
+        k(s.avg_play_min == null ? '-' : num(s.avg_play_min) + 'м', 'в игре на игрока', 1),
+        k(num(s.wau), 'за 7 дней', 4),
+        k(num(s.banned), 'заблокировано', 5),
+        k(trend == null ? '-' : (trend > 0 ? '+' : '') + trend + '%', 'новых к прошлой неделе', trend != null && trend < 0 ? 5 : 3)),
       sec('14 дней'),
-      h('div', { class: 'panel pad chart' }, chart(s.days || []),
-        h('div', { class: 'legend' }, h('span', null, h('i', { style: { background: 'var(--acc)' } }), 'новые'), h('span', null, h('i', { style: { background: 'var(--blue)' } }), 'активные'))),
+      h('div', { class: 'panel pad chart' }, chart(days),
+        h('div', { class: 'legend' }, h('span', null, h('i', { class: 'lg-new' }), 'новые'), h('span', null, h('i', { class: 'lg-act' }), 'активные'))),
       sec('Ранги лавок'),
       h('div', { class: 'panel pad' }, bars(RANKS.map((n, i) => [n, (s.ranks || {})[i] || 0]), total)),
       sec('Версии за неделю'),
@@ -411,25 +435,29 @@
     const n = days.length || 1, step = (W - P) / n, bw = Math.min(10, step * 0.42);
     const el = (t, a) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); svg.append(e); return e; };
     const defs = el('defs', {});
-    defs.innerHTML = '<linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6EA8FF" stop-opacity=".22"/><stop offset="1" stop-color="#6EA8FF" stop-opacity="0"/></linearGradient>';
+    defs.innerHTML = '<linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C84BFF" stop-opacity=".38"/><stop offset="1" stop-color="#7B61FF" stop-opacity="0"/></linearGradient>' +
+      '<linearGradient id="gl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7B61FF"/><stop offset=".6" stop-color="#C84BFF"/><stop offset="1" stop-color="#FF6FB1"/></linearGradient>' +
+      '<linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22D3EE"/><stop offset="1" stop-color="#34E0A1" stop-opacity=".55"/></linearGradient>';
     [0, 0.5, 1].forEach((f) => {
       const y = H - (H - 10) * f;
-      el('line', { x1: P, x2: W, y1: y, y2: y, stroke: '#1E222C' });
-      const t = el('text', { x: 0, y: y + 3.5, fill: '#5A6170', 'font-size': 9.5, 'font-family': 'ui-monospace, monospace' }); t.textContent = Math.round(max * f);
+      el('line', { x1: P, x2: W, y1: y, y2: y, stroke: 'rgba(255,255,255,.07)', 'stroke-dasharray': f ? '3 4' : '' });
+      const t = el('text', { x: 0, y: y + 3.5, fill: '#6E6990', 'font-size': 9.5, 'font-family': 'ui-monospace, monospace' }); t.textContent = Math.round(max * f);
     });
     let path = '';
     const xs = days.map((d, i) => P + step * i + step / 2);
     days.forEach((d, i) => {
       const x = xs[i];
       const bh = (H - 10) * d.new / max;
-      if (d.new) el('rect', { x: x - bw / 2, y: H - bh, width: bw, height: Math.max(bh, 2), rx: 2, fill: '#C4F13B' });
+      if (d.new) el('rect', { x: x - bw / 2, y: H - bh, width: bw, height: Math.max(bh, 2), rx: 3, fill: 'url(#gb)' });
       path += (i ? 'L' : 'M') + x.toFixed(1) + ' ' + (H - (H - 10) * d.act / max).toFixed(1);
-      if (i % 2 === (n - 1) % 2) { const t = el('text', { x, y: H + 14, fill: '#5A6170', 'font-size': 9, 'font-family': 'ui-monospace, monospace', 'text-anchor': 'middle' }); t.textContent = d.d.slice(0, 5); }
+      if (i % 2 === (n - 1) % 2) { const t = el('text', { x, y: H + 14, fill: '#6E6990', 'font-size': 9, 'font-family': 'ui-monospace, monospace', 'text-anchor': 'middle' }); t.textContent = d.d.slice(0, 5); }
     });
     if (days.length) {
       el('path', { d: path + 'L' + xs[n - 1] + ' ' + H + 'L' + xs[0] + ' ' + H + 'Z', fill: 'url(#ga)' });
-      el('path', { d: path, fill: 'none', stroke: '#6EA8FF', 'stroke-width': 1.8, 'stroke-linejoin': 'round' });
-      el('circle', { cx: xs[n - 1], cy: H - (H - 10) * days[n - 1].act / max, r: 3, fill: '#6EA8FF' });
+      el('path', { d: path, fill: 'none', stroke: 'url(#gl)', 'stroke-width': 2.4, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', style: 'filter: drop-shadow(0 3px 6px rgba(200,75,255,.55))' });
+      const cy = H - (H - 10) * days[n - 1].act / max;
+      el('circle', { cx: xs[n - 1], cy, r: 7, fill: '#FF6FB1', opacity: .25 });
+      el('circle', { cx: xs[n - 1], cy, r: 3.6, fill: '#FFF', stroke: '#FF6FB1', 'stroke-width': 2 });
     }
     return svg;
   }
