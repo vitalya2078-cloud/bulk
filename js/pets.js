@@ -371,9 +371,9 @@ const Pets = (() => {
   function petH() { return G.r * 0.72; }
   // Углубление лежанки (доли картинки: центр x, y, полуоси) или дверь домика (x, верх, низ, полуширина)
   const BEDS = {
-    bed_cushion: { hole: [0.5, 0.44, 0.31, 0.19] },
-    bed_basket:  { hole: [0.5, 0.38, 0.40, 0.24] },
-    bed_house:   { door: [0.47, 0.38, 0.82, 0.155] }
+    bed_cushion: { hole: [0.5, 0.46, 0.27, 0.16] },
+    bed_basket:  { hole: [0.51, 0.38, 0.36, 0.2] },
+    bed_house:   { door: [0.4, 0.44, 0.74, 0.155] }
   };
   function bedPos() {
     const id = S().wear.bed, item = id && D.wardrobe.find((x) => x.id === id);
