@@ -307,9 +307,18 @@ const Platform = (() => {
 
   const label = () => ({ vk: 'ВКонтакте', tg: 'Telegram', web: 'браузер' }[kind]);
 
+  // внешняя ссылка: в Telegram - его способом (ссылки t.me открываются внутри Telegram), иначе новое окно
+  function openUrl(url) {
+    if (!url) return false;
+    try {
+      if (kind === 'tg' && tg) { if (/^https:\/\/t\.me\//.test(url) && tg.openTelegramLink) tg.openTelegramLink(url); else tg.openLink(url); return true; }
+    } catch (e) { /* ниже - обычное окно */ }
+    try { return !!window.open(url, '_blank'); } catch (e) { return false; }
+  }
+
   return {
     init, kind: () => kind, label, userId, referrer, profile, authData, setUid,
     storageGet, storageSet, adsAvailable, rewardedAd, haptic, canFavorite, addFavorite, canStory, shareStory, canNotify, allowNotify,
-    invite, share, hasLeaderboard, leaderboard
+    invite, share, hasLeaderboard, leaderboard, openUrl
   };
 })();

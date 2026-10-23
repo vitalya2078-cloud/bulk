@@ -43,7 +43,8 @@ const Online = (() => {
     try { saveObj = JSON.parse(Econ.serialize()); } catch (e) { /* ignore */ }
     return {
       start: start ? '1' : '0', claim: claim ? '1' : '0', sess: SESS, ver: CONFIG.version,
-      name: (s.prof.name || '').trim(), avatar: s.prof.avatar === 'photo' ? '' : s.prof.avatar, photo: platPhoto,
+      name: (s.prof.name || '').trim(), avatar: s.prof.avatar === 'photo' ? '' : s.prof.avatar,
+      photo: s.set.hidePhoto ? '' : platPhoto, nophoto: s.set.hidePhoto ? '1' : '0',
       lvl: s.lvl, rank: Econ.rank(), le: Math.floor(s.le), e: Math.floor(s.e), ph: Math.floor(Econ.basePerHour()),
       cr: s.cr, mastery: Econ.mastery(), play: Math.floor(s.stat.play || 0),
       ref: start ? Platform.referrer() : '', save: saveObj
@@ -53,6 +54,7 @@ const Online = (() => {
   // claimed - база подтвердила, что играем здесь. Пока нет - каждый отчёт снова заявляет сессию:
   // иначе после оборванного первого отчёта база считала этот же телефон «другим местом».
   let lastHello = 0, claimed = false;
+  let linked = null; // какие платформы привязаны к аккаунту (из базы)
   async function hello(start, force) {
     if (!on() || kicked) return;
     if (!start && Date.now() - lastHello < (force ? 5000 : 45000)) return;
@@ -62,6 +64,7 @@ const Online = (() => {
     try { r = await rpc('hello', { init_data: initData(), p: stats(start, claim) }); } catch (e) { console.warn('online', e); return; }
     if (!r) return;
     if (r.uid) { uid = r.uid; Platform.setUid(uid); }
+    linked = { tg: !!r.tg, vk: !!r.vk };
     if (r.kicked) { kickScreen(); return; }
     if (claim) claimed = true;
     if (r.restore && adopt(r.restore, true)) {
@@ -374,5 +377,8 @@ const Online = (() => {
 
   const boost = () => (state.settings && state.settings.boost) || null;
 
-  return { boost, call, start, openMail, admCode, notifyPush, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid };
+  // команда игры для вкладки «Сообщество»
+  async function team() { try { return await rpc('team_public', {}, 6000); } catch (e) { return null; } }
+
+  return { team, linked: () => linked, boost, call, start, openMail, admCode, notifyPush, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid };
 })();

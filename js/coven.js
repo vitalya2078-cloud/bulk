@@ -497,5 +497,8 @@ const Coven = (() => {
     setInterval(() => { if (!document.hidden) refresh(); }, 2 * 60000);
   }
 
-  return { start, open, refresh, emblem };
+  // для профиля: название ковена и роль игрока (или null)
+  const mine = () => (my && my.coven ? { name: my.coven.name, role: my.role || '' } : null);
+
+  return { start, open, refresh, emblem, mine };
 })();
