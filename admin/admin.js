@@ -1573,10 +1573,11 @@
     const link = h('input', { class: 'input mono', type: 'url', placeholder: 'https://vk.com/app' + VK_APP_ID + ' (ссылка с превью, необязательно)', value: m.link || '' });
     const media = (m.media || []).slice();
     const mediaBox = h('div', { class: 'media' });
-    const fileIn = h('input', { type: 'file', multiple: true, accept: 'image/*', style: { display: 'none' } });
+    // поле выбора файла лежит прямо на плитке «Добавить»: нажатие из кода встроенный браузер ВК не пропускает
+    const fileIn = h('input', { type: 'file', multiple: true, accept: 'image/*', class: 'file-hit', 'aria-label': 'Добавить фото' });
     const drawMedia = () => mediaBox.replaceChildren(...media.map((x, i) => h('div', { class: 'mi' + (x.busy ? ' busy' : '') }, h('img', { src: x.local || x.url, alt: '' }),
       h('button', { type: 'button', class: 'mi-x', 'aria-label': 'Убрать', onclick: () => { media.splice(i, 1); drawMedia(); } }, icon('x')))),
-      media.length < 10 ? h('button', { type: 'button', class: 'mi add', onclick: () => fileIn.click() }, icon('image'), h('small', null, 'Фото')) : null);
+      media.length < 10 ? h('label', { class: 'mi add' }, icon('image'), h('small', null, 'Добавить'), fileIn) : null);
     fileIn.addEventListener('change', async () => {
       for (const f of [...fileIn.files]) {
         if (media.length >= 10) break;
@@ -1602,7 +1603,7 @@
     const replRow = h('div', { class: 'tog', style: { opacity: every < 60 ? .5 : 1 } }, h('div', { class: 't' }, h('b', null, 'Удалять прошлый пост'), h('small', null, 'В группе висит одна свежая запись, а не стопка копий')), repl);
     out.push(sec('Пост'), h('div', { class: 'panel pad' },
       field('Текст', text), field('Ссылка', link),
-      group('Фото', h('div', null, mediaBox, fileIn)),
+      group('Фото', mediaBox),
       h('p', { class: 'hint', style: { marginTop: '-4px' } }, 'На стенах ВК нет жирного и курсива - только текст, эмодзи, фото и ссылки.'),
       group('Как часто в каждую группу', everySel),
       h('div', { class: 'g2' }, field('Постов в группу за сутки', perG), field('Всего за сутки', perD)),
@@ -1663,7 +1664,7 @@
 
     // вложения
     const mediaBox = h('div', { class: 'media' });
-    const fileIn = h('input', { type: 'file', multiple: true, accept: 'image/*,video/*,.gif,.pdf,.zip,.doc,.docx,.xls,.xlsx,.txt,.apk,.mp3', style: { display: 'none' } });
+    const fileIn = h('input', { type: 'file', multiple: true, class: 'file-hit', 'aria-label': 'Добавить вложение' });
     fileIn.addEventListener('change', async () => {
       const files = [...fileIn.files]; fileIn.value = '';
       for (const f of files) {
@@ -1684,7 +1685,7 @@
       mediaBox.replaceChildren(...st.media.map((m, i) => h('div', { class: 'mi' + (m.busy ? ' busy' : '') },
         m.kind === 'photo' || m.kind === 'animation' ? h('img', { src: m.local || m.url, alt: '' }) : h('span', { class: 'mi-ic' }, icon(m.kind === 'video' ? 'play' : 'file'), h('small', null, m.name || '')),
         h('button', { type: 'button', class: 'mi-x', 'aria-label': 'Убрать', onclick: () => { st.media.splice(i, 1); drawMedia(); upd(); } }, icon('x')))),
-        st.media.length < 10 ? h('button', { type: 'button', class: 'mi add', onclick: () => fileIn.click() }, icon('image'), h('small', null, 'Фото, видео, файл')) : null);
+        st.media.length < 10 ? h('label', { class: 'mi add' }, icon('image'), h('small', null, 'Добавить'), fileIn) : null);
     }
 
     // кнопки под сообщением
@@ -1831,7 +1832,7 @@
         group('Кому', aud.el),
         field('Название', title),
         h('div', { class: 'field' }, h('span', null, 'Сообщение'), rich.el, h('div', { class: 'ed-foot' }, counter)),
-        h('div', { class: 'field' }, h('span', null, 'Вложения'), mediaBox, fileIn, h('p', { class: 'hint' }, 'До 10 штук, каждое до 50 МБ. Несколько фото и видео в Telegram придут альбомом, кнопки - следом. Во ВК видео уходит файлом.')),
+        h('div', { class: 'field' }, h('span', null, 'Вложения'), mediaBox, h('p', { class: 'hint' }, 'Фото, видео, гиф или файл. До 10 штук, каждое до 50 МБ. Несколько фото и видео в Telegram придут альбомом, кнопки - следом. Во ВК видео уходит файлом.')),
         h('div', { class: 'field' }, h('span', null, 'Кнопки под сообщением'), btnBox),
         h('div', { class: 'field' }, h('span', null, 'Настройки'), optBox),
         group('Когда', h('div', null, whenSeg, whenIn)),

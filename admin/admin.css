@@ -370,3 +370,6 @@ pre { margin: 0; padding: 0 14px 14px; white-space: pre-wrap; word-break: break-
 .wall-groups { margin-top: 12px; }
 .wall-groups .row { padding: 10px 0; gap: 10px; }
 .wall-groups .who small + small { margin-top: 2px; }
+.mi.add { cursor: pointer; }
+.mi.add small { white-space: normal; }
+.file-hit { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; }
