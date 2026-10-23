@@ -5,6 +5,7 @@
 //    Будит база раз в минуту (заголовок x-bcast) и админка сразу после «Отправить» (init_data).
 //  * POST {action: "wall"} - пост в следующую по очереди группу ВК (цикл «Посты в группы», база будит раз в минуту).
 //  * POST {action: "wall_resolve", links} - проверить группы по ссылкам (открыта ли стена) и добавить в список.
+//  * POST {action: "wall_code", code} - обменять код из адреса страницы ВК на ключ создателя (ключ из браузера привязан к телефону).
 //  * POST {action: "from_url", url} - скачать картинку/видео по ссылке в хранилище; {action: "vk_photos"} - мои фото ВК для выбора.
 //  Ключи берутся из базы (private_secrets), сюда их никто не передаёт.
 //  Развернуть: supabase functions deploy bcast --no-verify-jwt
@@ -313,6 +314,27 @@ async function wallResolve(links: string[]) {
   if (list.length) await rpc("wall_groups_put", { p: list });
   return json({ groups: list, missing: refs.filter((x) => !list.some((g: any) => String(g.gid) === x || g.screen === x)) });
 }
+// код из oauth.vk.com/blank.html#code=... меняем на ключ здесь, на сервере: так ключ не привязан к адресу телефона
+const REDIRECT = "https://oauth.vk.com/blank.html";
+async function wallCode(initData: string, code: string) {
+  let admin: number;
+  try { admin = await rpc("wall_creator", { init_data: initData }); } catch { return json({ error: "ключ ВК вставляет только создатель" }, 403); }
+  if (!/^[A-Za-z0-9_-]{8,}$/.test(code)) return json({ error: "это не похоже на код" }, 400);
+  const secret = await rpc("wall_app_secret", {});
+  if (!secret) return json({ error: "нет защищённого ключа приложения" }, 500);
+  const q = new URLSearchParams({ client_id: String(VK_APP), client_secret: secret, redirect_uri: REDIRECT, code });
+  const r = await (await fetch(`https://oauth.vk.com/access_token?${q}`)).json().catch(() => ({ error: "bad response" }));
+  if (!r.access_token) {
+    const why = String(r.error_description || r.error || "ошибка");
+    return json({ error: /code is expired|invalid code|code is invalid/i.test(why) ? "код устарел или уже использован - открой ссылку ещё раз и вставь новый адрес" : "ВК не выдал ключ: " + why }, 400);
+  }
+  // сразу проверяем, что ключ работает с сервера
+  const me = await vk("users.get", {}, r.access_token);
+  if (me.error) return json({ error: `ВК выдал ключ, но он не работает: ${me.error.error_code}: ${me.error.error_msg}` }, 400);
+  await rpc("wall_token_put", { p_token: r.access_token, p_expires: Number(r.expires_in) || 0, p_admin: admin });
+  const u = me.response?.[0] || {};
+  return json({ ok: true, name: `${u.first_name || ""} ${u.last_name || ""}`.trim(), expires: Number(r.expires_in) || 0 });
+}
 async function wallPhotos(token: string, m: Msg) {
   const out: string[] = [];
   for (const x of (m.media || []).filter((y) => y.kind === "photo").slice(0, 10)) {
@@ -361,13 +383,14 @@ Deno.serve(async (req) => {
   try {
     if ((req.headers.get("content-type") || "").startsWith("multipart/form-data")) return await upload(req);
     const body = await req.json().catch(() => ({}));
-    if (!["tick", "wall", "wall_resolve", "from_url", "vk_photos"].includes(body.action)) return json({ error: "unknown action" }, 400);
+    if (!["tick", "wall", "wall_resolve", "wall_code", "from_url", "vk_photos"].includes(body.action)) return json({ error: "unknown action" }, 400);
     const sec = await rpc("bcast_secrets", {});
     const cronOk = !!sec.bcast_cron && req.headers.get("x-bcast") === sec.bcast_cron;
     if (!cronOk && !(await isAdmin(String(body.init_data || "")))) return json({ error: "forbidden" }, 403);
     if (body.action === "from_url") return cronOk ? json({ error: "forbidden" }, 403) : await fromUrl(String(body.url || "").trim());
     if (body.action === "vk_photos") return cronOk ? json({ error: "forbidden" }, 403) : await vkPhotos(Number(body.offset) || 0);
     if (body.action === "wall_resolve") return cronOk ? json({ error: "forbidden" }, 403) : await wallResolve(Array.isArray(body.links) ? body.links.map(String) : []);
+    if (body.action === "wall_code") return cronOk ? json({ error: "forbidden" }, 403) : await wallCode(String(body.init_data || ""), String(body.code || "").trim());
     if (body.action === "wall") return json(await wallPost());
     return json({ sent: await tick() });
   } catch (e) {

@@ -1502,37 +1502,32 @@
     const tk = w.token || {};
     const tokOld = !!(tk.set && tk.until && new Date(tk.until) < new Date());
     const tokBox = h('div', { class: 'panel pad' });
-    const paste = h('input', { class: 'input mono', placeholder: 'vk1.a....', autocomplete: 'off' });
-    const oauth = 'https://oauth.vk.com/authorize?client_id=' + VK_APP_ID + '&display=mobile&redirect_uri=https://oauth.vk.com/blank.html&scope=wall,photos,groups&response_type=token&v=5.199';
+    const paste = h('input', { class: 'input mono', placeholder: 'https://oauth.vk.com/blank.html#code=...', autocomplete: 'off' });
+    // код, а не ключ: ключ из браузера ВК работает только с адреса телефона, а по коду его получает сервер
+    const oauth = 'https://oauth.vk.com/authorize?client_id=' + VK_APP_ID + '&display=mobile&redirect_uri=https://oauth.vk.com/blank.html&scope=wall,photos,groups&response_type=code&v=5.199';
     tokBox.append(
       h('div', { class: 'kv' }, h('span', null, 'Твой ключ ВК'), h('b', { style: { color: tk.set && !tokOld ? 'var(--green)' : 'var(--amber)' } }, !tk.set ? 'нет' : tokOld ? 'истёк, получи новый' : 'есть' + (tk.until ? ', до ' + dateTime(tk.until) : ''))),
-      w.creator ? h('div', null,
-        vkData ? h('button', { class: 'btn wide', style: { marginTop: '10px' }, onclick: async () => {
-          try {
-            const r = await vkSend('VKWebAppGetAuthToken', { app_id: VK_APP_ID, scope: 'wall,photos,groups' });
-            if (!r || !r.access_token) throw new Error('пусто');
-            if (r.scope && !/wall/.test(r.scope)) { toast('ВК не выдал право «стена». Попробуй вторым способом', true); return; }
-            if (await act('adm_wall_token', { p_token: r.access_token, p_expires: +r.expires || 0 }, 'Ключ сохранён')) reload();
-          } catch (e) { toast('ВК не выдал ключ. Попробуй вторым способом ниже', true); }
-        } }, icon('check'), 'Получить ключ одной кнопкой') : null,
-        h('details', { class: 'how' }, h('summary', null, vkData ? 'Второй способ: вручную' : 'Как получить ключ'),
+      w.creator ? h('details', { class: 'how', open: !tk.set || tokOld }, h('summary', null, 'Как получить ключ'),
           h('ol', { class: 'steps' },
-            h('li', null, 'Открой ссылку ниже в браузере, где ты вошёл во ВКонтакте, и нажми «Разрешить».'),
+            h('li', null, 'Нажми «Открыть ссылку», войди во ВКонтакте, если попросит, и нажми «Разрешить».'),
             h('li', null, 'Тебя перекинет на пустую страницу с надписью про безопасность. Скопируй адрес этой страницы целиком (он начинается с oauth.vk.com/blank.html).'),
-            h('li', null, 'Вставь сюда и нажми «Сохранить» - ключ найдётся в адресе сам. Он уходит прямо в базу, здесь больше не показывается.'),
-            h('li', null, 'Ключ живёт сутки. Когда истечёт, цикл встанет на паузу - просто получи новый.')),
+            h('li', null, 'Вставь сюда и нажми «Сохранить» в течение часа. Сервер сам получит ключ и проверит его.'),
+            h('li', null, 'Ключ живёт сутки. Когда истечёт, цикл встанет на паузу - просто повтори.')),
           h('div', { class: 'btns', style: { marginTop: 0 } },
             h('button', { class: 'btn ghost sm', onclick: () => openExt(oauth) }, 'Открыть ссылку'),
             h('button', { class: 'btn ghost sm', onclick: () => { try { navigator.clipboard.writeText(oauth); toast('Ссылка скопирована'); } catch (e) { /* ignore */ } } }, 'Скопировать ссылку')),
-          h('div', { class: 'inline', style: { marginTop: '10px' } }, paste, h('button', { class: 'btn', onclick: async () => {
-            let t = paste.value.trim();
-            const m = t.match(/access_token=([^&\s]+)/); if (m) t = m[1];
-            const ex = (paste.value.match(/expires_in=(\d+)/) || [])[1];
-            if (!m && /oauth\.vk\.com\/authorize/.test(t)) { toast('Это ссылка для входа, а не ключ. Открой её, нажми «Разрешить» и вставь адрес страницы, куда тебя перекинет', true); return; }
-            if (!m && /error/.test(t)) { toast('ВК вернул ошибку вместо ключа: ' + decodeURIComponent((t.match(/error_description=([^&]+)/) || [, t])[1]).replace(/\+/g, ' ').slice(0, 120), true); return; }
-            if (t.length < 20 || !/^[A-Za-z0-9._-]+$/.test(t)) { toast('Это не похоже на ключ. Вставь адрес страницы целиком', true); return; }
-            if (await act('adm_wall_token', { p_token: t, p_expires: +ex || 0 }, 'Ключ сохранён')) reload();
-          } }, 'Сохранить')))) : h('p', { class: 'hint' }, 'Ключ ВК вставляет создатель.'),
+          h('div', { class: 'inline', style: { marginTop: '10px' } }, paste, h('button', { class: 'btn', onclick: async (ev) => {
+            const t = paste.value.trim();
+            const m = t.match(/[#?&]code=([A-Za-z0-9_-]+)/);
+            if (!m && /oauth\.vk\.com\/authorize/.test(t)) { toast('Это ссылка для входа, а не результат. Открой её, нажми «Разрешить» и вставь адрес страницы, куда тебя перекинет', true); return; }
+            if (!m && /error/.test(t)) { toast('ВК вернул ошибку: ' + decodeURIComponent((t.match(/error_description=([^&]+)/) || [, t])[1]).replace(/\+/g, ' ').slice(0, 120), true); return; }
+            if (!m) { toast('В адресе нет кода. Скопируй адрес страницы после «Разрешить» целиком', true); return; }
+            const b = ev.currentTarget; b.disabled = true; toast('Получаю ключ...');
+            try {
+              const r = await fnCall({ action: 'wall_code', code: m[1] });
+              toast('Ключ сохранён' + (r.name ? ': ' + r.name : '')); paste.value = ''; reload();
+            } catch (e) { toast('Не получилось: ' + e.message, true); } finally { b.disabled = false; }
+          } }, 'Сохранить'))) : h('p', { class: 'hint' }, 'Ключ ВК вставляет создатель.'),
       h('p', { class: 'hint' }, 'Посты идут от твоей страницы. Ключ даёт доступ к стене и фото, хранится только в базе.'));
     out.push(sec('Ключ ВК'), tokBox);
 
