@@ -294,7 +294,8 @@ const UI = (() => {
     shop:    { label: 'Лавка',   img: 'cards/window' },
     wardrobe: { label: 'Гардероб', img: 'ui/wardrobe' },
     tasks:   { label: 'Задания', img: 'ui/checklist' },
-    friends: { label: 'Сообщество', img: 'ui/envelope' }
+    friends: { label: 'Сообщество', img: 'ui/envelope' },
+    profile: { label: 'Профиль', img: 'ui/medal_crown' }
   };
   const badges = {};
 
@@ -659,17 +660,27 @@ const UI = (() => {
     friends: {
       key: () => 'f' + (Econ.canInvite() ? 1 : 0),
       render(box) {
+        // шапка
+        box.append(h('div', { class: 'panel comm-hero' }, pic('ui/cauldron', 'comm-hero-ico'),
+          h('div', null, h('b', null, 'Лавка «Бульк»'), h('p', { class: 'slogan' }, C.slogan || ''))));
         // официальные места игры
         const L = C.links || {};
-        const linkRow = (img, title, sub, url) => url ? h('button', { class: 'soc-row', type: 'button', onclick: () => { Sound.tap(); if (!Platform.openUrl(url)) toast('Не получилось открыть ссылку'); } },
-          pic(img, 'soc-ico'), h('span', null, h('small', null, sub), h('b', null, title)), h('i', null, 'Открыть')) : null;
-        const comm = h('div', { class: 'panel' },
+        const linkRow = (ico, title, sub, url) => url ? h('button', { class: 'soc-row', type: 'button', onclick: () => { Sound.tap(); if (!Platform.openUrl(url)) toast('Не получилось открыть ссылку'); } },
+          typeof ico === 'string' ? pic(ico, 'soc-ico') : ico, h('span', null, h('small', null, sub), h('b', null, title)), h('i', null, 'Открыть')) : null;
+        box.append(h('div', { class: 'panel' },
           h('h3', { class: 'mini-title' }, 'Мы на связи'),
           h('div', { class: 'soc-block' },
-            linkRow('ui/chat', 'Сообщество ВКонтакте', 'Новости, конкурсы, идеи', L.vk),
-            linkRow('ui/scroll', 'Канал в Telegram', 'Новости игры', L.tgChannel),
-            linkRow('ui/phone', 'Бульк в Telegram', 'Играй и там - прогресс общий', L.tg)));
-        box.append(comm);
+            linkRow(brandIco('vk'), 'Сообщество ВКонтакте', 'Новости, конкурсы, идеи', L.vk),
+            linkRow(brandIco('tg'), 'Канал в Telegram', 'Новости игры', L.tgChannel),
+            linkRow(brandIco('tg'), 'Бульк в Telegram', 'Играй и там - прогресс общий', L.tg))));
+        // поддержка
+        if (typeof Support !== 'undefined' && typeof Online !== 'undefined' && Online.on()) {
+          box.append(h('div', { class: 'panel' },
+            h('h3', { class: 'mini-title' }, 'Поддержка'),
+            h('div', { class: 'soc-block' }, h('button', { class: 'soc-row hot', type: 'button', onclick: () => { Sound.tap(); Support.open(); } },
+              pic('ui/chat', 'soc-ico'), h('span', null, h('small', null, 'Ошибка, вопрос или идея'), h('b', null, 'Написать команде')), h('i', null, 'Написать'))),
+            h('p', { class: 'note center' }, 'Отвечаем здесь же и письмом в почту.')));
+        }
 
         // приглашение друзей
         const panel = h('div', { class: 'panel' });
@@ -705,7 +716,6 @@ const UI = (() => {
         // об игре
         const about = h('div', { class: 'panel' },
           h('h3', { class: 'mini-title' }, 'Об игре'),
-          h('p', { class: 'slogan' }, C.slogan || ''),
           h('p', { class: 'note center' }, '«Бульк» - уютная лавка зелий: котёл с характером, жители со своими историями, питомцы, ковены и тайные рецепты. Один мир во ВКонтакте и в Telegram.'),
           h('div', { class: 'soc-block' },
             h('button', { class: 'soc-row', type: 'button', onclick: () => { Sound.tap(); if (typeof Changelog !== 'undefined') Changelog.open(); } },
@@ -727,6 +737,13 @@ const UI = (() => {
           });
         }
       }
+    },
+
+    profile: {
+      // перерисовка при смене того, что видно не живыми цифрами
+      key: () => { const s = S(); return 'p' + [s.prof.name, s.prof.avatar, s.prof.title, s.lvl, s.xp > 0, s.ac.length, Econ.rank(), s.book.length, Econ.skillPoints(),
+        typeof Coven !== 'undefined' && Coven.mine && Coven.mine() ? Coven.mine().name : '', JSON.stringify(typeof Online !== 'undefined' && Online.linked ? Online.linked() : null)].join('|'); },
+      render(box) { renderProfile(box); }
     }
   };
 
@@ -885,6 +902,8 @@ const UI = (() => {
         })() : null,
         (typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/key', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Один прогресс'), h('small', null, 'Играй в ВК и Telegram с одним сохранением')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.linkDialog(), 0); } }, 'Связать')) : null,
+        (typeof Support !== 'undefined' && typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/chat', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Поддержка'), h('small', null, 'Ошибка, вопрос или идея - напиши команде')),
+          h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Support.open(), 0); } }, 'Написать')) : null,
         (typeof Online !== 'undefined' && Online.isAdmin()) ? h('div', { class: 'set-row' }, pic('ui/key', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Приложение админки'), h('small', null, 'Код для входа, только для команды')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.admCode(), 0); } }, 'Код')) : null,
         h('p', { class: 'small center ver-line', onclick: (() => {
@@ -1006,14 +1025,84 @@ const UI = (() => {
   const avatarImg = (cls, id) => h('img', { class: 'pic ' + (cls === 'round' ? 'av-round' : (cls || '')), src: avatarSrc(id), alt: '', draggable: 'false', referrerpolicy: 'no-referrer' });
 
   // ---------- профиль ----------
-  function profileModal() {
+  // значки ВКонтакте и Telegram для ссылок на сообщества (рисуются кодом, без картинок)
+  function brandIco(kind) {
+    const el = h('span', { class: 'soc-ico brand ' + kind, 'aria-hidden': 'true' });
+    el.innerHTML = kind === 'vk'
+      ? '<svg viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#0077FF"/><path fill="#fff" d="M25.5 34.6c-10.4 0-16.3-7.1-16.6-19h5.2c.2 8.7 4 12.4 7.1 13.1V15.6h4.9v7.5c3-.3 6.2-3.7 7.3-7.5h4.9c-.8 4.6-4.2 8-6.6 9.4 2.4 1.1 6.3 4.1 7.8 9.6h-5.4c-1.2-3.7-4.1-6.5-8-6.9v6.9h-.6z"/></svg>'
+      : '<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#2AABEE"/><path fill="#fff" d="M10.9 23.4c7.6-3.3 12.7-5.5 15.3-6.6 7.3-3 8.8-3.6 9.8-3.6.2 0 .7.1 1 .3.3.2.3.5.4.7v.9c-.4 4.1-2.1 14.1-3 18.7-.4 1.9-1.1 2.6-1.8 2.7-1.5.1-2.7-1-4.2-2-2.3-1.5-3.6-2.5-5.9-4-2.6-1.7-.9-2.7.6-4.2.4-.4 7.1-6.5 7.2-7 0-.1 0-.3-.1-.4-.2-.1-.4-.1-.5 0-.2 0-3.7 2.4-10.6 7-1 .7-1.9 1-2.7 1-.9 0-2.6-.5-3.9-.9-1.6-.5-2.8-.8-2.7-1.7.1-.5.7-.9 2.1-1.4z"/></svg>';
+    return el;
+  }
+
+  // ---------- профиль: отдельная вкладка (0.21) ----------
+  // profileModal оставлен для старых вызовов (после смены имени, аватара, титула) - открывает вкладку
+  function profileModal() { show('profile'); }
+
+  function renderProfile(box) {
     const s = S();
     const nm = s.prof.name || 'Алхимик';
+    const rp = Econ.rankProgress();
+    const nextRank = D.ranks[rp.r + 1];
+    // шапка: аватар, имя, титул, ранг
+    box.append(h('div', { class: 'panel prof-panel' },
+      h('div', { class: 'prof-head' },
+        h('button', { class: 'prof-avatar', type: 'button', 'aria-label': 'Сменить аватар', onclick: () => { Sound.tap(); avatarPicker(); } },
+          avatarImg('round'), h('span', { class: 'prof-edit' }, pic('ui/camera'))),
+        h('div', { class: 'prof-text' },
+          h('button', { class: 'prof-name', type: 'button', onclick: () => { Sound.tap(); nameEditor('player'); } }, nm, h('span', { class: 'pencil' }, pic('hud/pencil'))),
+          h('button', { class: 'prof-title', type: 'button', onclick: () => { Sound.tap(); titlePicker(); } }, pic('ui/banner', 'title-ico'), Econ.titleName()),
+          h('div', { class: 'prof-meta' }, 'В лавке с ' + new Date(s.stat.start).toLocaleDateString('ru-RU')))),
+      h('button', { class: 'prof-rank', type: 'button', onclick: () => { Sound.tap(); rankModal(); } },
+        pic(D.ranks[rp.r].img, 'prof-rank-ico'),
+        h('span', null, h('small', null, 'Ранг лавки ' + (rp.r + 1) + ' из ' + D.ranks.length), h('b', null, D.ranks[rp.r].name),
+          h('i', { class: 'bar' }, h('i', { style: 'width:' + Math.round(rp.frac * 100) + '%' })),
+          h('small', null, nextRank ? 'Дальше: ' + nextRank.name : 'Высший ранг!')))));
+    box.append(levelBlock());
+
+    // лавка сейчас (живые цифры)
+    const live = [['ui/essence', 'Эссенция', () => ess(S().e)], ['ui/hourglass', 'Доход в час', () => '+' + ess(Econ.perHour())],
+      ['ui/ladle', 'За тап', () => '+' + ess(Econ.tapValue())], ['ui/crystal', 'Кристаллы', () => String(S().cr)],
+      ['ui/basket', 'Копится без тебя', () => Econ.pantryHours() + ' ч'], ['ui/chart', 'Множитель дохода', () => '×' + (Math.round(Econ.incomeMul() * 10) / 10).toString().replace('.', ',')]];
+    box.append(h('h3', { class: 'mini-title' }, 'Лавка сейчас'), h('div', { class: 'stat-grid' }, live.map(([img, t, f]) => {
+      const v = h('b', null, f());
+      refs.push(() => setText(v, f()));
+      return h('div', { class: 'stat-card' }, pic(img, 'stat-ico'), h('small', null, t), v);
+    })));
+
+    // коллекции
+    const cnt = (arr, f) => arr.filter(f).length;
+    const petsOwn = s.pets && s.pets.own ? Object.keys(s.pets.own).length : 0;
+    const coll = [
+      ['ui/book', 'Рецепты', s.book.length, D.recipeList.length],
+      ['ui/trophy', 'Достижения', s.ac.length, D.achievements.length],
+      ['ui/paw_heart', 'Питомцы', petsOwn, (D.pets || []).length],
+      ['ui/wardrobe', 'Гардероб', cnt(D.wardrobe, (it) => Econ.itemState(it).owned), D.wardrobe.length],
+      ['ui/hooded', 'Аватары', cnt(D.avatars, (a) => Econ.avatarOwned(a)), D.avatars.length],
+      ['ui/banner', 'Титулы', Econ.titlesUnlocked().length, D.titles.length],
+      ['ui/heart4', 'Лучшие друзья', Econ.bestFriends(), D.visitors.length]];
+    box.append(h('h3', { class: 'mini-title' }, 'Коллекции'), h('div', { class: 'coll-list' }, coll.map(([img, t, n, of]) =>
+      h('div', { class: 'coll-row' }, pic(img, 'coll-ico'), h('span', null, h('b', null, t), h('i', { class: 'bar' }, h('i', { style: 'width:' + Math.round(of ? n / of * 100 : 0) + '%' }))), h('em', null, n + ' / ' + of)))));
+
+    // связи и помощь
+    const soc = socialBlock();
+    if (soc) {
+      box.append(h('h3', { class: 'mini-title' }, 'Друзья и связи'), soc);
+      if (typeof Online !== 'undefined' && Online.uid()) {
+        const id = String(Online.uid());
+        soc.append(h('button', { class: 'soc-row', type: 'button', onclick: async () => {
+          Sound.tap();
+          try { await navigator.clipboard.writeText(id); toast('Номер скопирован'); } catch (e) { toast('Твой номер: ' + id); }
+        } }, pic('ui/key', 'soc-ico'), h('span', null, h('small', null, 'Номер лавки - назови его поддержке'), h('b', { class: 'mono' }, id)), h('i', null, 'Копировать')));
+      }
+      if (typeof Support !== 'undefined') soc.append(h('button', { class: 'soc-row', type: 'button', onclick: () => { Sound.tap(); Support.open(); } },
+        pic('ui/chat', 'soc-ico'), h('span', null, h('small', null, 'Что-то не так или есть идея?'), h('b', null, 'Написать в поддержку')), h('i', null, 'Написать')));
+    }
+
+    // статистика
     const stats = [
       ['ui/essence', 'Сварено всего', ess(s.le)],
       ['ui/ladle', 'Помешиваний', ess(s.taps)],
       ['ui/door', 'Выполнено просьб', s.served],
-      ['ui/heart4', 'Лучших друзей', Econ.bestFriends() + ' из ' + D.visitors.length],
       ['ui/book', 'Разгадано рецептов', s.recipesSolved],
       ['ui/rune', 'Начерчено рун', s.runesDone],
       ['cauldron/bubble', 'Поймано пузырей', s.bb],
@@ -1023,30 +1112,18 @@ const UI = (() => {
       ['ui/chart', 'Рекорд дохода', ess(s.stat.maxPh) + ' в час'],
       ['ui/hourglass', 'Времени в игре', Fmt.time(s.stat.play)]
     ];
-    modal({
-      sheet: true,
-      title: 'Профиль',
-      body: h('div', { class: 'profile' },
-        h('div', { class: 'prof-head' },
-          h('button', { class: 'prof-avatar', type: 'button', 'aria-label': 'Сменить аватар', onclick: () => { closeModal(); avatarPicker(); } },
-            avatarImg('round'), h('span', { class: 'prof-edit' }, pic('ui/camera'))),
-          h('div', { class: 'prof-text' },
-            h('button', { class: 'prof-name', type: 'button', onclick: () => { closeModal(); nameEditor('player'); } }, nm, h('span', { class: 'pencil' }, pic('hud/pencil'))),
-            h('button', { class: 'prof-title', type: 'button', onclick: () => { closeModal(); titlePicker(); } }, pic('ui/banner', 'title-ico'), Econ.titleName()),
-            h('div', { class: 'prof-meta' }, pic(D.ranks[Econ.rank()].img, 'rank-mini'), D.ranks[Econ.rank()].name, ' · с ', new Date(s.stat.start).toLocaleDateString('ru-RU')))),
-        levelBlock(),
-        socialBlock(),
-        h('h3', { class: 'mini-title' }, 'Статистика'),
-        h('div', { class: 'stat-grid' }, stats.map(([img, t, v]) => h('div', { class: 'stat-card' }, pic(img, 'stat-ico'), h('small', null, t), h('b', null, v)))),
-        h('h3', { class: 'mini-title' }, 'Достижения ' + s.ac.length + ' из ' + D.achievements.length),
-        h('div', { class: 'ach-icons' }, D.achievements.slice().sort((a, b) => (s.ac.includes(b.id) ? 1 : 0) - (s.ac.includes(a.id) ? 1 : 0)).map((a) => {
-          const on = s.ac.includes(a.id);
-          return h('button', { class: 'ach-ico' + (on ? '' : ' off'), type: 'button', 'aria-label': a.name,
-            onclick: () => { Sound.tap(); toast((on ? 'Получено: ' : 'Ещё не получено: ') + a.name + ' - ' + a.desc); } },
-            pic(a.img), on ? null : pic('ui/padlock', 'lock'));
-        })),
-        h('p', { class: 'small center' }, 'Нажми на значок, чтобы узнать, за что он.')),
-    });
+    box.append(h('h3', { class: 'mini-title' }, 'Статистика'),
+      h('div', { class: 'stat-grid' }, stats.map(([img, t, v]) => h('div', { class: 'stat-card' }, pic(img, 'stat-ico'), h('small', null, t), h('b', null, v)))));
+
+    // достижения
+    box.append(h('h3', { class: 'mini-title' }, 'Достижения ' + s.ac.length + ' из ' + D.achievements.length),
+      h('div', { class: 'ach-icons' }, D.achievements.slice().sort((a, b) => (s.ac.includes(b.id) ? 1 : 0) - (s.ac.includes(a.id) ? 1 : 0)).map((a) => {
+        const on = s.ac.includes(a.id);
+        return h('button', { class: 'ach-ico' + (on ? '' : ' off'), type: 'button', 'aria-label': a.name,
+          onclick: () => { Sound.tap(); toast((on ? 'Получено: ' : 'Ещё не получено: ') + a.name + ' - ' + a.desc); } },
+          pic(a.img), on ? null : pic('ui/padlock', 'lock'));
+      })),
+      h('p', { class: 'small center' }, 'Нажми на значок, чтобы узнать, за что он.'));
   }
 
   // Связи игрока: ковен и привязанные платформы (один прогресс для ВК и Telegram)
@@ -1317,7 +1394,7 @@ const UI = (() => {
     buildTabs();
     $('rank-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); rankModal(); });
     $('btn-settings').addEventListener('click', () => { Sound.unlock(); Sound.tap(); settingsModal(); });
-    $('btn-profile').addEventListener('click', () => { Sound.unlock(); Sound.tap(); profileModal(); });
+    $('btn-profile').addEventListener('click', () => { Sound.unlock(); Sound.tap(); show('profile'); });
     $('lvl-chip').addEventListener('click', () => { Sound.unlock(); Sound.tap(); SkillsUI.open(); });
     $('crystal-pill').addEventListener('click', () => { Sound.unlock(); Sound.tap(); crystalsInfo(); });
     $('balance-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); incomeInfo(); });

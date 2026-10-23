@@ -2177,3 +2177,47 @@ body:not(.has-modal) #toast::before, body:not(.has-modal) #toast::after { displa
 .panel .mini-title:first-child { margin-top: 0; }
 body[data-screen]:not([data-screen="main"]) .wallet .effects { display: none; }
 .soc-row b { white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.2; }
+
+/* ---------- 0.21: вкладка «Профиль» ---------- */
+.prof-panel { padding-bottom: 10px; }
+.prof-rank { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 10px; padding: 8px 10px; border: 2px solid rgba(255, 211, 107, .45); border-radius: 14px;
+  background: rgba(26, 14, 44, .55); color: var(--text); font-family: var(--body); text-align: left; cursor: pointer; }
+.prof-rank-ico { width: 44px; height: 44px; flex-shrink: 0; }
+.prof-rank > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.prof-rank small { font-size: 11px; color: var(--muted); }
+.prof-rank b { font-size: 15px; font-weight: 900; }
+.prof-rank .bar, .coll-row .bar { display: block; height: 7px; border-radius: 4px; background: rgba(10, 4, 20, .6); overflow: hidden; }
+.prof-rank .bar > i, .coll-row .bar > i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #F2A23A, #FFE08A); }
+.coll-list { display: flex; flex-direction: column; gap: 6px; }
+.coll-row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 12px; background: rgba(26, 14, 44, .5); }
+.coll-ico { width: 30px; height: 30px; flex-shrink: 0; }
+.coll-row > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.coll-row b { font-size: 13px; font-weight: 900; }
+.coll-row em { font-style: normal; font-size: 13px; font-weight: 900; color: #FFD36B; white-space: nowrap; }
+.mono { font-variant-numeric: tabular-nums; letter-spacing: .5px; }
+
+/* ---------- 0.21: поддержка в игре ---------- */
+.sup-wrap { display: flex; flex-direction: column; gap: 10px; min-height: 100%; }
+.sup-list { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.sup-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 8px; text-align: center; }
+.sup-empty-ico { width: 64px; height: 64px; }
+.sup-empty b { font-family: var(--head); font-size: 18px; }
+.sup-empty p { margin: 0; font-size: 13.5px; line-height: 1.4; color: var(--muted); }
+.sup-msg { max-width: 86%; align-self: flex-end; padding: 8px 11px; border-radius: 14px 14px 4px 14px; background: #5B3A8E; color: #FFF6E8; }
+.sup-msg.team { align-self: flex-start; border-radius: 14px 14px 14px 4px; background: #F3E3C3; color: #3A1F00; }
+.sup-msg small { display: block; margin-bottom: 2px; font-size: 11px; font-weight: 800; opacity: .75; }
+.sup-msg p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.4; }
+.sup-form { position: sticky; bottom: 0; display: flex; flex-direction: column; gap: 8px; padding: 8px 0 2px; background: var(--plum); }
+.sup-input { width: 100%; min-height: 70px; padding: 10px 12px; border: 2px solid rgba(255, 211, 107, .5); border-radius: 14px; background: rgba(26, 14, 44, .7);
+  color: var(--text); font: 600 15px var(--body), system-ui, sans-serif; resize: none; }
+.sup-input:focus { outline: none; border-color: #FFD36B; }
+.comm-hero { display: flex; align-items: center; gap: 12px; }
+.comm-hero-ico { width: 72px; height: 72px; flex-shrink: 0; filter: drop-shadow(0 4px 4px rgba(10, 4, 20, .5)); }
+.comm-hero b { display: block; font-family: var(--head); font-size: 22px; color: #FFF6E8; }
+.comm-hero .slogan { margin: 2px 0 0; text-align: left; font-size: 15px; }
+.soc-ico.brand { display: block; width: 36px; height: 36px; flex-shrink: 0; filter: drop-shadow(0 2px 2px rgba(10, 4, 20, .5)); }
+.soc-ico.brand svg { display: block; width: 100%; height: 100%; }
+.soc-row.hot { border-color: #FFD36B; background: linear-gradient(180deg, rgba(255, 211, 107, .18), rgba(26, 14, 44, .55)); }
+.sup-modal .sup-msg p { color: #FFF6E8; }
+.sup-modal .sup-msg.team p { color: #3A1F00; }
+.sup-modal .sup-msg.team small { color: #6A3A1E; }

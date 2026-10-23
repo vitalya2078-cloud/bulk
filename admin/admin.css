@@ -269,3 +269,10 @@ pre { margin: 0; padding: 0 14px 14px; white-space: pre-wrap; word-break: break-
 .member .who b { display: flex; align-items: center; gap: 6px; font-weight: 550; }
 .member .who em { font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .member .who small { display: block; color: var(--dim); font: 500 11px var(--mono); }
+
+/* ---------- 0.21: поддержка ---------- */
+.sup-msgs { display: flex; flex-direction: column; gap: 8px; }
+.sup-msg { max-width: 88%; align-self: flex-start; padding: 8px 10px; border-radius: 12px 12px 12px 4px; background: var(--s2); border: 1px solid var(--line); }
+.sup-msg.team { align-self: flex-end; border-radius: 12px 12px 4px 12px; background: rgba(196, 241, 59, .08); border-color: rgba(196, 241, 59, .35); }
+.sup-msg small { display: block; margin-bottom: 3px; color: var(--mut); font-size: 11px; }
+.sup-msg p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.4; }

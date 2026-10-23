@@ -63,7 +63,8 @@
     alert: 'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
     bolt: 'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
     plus: 'M12 5v14M5 12h14',
-    send: 'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z'
+    send: 'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
+    help: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01'
   };
   function icon(name, cls) {
     const NS = 'http://www.w3.org/2000/svg';
@@ -178,6 +179,7 @@
     if (/creator is fixed/.test(m)) return 'Создателя изменить нельзя';
     if (/bad signature|too old/.test(m)) return 'Подпись платформы устарела, открой панель заново';
     if (/bad session/.test(m)) return 'Вход устарел, войди заново';
+    if (/no ticket/.test(m)) return 'Обращение не найдено';
     if (/no player/.test(m)) return 'Такого игрока нет. Проверь номер (у игроков ВК он с минусом)';
     if (/already pending/.test(m)) return 'Возврат копии уже ждёт игрока';
     if (/no save/.test(m)) return 'Копия не найдена';
@@ -221,6 +223,7 @@
   const ALL_TABS = [
     { id: 'home', label: 'Обзор', icon: 'pulse', ok: () => true },
     { id: 'players', label: 'Игроки', icon: 'users', ok: () => true },
+    { id: 'support', label: 'Помощь', icon: 'help', ok: () => can('mail') },
     { id: 'mail', label: 'Почта', icon: 'mail', ok: () => can('mail') || can('mail_all') },
     { id: 'shop', label: 'Лавка', icon: 'sliders', ok: () => can('settings') || can('maint') },
     { id: 'team', label: 'Команда', icon: 'shield', ok: () => true }
@@ -263,6 +266,7 @@
     try {
       if (tab === 'home') await renderHome(id);
       else if (tab === 'players') await renderPlayers(id);
+      else if (tab === 'support') await renderSupport(id);
       else if (tab === 'mail') await renderMail(id);
       else if (tab === 'shop') await renderShop(id);
       else if (tab === 'team') await renderTeam(id);
@@ -270,6 +274,69 @@
   }
   const stale = (id) => id !== renderId;
   const failBox = (e) => h('div', { class: 'panel pad center' }, h('p', { class: 'mut', style: { margin: '0 0 12px' } }, errText(e)), h('button', { class: 'btn ghost sm', onclick: render }, 'Повторить'));
+
+  // ---------- поддержка: обращения игроков ----------
+  const SUP_ST = { open: 'Ждут', answered: 'Отвечено', closed: 'Закрыты', all: 'Все' };
+  let supFilter = 'open';
+  async function renderSupport(id) {
+    body.replaceChildren(sec('Обращения'), skeleton(4));
+    let r;
+    try { r = await api('adm_support_list', { p_status: supFilter }); } catch (e) { if (!stale(id)) body.replaceChildren(failBox(e)); return; }
+    if (stale(id)) return;
+    const c = r.counts || {};
+    const seg = h('div', { class: 'seg' }, Object.keys(SUP_ST).map((k) => h('button', { class: k === supFilter ? 'on' : '',
+      onclick: () => { if (supFilter === k) return; supFilter = k; haptic(); render(); } }, SUP_ST[k] + (k !== 'all' && c[k] ? ' ' + c[k] : ''))));
+    const rows = r.rows || [];
+    body.replaceChildren(sec('Обращения', c.open ? c.open + ' ждут' : ''), seg, h('div', { style: { height: '10px' } }),
+      rows.length ? h('div', { class: 'panel list' }, rows.map((t) => h('button', { class: 'row', onclick: () => { haptic(); openTicket(t.id); } },
+        ava(t.photo, false),
+        h('span', { class: 'who' }, h('b', null, h('em', null, t.name), t.team_unread ? h('span', { class: 'tag acc', style: { marginLeft: '6px' } }, 'новое ' + t.team_unread) : null),
+          h('small', null, (t.last_team ? 'Вы: ' : '') + (t.last || ''))),
+        h('span', { class: 'mut mono', style: { fontSize: '11px', whiteSpace: 'nowrap' } }, ago(t.updated_at))))) :
+        h('div', { class: 'panel empty' }, supFilter === 'open' ? 'Новых обращений нет' : 'Пусто'));
+  }
+
+  async function openTicket(tid) {
+    if (!sheetEl) sheetScroll = window.scrollY;
+    if (sheetEl) sheetEl.remove();
+    const inner = h('main', null, h('div', { style: { height: '14px' } }), skeleton(4));
+    sheetEl = h('div', { class: 'sheet' },
+      h('div', { class: 'top' }, h('div', { class: 'top-in' },
+        h('button', { class: 'ib', 'aria-label': 'Назад', onclick: () => { closeSheet(); if (tab === 'support') render(); } }, icon('back')),
+        h('div', { class: 'title' }, h('b', null, 'Обращение №' + tid), h('small', null, 'Поддержка')),
+        h('button', { class: 'ib', 'aria-label': 'Обновить', onclick: () => openTicket(tid) }, icon('refresh')))),
+      inner);
+    document.body.append(sheetEl);
+    document.body.style.overflow = 'hidden';
+    let t;
+    try { t = await api('adm_support_get', { p_id: tid }); } catch (e) { inner.replaceChildren(h('div', { style: { height: '14px' } }), failBox(e)); return; }
+    const PL = { vk: 'ВКонтакте', tg: 'Telegram' };
+    const msgs = h('div', { class: 'sup-msgs' }, (t.msgs || []).map((m) => h('div', { class: 'sup-msg' + (m.team ? ' team' : '') },
+      h('small', null, (m.team ? (m.who || 'Поддержка') : t.name) + ' · ' + dateTime(m.at)), h('p', null, m.text))));
+    const input = h('textarea', { class: 'input', rows: '3', maxlength: '2000', placeholder: 'Ответ игроку. Он придёт и в поддержку в игре, и письмом в почту.' });
+    const send = h('button', { class: 'btn wide', onclick: async () => {
+      const txt = input.value.trim();
+      if (!txt) { toast('Напиши ответ', true); return; }
+      send.disabled = true;
+      if (await act('adm_support_reply', { p_id: tid, p_text: txt }, 'Ответ отправлен')) openTicket(tid); else send.disabled = false;
+    } }, icon('send'), 'Ответить');
+    const closed = t.status === 'closed';
+    inner.replaceChildren(
+      h('div', { class: 'hero' }, ava(t.photo, false, true),
+        h('div', { style: { minWidth: 0 } }, h('h2', null, t.name),
+          h('div', { class: 'id' }, 'ID ' + t.uid + (t.platform ? ' · ' + (PL[t.platform] || t.platform) : '') + (t.ver ? ' · ' + t.ver : '')),
+          h('div', { class: 'tags' }, h('span', { class: 'tag' + (t.status === 'open' ? ' acc' : '') }, SUP_ST[t.status] || t.status),
+            t.earlier ? h('span', { class: 'tag' }, 'раньше обращался: ' + t.earlier) : null,
+            h('a', { href: '#', class: 'tag blue', onclick: (e) => { e.preventDefault(); openPlayer(t.uid); } }, 'карточка игрока')))),
+      sec('Переписка'), h('div', { class: 'panel pad' }, msgs),
+      sec('Ответ'), h('div', { class: 'panel pad' }, input, h('div', { style: { height: '8px' } }), send,
+        h('button', { class: 'btn ghost wide', style: { marginTop: '8px' }, onclick: async () => {
+          if (closed || await confirmBox('Закрыть обращение?', 'Если игрок напишет снова, откроется новое обращение.', 'Закрыть')) {
+            if (await act('adm_support_status', { p_id: tid, p_status: closed ? 'open' : 'closed' }, closed ? 'Обращение открыто' : 'Обращение закрыто')) openTicket(tid);
+          }
+        } }, closed ? 'Открыть снова' : 'Закрыть обращение')));
+    requestAnimationFrame(() => { const last = msgs.lastElementChild; if (last) last.scrollIntoView({ block: 'nearest' }); });
+  }
 
   // ---------- обзор ----------
   async function renderHome(id) {
