@@ -406,7 +406,7 @@ const Brew = (() => {
   function onTap(x, y) {
     const s = S();
     s.tapIng++;
-    const petMul = 1 + (typeof Pets !== 'undefined' ? Pets.bonus('drop') : 0);
+    const petMul = 1 + (typeof Pets !== 'undefined' ? Pets.bonus('drop') : 0) + (typeof Relics !== 'undefined' ? Relics.bonus('drop') : 0);
     if (Math.random() < B.tapChance * petMul || s.tapIng >= B.tapPity) {
       s.tapIng = 0;
       const got = give(1);

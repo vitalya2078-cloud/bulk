@@ -406,6 +406,7 @@ const UI = (() => {
     updateBadges();
     updateEffects();
     Events.refreshButton();
+    if (typeof Relics !== 'undefined') Relics.refreshButton();
     if (typeof Guide !== 'undefined') Guide.goal();
   }
 
@@ -1432,6 +1433,8 @@ const UI = (() => {
     $('goal').addEventListener('click', () => { Sound.unlock(); if (typeof Guide !== 'undefined') Guide.goalTap(); });
     $('games-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Games.open(); });
     $('tops-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Tops.open(0); });
+    $('relic-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Relics.open(); });
+    $('wheel-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Relics.wheel(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current && current.closable !== false) closeModal(); });
   }
 

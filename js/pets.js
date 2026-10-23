@@ -301,6 +301,8 @@ const Pets = (() => {
       S().ing[x.id] = (S().ing[x.id] || 0) + 1;
     }
     const res = { pet: id, loc: L, got, n };
+    // 0.28: сундук для «Диковинок» за поход на 4 и 8 часов
+    if (typeof Relics !== 'undefined') res.relicChest = Relics.onTrip(T.min);
     // сундук в долгом походе
     if (T.chest) {
       const cr = 2 + Math.floor(Math.random() * 3);
@@ -958,6 +960,7 @@ const Pets = (() => {
         h('p', { class: 'center' }, 'Поход: ' + r.loc.name + '. Принёс ' + r.n + ' ' + Fmt.plural(r.n, ['ингредиент', 'ингредиента', 'ингредиентов']) + '.'),
         h('div', { class: 'loot-grid' }, list),
         r.crystals ? h('p', { class: 'center' }, 'В сундуке: +' + r.crystals + ' ' + UI.crystalsWord(r.crystals) + (r.scroll ? ' и свиток рецепта' : '')) : null,
+        r.relicChest ? h('p', { class: 'center' }, (r.relicChest === 's' ? 'Серебряный' : 'Деревянный') + ' сундук ждёт в «Диковинках»!') : null,
         r.egg ? h('div', { class: 'gift-row big' }, pic(D.eggs[r.egg].img, 'gift-pic'), h('span', null, 'Нашлось ', h('b', null, D.eggs[r.egg].name.toLowerCase()), '! Оно уже греется у тёплого котла.')) : null),
       actions: [{ label: 'Отлично!', onClick: () => { if (r.margoLine) setTimeout(() => margoModal(r.margoLine, true), 0); else setTimeout(() => open('trips'), 0); } }]
     });

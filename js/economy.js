@@ -83,6 +83,7 @@ const Econ = (() => {
       mg: {},          // мини-игры: { d: день, n: сыграно с полной наградой, ad: добавлено рекламой, best: рекорды }
       pd: [],          // 0.20.1: номера применённых правок из админки - чтобы правка не применилась дважды
       pth: null,       // 0.22: «Путь алхимика» { i: текущий шаг, at: когда начат }; null - ещё не начат
+      rel: {},         // 0.28: диковинки, сундуки, осколки, колесо (см. relics.js)
       tut: null        // 0.22: обучение { v: версия, done: true } ; null - не показывалось
     };
   }
@@ -150,7 +151,7 @@ const Econ = (() => {
     const g = C.cardIncomeGrowth;
     return c.income * (Math.pow(g, L) - 1) / (g - 1);
   }
-  const cardCost = (c, L) => Math.round(c.cost * Math.pow(C.cardCostGrowth, L) * (1 - 0.03 * sk('h3')));
+  const cardCost = (c, L) => Math.round(c.cost * Math.pow(C.cardCostGrowth, L) * (1 - 0.03 * sk('h3')) * (1 - relB('card')));
   const cardNextGain = (c) => cardIncome(c, level(c.id) + 1) - cardIncome(c, level(c.id));
 
   // null - доступна; иначе объект требования
@@ -192,7 +193,9 @@ const Econ = (() => {
     return true;
   }
   const petB = (k) => (typeof Pets !== 'undefined' ? Pets.bonus(k) : 0);
-  const pantryHours = () => Math.round((D.pantry.hours[s.pantry] + sk('h2') + (potion('time') ? 4 : 0) + petB('pantry')) * 4) / 4;
+  // 0.28: бонусы диковинок на полке
+  const relB = (k) => (typeof Relics !== 'undefined' ? Relics.bonus(k) : 0);
+  const pantryHours = () => Math.round((D.pantry.hours[s.pantry] + sk('h2') + (potion('time') ? 4 : 0) + petB('pantry') + relB('pantry')) * 4) / 4;
   const pantryNext = () => (s.pantry + 1 < D.pantry.hours.length ? { hours: D.pantry.hours[s.pantry + 1], cost: D.pantry.costs[s.pantry + 1] } : null);
   function buyPantry() {
     const n = pantryNext();
@@ -209,7 +212,7 @@ const Econ = (() => {
   const xpToNext = () => (s.lvl >= C.maxLevel ? 0 : C.xpNeed(s.lvl));
   function addXp(n) {
     if (!(n > 0) || s.lvl >= C.maxLevel) return;
-    s.xp += n * (1 + 0.1 * sk('s4') + petB('xp')) * (potion('wisdom') ? 2 : 1);
+    s.xp += n * (1 + 0.1 * sk('s4') + petB('xp') + relB('xp')) * (potion('wisdom') ? 2 : 1);
     let ups = 0;
     while (s.lvl < C.maxLevel && s.xp >= C.xpNeed(s.lvl)) {
       s.xp -= C.xpNeed(s.lvl);
@@ -217,6 +220,7 @@ const Econ = (() => {
       ups++;
     }
     if (s.lvl >= C.maxLevel) s.xp = 0;
+    if (ups && typeof Relics !== 'undefined') Relics.onLevel(s.lvl);
     if (ups && hooks.levelUp) hooks.levelUp(s.lvl, ups);
   }
   function learnSkill(id) {
@@ -277,13 +281,13 @@ const Econ = (() => {
   let cmul = 1;
   const setCovenMul = (m) => { cmul = m >= 1 && m <= 2 ? m : 1; };
   // всё, что сейчас умножает доход в час (эффекты, золотое зелье, бонус лавки, ковен)
-  const incomeMul = () => fxMul('income') * (potion('gold') ? 1.5 : 1) * gmul * cmul;
+  const incomeMul = () => fxMul('income') * (potion('gold') ? 1.5 : 1) * gmul * cmul * (1 + relB('inc'));
   const covenMul = () => cmul;
   const perHour = () => derive().perHour * incomeMul();
   // тап - целое число (не меньше 1): над котлом «+2», и баланс растёт ровно на столько же
   const tapValue = () => Math.max(1, Math.round(tapRaw()));
   const tapRaw = () => ((1 + s.scoop + rank() + sk('t1')) * Math.pow(1.25, sk('t5')) + derive().perHour * (C.tapIncomeShare + 0.0001 * sk('t3'))) * fxMul('tap')
-    * (potion('power') ? 2 : 1) * (potion('dragon') ? 5 : 1) * (1 + petB('tap')) * gmul * cmul;
+    * (potion('power') ? 2 : 1) * (potion('dragon') ? 5 : 1) * (1 + petB('tap') + relB('tap')) * gmul * cmul;
   const hoursOfIncome = (h, min) => Math.max(min || 0, basePerHour() * h);
 
   function earn(amount, countForQuest) {
@@ -296,7 +300,7 @@ const Econ = (() => {
 
   let lastCrit = false;
   function tap() {
-    lastCrit = Math.random() < 0.03 * sk('t2') + (potion('luck') ? 0.1 : 0);
+    lastCrit = Math.random() < 0.03 * sk('t2') + (potion('luck') ? 0.1 : 0) + relB('crit');
     const v = tapValue() * (lastCrit ? 5 : 1);
     earn(v);
     s.taps++;
@@ -306,13 +310,13 @@ const Econ = (() => {
   }
 
   // зелье сна удваивает доход за время отсутствия (от минуты)
-  const offlineEarnings = (sec) => Math.min(sec, pantryHours() * 3600) * basePerHour() / 3600 * (1 + 0.1 * sk('h4')) * (s.sleepPot && sec >= 60 ? 2 : 1);
+  const offlineEarnings = (sec) => Math.min(sec, pantryHours() * 3600) * basePerHour() / 3600 * (1 + 0.1 * sk('h4') + relB('offline')) * (s.sleepPot && sec >= 60 ? 2 : 1);
   const brewHook = (kind, a) => (typeof Brew !== 'undefined' ? Brew.reward(kind, a) : null);
 
   // Показывает новый ранг один раз. Возвращает индекс ранга или -1.
   function checkRankUp() {
     const r = rank();
-    if (r > s.rank) { s.rank = r; invalidate(); addXp(C.xp.rankUp); return r; }
+    if (r > s.rank) { s.rank = r; invalidate(); addXp(C.xp.rankUp); if (typeof Relics !== 'undefined') Relics.onRank(r); return r; }
     return -1;
   }
 
@@ -369,7 +373,7 @@ const Econ = (() => {
       if (q.p >= q.n) { q.c = 1; if (hooks.questReady) hooks.questReady(q); }
     }
   }
-  const questReward = (q) => hoursOfIncome(q.h, 1000);
+  const questReward = (q) => hoursOfIncome(q.h, 1000) * (1 + relB('quest'));
   function claimQuest(i) {
     const q = s.q && s.q.l[i];
     if (!q || q.c !== 1) return 0;
@@ -380,6 +384,7 @@ const Econ = (() => {
     s.cr += C.crystals.quest;
     addXp(C.xp.quest);
     brewHook('quest');
+    if (typeof Relics !== 'undefined' && s.q.l.every((x) => x.c === 2)) Relics.onQuestsDone();
     return v;
   }
   const claimableQuests = () => (s.q ? s.q.l.filter((q) => q.c === 1).length : 0);
@@ -463,7 +468,7 @@ const Econ = (() => {
     return { lv, n, next, frac: next ? (n - cur.need) / (next.need - cur.need) : 1 };
   }
   const visitorGift = (id) => D.wardrobe.find((w) => w.how.visitor === id);
-  const orderReward = (id) => hoursOfIncome(0.15, 150 + tapValue() * 40) * (1 + C.friendshipBonus * (id ? friendLevel(id) : 0)) * (1 + 0.1 * sk('v2'));
+  const orderReward = (id) => hoursOfIncome(0.15, 150 + tapValue() * 40) * (1 + C.friendshipBonus * (id ? friendLevel(id) : 0)) * (1 + 0.1 * sk('v2')) * (1 + relB('order'));
 
   // Возвращает { reward, story, part, levelUp, gift }
   function serveVisitor(id) {

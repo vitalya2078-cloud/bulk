@@ -147,12 +147,12 @@ const Guide = (() => {
     { sel: ['#shop-body .tile', '.tab[data-go="shop"]'], text: 'Грядка мяты будет варить эссенцию сама, даже когда тебя нет. Купи её!', wait: () => Econ.levels() > 0 },
     { sel: ['.tab[data-go="tasks"]'], text: 'Дальше подскажет «Путь алхимика» в Заданиях. Кнопка «Перейти» сама приведёт куда нужно. Удачи!', next: 'Понятно' }
   ];
-  const NEWS = [
-    { sel: ['#btn-profile'], text: 'Нажми на свой портрет - откроется Профиль: ранг, коллекции, ковен и всё о твоей лавке.', next: 'Дальше' },
-    { sel: ['.tab[data-go="friends"]'], text: Platform.kind() === 'vk' ? 'Сообщество: наша группа ВКонтакте, друзья и поддержка прямо из игры.' : 'Сообщество: наши группы ВКонтакте и Telegram, команда и поддержка прямо из игры.', next: 'Дальше' },
-    { sel: ['.tab[data-go="tasks"]'], text: 'В Заданиях появился «Путь алхимика» - цепочка целей с наградами. А кнопка «Перейти» ведёт прямо к делу.', next: 'Понятно' }
-  ];
-  const TUT_V = 1;
+  // 0.28: что нового для тех, кто уже играет (показываем, только если раздел открыт)
+  const NEWS = () => (typeof Relics !== 'undefined' && Relics.unlocked() ? [
+    { sel: ['#relic-btn'], text: 'Новое: Диковинки! Волшебные вещицы на полке лавки дают постоянные бонусы. Тебя уже ждут сундуки в подарок.', next: 'Дальше' },
+    { sel: ['#wheel-btn'], text: 'А это Колесо Булька: крути бесплатно каждый день. Приз будет точно!', next: 'Понятно' }
+  ] : []);
+  const TUT_V = 2;
   let tour = null, ti = 0, layer = null, ring = null, box = null, txt = null, nextBtn = null, loop = 0;
 
   function visible(el) {
@@ -244,7 +244,11 @@ const Guide = (() => {
       }
       if (window.Game) Game.save();
     }
-    if (!s.tut || s.tut.v < TUT_V) setTimeout(() => run(isNew ? NEWBIE : NEWS), 1200);
+    if (!s.tut || s.tut.v < TUT_V) {
+      const steps = isNew ? NEWBIE : NEWS();
+      if (steps.length) setTimeout(() => run(steps), 1200);
+      else s.tut = { v: TUT_V, done: true };
+    }
   }
 
   // ---------- табличка текущей цели на главном экране ----------
