@@ -1624,7 +1624,7 @@
     const media = (m.media || []).slice();
     const mediaBox = h('div', { class: 'media' });
     // поле выбора файла лежит прямо на плитке «Добавить»: нажатие из кода встроенный браузер ВК не пропускает
-    const fileIn = h('input', { type: 'file', multiple: true, accept: 'image/*', class: 'file-hit', 'aria-label': 'Добавить фото' });
+    const fileIn = h('input', { type: 'file', accept: 'image/*', class: 'file-hit', 'aria-label': 'Добавить фото' });
     const drawMedia = () => mediaBox.replaceChildren(...media.map((x, i) => h('div', { class: 'mi' + (x.busy ? ' busy' : '') }, h('img', { src: x.local || x.thumb || x.url, alt: '' }),
       h('button', { type: 'button', class: 'mi-x', 'aria-label': 'Убрать', onclick: () => { media.splice(i, 1); drawMedia(); } }, icon('x')))),
       ...(media.length < 10 ? addTiles(fileIn, (it) => { if (media.length < 10) { media.push(it); drawMedia(); } }, 10 - media.length, true) : []));
@@ -1715,7 +1715,8 @@
 
     // вложения
     const mediaBox = h('div', { class: 'media' });
-    const fileIn = h('input', { type: 'file', multiple: true, class: 'file-hit', 'aria-label': 'Добавить вложение' });
+    // без multiple: во встроенных браузерах ВК и Telegram на Android с ним выбор файла не открывается
+    const fileIn = h('input', { type: 'file', accept: 'image/*,video/*', class: 'file-hit', 'aria-label': 'Добавить вложение' });
     fileIn.addEventListener('change', async () => {
       const files = [...fileIn.files]; fileIn.value = '';
       if (files.length) toast('Загружаю: ' + files.length);
