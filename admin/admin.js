@@ -178,6 +178,9 @@
     if (/creator is fixed/.test(m)) return 'Создателя изменить нельзя';
     if (/bad signature|too old/.test(m)) return 'Подпись платформы устарела, открой панель заново';
     if (/bad session/.test(m)) return 'Вход устарел, войди заново';
+    if (/no player/.test(m)) return 'Такого игрока нет. Проверь номер (у игроков ВК он с минусом)';
+    if (/already pending/.test(m)) return 'Возврат копии уже ждёт игрока';
+    if (/no save/.test(m)) return 'Копия не найдена';
     if (/Failed to fetch|NetworkError|долго|Load failed/.test(m)) return 'Нет связи с базой. Проверь интернет или VPN';
     return 'Ошибка: ' + m.slice(0, 120);
   }
@@ -654,33 +657,65 @@
     }
 
     if (can('edit')) {
-      const eCr = h('input', { class: 'input mono', type: 'number', inputmode: 'numeric', placeholder: String(p.cr) });
-      const eE = h('input', { class: 'input mono', type: 'number', inputmode: 'numeric', placeholder: String(Math.floor(p.ess)) });
-      const eLvl = h('input', { class: 'input mono', type: 'number', inputmode: 'numeric', placeholder: String(p.lvl) });
+      // сейчас в сохранении игрока - от этого считаем «было → станет»
+      const sv = p.save && typeof p.save === 'object' ? p.save : {};
+      const cur = { cr: +sv.cr || +p.cr || 0, e: +sv.e || +p.ess || 0, lvl: +sv.lvl || +p.lvl || 1, le: +sv.le || +p.le || 0 };
+      let mode = 'add';
+      const eCr = h('input', { class: 'input mono', type: 'number', inputmode: 'numeric', placeholder: '0' });
+      const eE = h('input', { class: 'input mono', type: 'number', inputmode: 'numeric', placeholder: '0' });
+      const eLvl = h('input', { class: 'input mono', type: 'number', inputmode: 'numeric', placeholder: String(cur.lvl) });
       const eName = h('input', { class: 'input', maxlength: '20', placeholder: p.name || '' });
-      const eRank = h('select', { class: 'input' }, h('option', { value: '' }, 'Не менять (' + (RANKS[p.rnk] || '-') + ')'), RANKS.map((n, i) => h('option', { value: String(i) }, (i + 1) + '. ' + n)));
+      const curRank = RANK_NEED.reduce((r, n, i) => (cur.le >= n ? i : r), 0);
+      const eRank = h('select', { class: 'input' }, h('option', { value: '' }, 'Не менять (' + (RANKS[curRank] || '-') + ')'), RANKS.map((n, i) => h('option', { value: String(i) }, (i + 1) + '. ' + n)));
+      const fCr = field('Кристаллы', eCr), fE = field('Эссенция', eE);
+      const modeHint = h('p', { class: 'hint' });
+      const modeSeg = h('div', { class: 'seg', style: { margin: '0 0 10px' } });
+      const drawMode = () => {
+        modeSeg.replaceChildren(...[['add', 'Начислить'], ['set', 'Установить']].map(([v, l]) => h('button', { class: v === mode ? 'on' : '', onclick: () => { mode = v; haptic(); drawMode(); } }, l)));
+        const ph = mode === 'add' ? ['+0', '+0'] : [String(cur.cr), String(Math.floor(cur.e))];
+        eCr.placeholder = ph[0]; eE.placeholder = ph[1];
+        modeHint.textContent = mode === 'add' ? 'Начислить: прибавляется к тому, что есть у игрока (минус - списать). Эссенция добавится и в «Сварено всего».' : 'Установить: заменяет значение целиком. Сейчас у игрока: ' + num(cur.cr) + ' кр, ' + num(cur.e) + ' эссенции.';
+      };
+      drawMode();
+      const btn = h('button', { class: 'btn wide', onclick: async () => {
+        const ops = {}, lines = [];
+        let down = false;
+        const arrow = (name, a, b) => { lines.push(name + ': ' + num(a) + ' → ' + num(b)); if (b < a) down = true; };
+        if (eCr.value !== '') {
+          const v = Math.floor(+eCr.value);
+          if (mode === 'add') { if (v) { ops.add_cr = v; arrow('Кристаллы', cur.cr, Math.max(0, cur.cr + v)); } } else { ops.set_cr = Math.max(0, v); arrow('Кристаллы', cur.cr, ops.set_cr); }
+        }
+        if (eE.value !== '') {
+          const v = +eE.value;
+          if (mode === 'add') { if (v) { ops.add_e = v; arrow('Эссенция', cur.e, Math.max(0, cur.e + v)); } } else { ops.set_e = Math.max(0, v); arrow('Эссенция', cur.e, ops.set_e); }
+        }
+        if (eLvl.value !== '') { ops.set_lvl = Math.max(1, Math.floor(+eLvl.value)); arrow('Уровень', cur.lvl, ops.set_lvl); }
+        if (eName.value.trim()) { ops.set_name = eName.value.trim(); lines.push('Имя: ' + ops.set_name); }
+        if (eRank.value !== '') {
+          ops.set_le = RANK_NEED[+eRank.value];
+          lines.push('Ранг: ' + (RANKS[curRank] || '-') + ' → ' + RANKS[+eRank.value] + ' («Сварено всего» ' + num(cur.le) + ' → ' + num(ops.set_le) + ')');
+          if (ops.set_le < cur.le) down = true;
+        }
+        if (!Object.keys(ops).length) { toast('Ничего не изменено', true); return; }
+        const text = lines.join('\n') + (down ? '\n\nВНИМАНИЕ: это уменьшит прогресс игрока.' : '') + '\n\nИгра применит правку при следующем входе игрока или в течение минуты, если он играет.';
+        if (!(await confirmBox(down ? 'Уменьшить прогресс?' : 'Применить правку?', text, 'Применить', down))) return;
+        btn.disabled = true; // не отправить дважды
+        if (await act('adm_patch', { p_id: id, ops }, 'Правка отправлена')) reopen(); else btn.disabled = false;
+      } }, 'Применить правку');
       out.push(sec('Правка сохранения'),
         h('div', { class: 'panel pad' },
-          h('div', { class: 'g2' }, field('Кристаллы', eCr), field('Эссенция', eE), field('Уровень', eLvl), field('Имя', eName)),
+          modeSeg,
+          h('div', { class: 'g2' }, fCr, fE, field('Уровень', eLvl), field('Имя', eName)),
           field('Ранг лавки', eRank),
-          h('button', { class: 'btn wide', onclick: async () => {
-            const ops = {};
-            if (eCr.value !== '') ops.set_cr = Math.max(0, Math.floor(+eCr.value));
-            if (eE.value !== '') ops.set_e = Math.max(0, +eE.value);
-            if (eLvl.value !== '') ops.set_lvl = Math.max(1, Math.floor(+eLvl.value));
-            if (eName.value.trim()) ops.set_name = eName.value.trim();
-            if (eRank.value !== '') ops.set_le = RANK_NEED[+eRank.value];
-            if (!Object.keys(ops).length) { toast('Ничего не изменено', true); return; }
-            if (await confirmBox('Применить правку?', opsText(ops) + '. Игра применит её при следующем входе игрока или в течение 5 минут, если он играет.', 'Применить')) {
-              if (await act('adm_patch', { p_id: id, ops }, 'Правка отправлена')) reopen();
-            }
-          } }, 'Применить правку'),
-          h('p', { class: 'hint' }, 'Пустые поля не меняются.'),
+          btn,
+          modeHint,
+          h('p', { class: 'hint' }, 'Пустые поля не меняются. Подарок через почту игрок забирает сам - это надёжнее правки.'),
           (p.patches || []).length ? h('div', { style: { marginTop: '12px' } }, p.patches.map((x) => h('div', { class: 'kv' },
             h('span', null, h('span', { class: 'mono' }, dateTime(x.at)), ' · ' + opsText(x.ops)),
             x.done ? h('b', { style: { color: 'var(--green)' } }, 'применена') : h('button', { class: 'btn ghost sm', onclick: async () => {
               if (await act('adm_patch_cancel', { p_id: x.id }, 'Правка отменена')) reopen();
             } }, 'Отменить')))) : null));
+      out.push(sec('История сохранений'), savesBox(id, can('reset')));
     }
 
     if ((can('ban') || can('reset')) && !isCreator) {
@@ -749,8 +784,28 @@
   }
   function opsText(o) {
     if (o.reset) return 'сброс прогресса';
+    if (o.restore) return 'возврат сохранения из истории (копия №' + o.restore + ')';
     const names = { set_cr: 'кристаллы →', add_cr: 'кристаллы +', set_e: 'эссенция →', add_e: 'эссенция +', add_ess_h: 'часы дохода +', set_lvl: 'уровень →', set_name: 'имя →' };
     return Object.keys(o).map((k) => k === 'set_le' ? 'ранг → ' + (RANKS[RANK_NEED.indexOf(o[k])] || num(o[k])) : (names[k] || k) + ' ' + (typeof o[k] === 'number' ? num(o[k]) : o[k])).join(', ');
+  }
+  // копии сохранения: база откладывает их раз в час и перед любым уменьшением прогресса
+  const SAVE_KIND = { start: 'при обновлении 0.20.1', hourly: 'раз в час', drop: 'перед уменьшением', other_game: 'перед сменой игры', deleted: 'перед удалением', rejected: 'не принята базой' };
+  function savesBox(id, canRestore) {
+    const box = h('div', { class: 'panel pad' }, h('p', { class: 'hint' }, 'Загружаю...'));
+    api('adm_saves', { p_id: id }).then((r) => {
+      const list = (r && r.list) || [];
+      if (!list.length) { box.replaceChildren(h('p', { class: 'hint' }, 'Копий пока нет. База откладывает их раз в час и перед любым уменьшением прогресса.')); return; }
+      const now = r.now || {};
+      box.replaceChildren(
+        h('p', { class: 'hint' }, 'Сейчас: сварено ' + num(now.le || 0) + ', уровень ' + (now.lvl || '-') + ', ' + num(now.cr || 0) + ' кр.'),
+        ...list.map((x) => h('div', { class: 'kv' },
+          h('span', null, h('span', { class: 'mono' }, dateTime(x.at)), ' · ' + (SAVE_KIND[x.kind] || x.kind) + ' · сварено ' + num(x.le || 0) + ', ур. ' + (x.lvl || '-') + ', ' + num(+x.cr || 0) + ' кр' + (x.born && now.born && x.born !== now.born ? ' · другая игра' : '')),
+          canRestore ? h('button', { class: 'btn ghost sm', onclick: async () => {
+            const ok = await confirmBox('Вернуть эту копию?', 'Прогресс игрока заменится копией от ' + dateTime(x.at) + ': сварено ' + num(x.le || 0) + ', уровень ' + (x.lvl || '-') + '.\n\nТекущее сохранение тоже останется в истории - его можно будет вернуть обратно. Игра применит копию при следующем входе игрока.', 'Вернуть', true);
+            if (ok && await act('adm_save_restore', { p_id: id, p_hist: x.id }, 'Копия отправлена игроку')) openPlayer(id);
+          } }, 'Вернуть') : null)));
+    }).catch((e) => box.replaceChildren(h('p', { class: 'hint' }, errText(e))));
+    return box;
   }
   function saveView(sv) {
     if (!sv) return h('div', { class: 'panel empty' }, 'Игра ещё не прислала сохранение');

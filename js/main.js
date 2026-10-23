@@ -25,8 +25,14 @@
     const srvP = typeof Online !== 'undefined' ? Online.loadServer() : Promise.resolve(null);
     try { const v = await Platform.storageGet(C.saveKey); if (v) remote = JSON.parse(v); } catch (e) { /* повреждено */ }
     try { server = await srvP; } catch (e) { /* без сети */ }
-    // самое свежее из трёх: этот телефон, облако платформы, наша база (общая для ВК и Telegram)
-    return [local, remote, server].filter((x) => x && typeof x === 'object').sort((a, b) => (b.ts || 0) - (a.ts || 0))[0] || null;
+    // база не ответила, а больше взять негде - пробуем ещё раз, чтобы не начать игру с нуля
+    if (server === undefined && !local && !remote && typeof Online !== 'undefined') server = await Online.loadServer(10000);
+    // самое свежее из трёх: этот телефон, облако платформы, наша база (общая для ВК и Telegram).
+    // Копия другой игры (началась позже, а игрок сам не сбрасывал) не может перебить базу:
+    // так случайный старт с нуля не затрёт настоящий прогресс.
+    const born = (x) => (x.stat && x.stat.start) || 0, wipe = (x) => (x.stat && x.stat.wipe) || 0;
+    const sameGame = (x) => !server || x === server || !born(server) || born(x) === born(server) || wipe(x) > wipe(server);
+    return [local, remote, server].filter((x) => x && typeof x === 'object' && sameGame(x)).sort((a, b) => (b.ts || 0) - (a.ts || 0))[0] || null;
   }
 
   // ---------- время вне игры ----------

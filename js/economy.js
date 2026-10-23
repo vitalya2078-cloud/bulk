@@ -80,7 +80,8 @@ const Econ = (() => {
       story: {},
       req: [],         // просьбы жителей в журнале
       jtab: 'req',     // открытая вкладка журнала заданий
-      mg: {}           // мини-игры: { d: день, n: сыграно с полной наградой, ad: добавлено рекламой, best: рекорды }
+      mg: {},          // мини-игры: { d: день, n: сыграно с полной наградой, ad: добавлено рекламой, best: рекорды }
+      pd: []           // 0.20.1: номера применённых правок из админки - чтобы правка не применилась дважды
     };
   }
 
@@ -122,7 +123,8 @@ const Econ = (() => {
     return JSON.stringify(Object.assign({}, s, { ts: Date.now(), e: r2(s.e), le: r2(s.le) }));
   }
 
-  function reset() { const snd = s.snd; s = fresh(); s.snd = snd; invalidate(); }
+  // wipe - метка «игрок сам начал заново»: по ней база отличает сброс от случайного старта с нуля
+  function reset() { const snd = s.snd; s = fresh(); s.snd = snd; s.stat.wipe = s.stat.start; invalidate(); }
 
   // ---------- ранги ----------
   function rankOf(le) {

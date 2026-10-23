@@ -60,6 +60,10 @@ const Online = (() => {
     if (!r) return;
     if (r.uid) { uid = r.uid; Platform.setUid(uid); }
     if (r.kicked) { kickScreen(); return; }
+    if (r.restore && adopt(r.restore, true)) {
+      restoredModal('Лавка нашлась!', 'Игра открылась без твоего сохранения, но котёл всё помнит. Возвращаем твой прогресс.');
+      return;
+    }
     state = { admin: !!r.admin, mail: +r.mail || 0, banned: !!r.banned, settings: r.settings || {}, reason: r.reason || '' };
     applySettings(start);
     if (state.banned) { banScreen(state.reason); return; }
@@ -94,13 +98,31 @@ const Online = (() => {
   }
 
   // сохранение из базы: при запуске берём самое свежее (локальное, облако платформы, база)
-  async function loadServer() {
+  // null - в базе сохранения нет, undefined - база не ответила
+  async function loadServer(ms) {
     if (!on()) return null;
     try {
-      const r = await rpc('load_save', { init_data: initData() }, 4500);
+      const r = await rpc('load_save', { init_data: initData() }, ms || 8000);
       if (r && r.uid) { uid = r.uid; Platform.setUid(uid); }
       return r && r.save && typeof r.save === 'object' ? r.save : null;
-    } catch (e) { console.warn('online load', e); return null; }
+    } catch (e) { console.warn('online load', e); return undefined; }
+  }
+
+  // ---------- возврат настоящего сохранения ----------
+  // База не приняла копию (игра открылась без сохранения или это копия другой игры) и прислала свою -
+  // или админ вернул копию из истории. Загружаем её, сохраняем везде и перезапускаем лавку.
+  let restoring = false;
+  function adopt(sv, mine) {
+    if (restoring || !sv || typeof sv !== 'object') return false;
+    restoring = true;
+    Econ.load(sv);
+    if (!mine) Econ.s.stat.wipe = Date.now(); // копия из истории - «другая игра», база должна её принять
+    save();
+    return true;
+  }
+  function restoredModal(title, text) {
+    UI.modal({ title, closable: false, body: h('p', { class: 'center' }, text),
+      actions: [{ label: 'Продолжить', onClick: () => { setTimeout(() => location.reload(), 300); } }] });
   }
 
   // ---------- привязка ВК и Telegram ----------
@@ -215,11 +237,24 @@ const Online = (() => {
   async function applyPatch(p) {
     if (!p || applied.has(p.id)) return;
     applied.add(p.id);
+    // уже применена (отметка в базу не дошла) - только отмечаем, второй раз не начисляем
+    if (!Array.isArray(Econ.s.pd)) Econ.s.pd = [];
+    if (Econ.s.pd.includes(p.id)) { rpc('patch_done', { init_data: initData(), p_id: p.id }).catch(() => {}); return; }
+    const done = () => { if (!Array.isArray(Econ.s.pd)) Econ.s.pd = []; Econ.s.pd.push(p.id); Econ.s.pd = Econ.s.pd.slice(-50); };
     const o = p.ops || {}, s = Econ.s, msg = [];
     const num = (v) => (typeof v === 'number' && isFinite(v) ? v : null);
+    if (o.restore) {
+      if (!adopt(o.restore, false)) return;
+      done(); save();
+      // сразу отдаём базе - чтобы копия не потерялась, даже если телефон не сохранит её у себя
+      try { await rpc('hello', { init_data: initData(), p: stats(false) }); } catch (e) { /* уйдёт со следующим отчётом */ }
+      try { await rpc('patch_done', { init_data: initData(), p_id: p.id }); } catch (e) { /* ignore */ }
+      restoredModal('Лавка восстановлена', 'Администратор вернул твою лавку из сохранения. Можно продолжать!');
+      return;
+    }
     if (o.reset) {
       try { await rpc('patch_done', { init_data: initData(), p_id: p.id }); } catch (e) { return; }
-      Econ.reset(); save();
+      Econ.reset(); done(); save();
       UI.modal({ title: 'Прогресс сброшен', closable: false, body: h('p', { class: 'center' }, 'Администратор начал твою лавку заново.'),
         actions: [{ label: 'Начать', onClick: () => { location.reload(); } }] });
       return;
@@ -232,8 +267,9 @@ const Online = (() => {
     if (num(o.set_le) !== null) s.le = Math.max(0, o.set_le);
     if (num(o.set_lvl) !== null) { s.lvl = Math.max(1, Math.floor(o.set_lvl)); s.xp = 0; }
     if (typeof o.set_name === 'string' && o.set_name.trim()) Econ.setName(o.set_name);
+    done();
     save();
-    try { await rpc('patch_done', { init_data: initData(), p_id: p.id }); } catch (e) { /* применится и отметится в следующий раз - не страшно: повтор отсекает applied */ }
+    try { await rpc('patch_done', { init_data: initData(), p_id: p.id }); } catch (e) { /* отметится в следующий раз; второй раз не начислится - номер правки уже в сохранении (pd) */ }
     if (Econ.checkRankUp) Econ.checkRankUp();
     UI.refresh(true);
     UI.toast(msg.length ? 'Подарок от лавки: ' + msg.join(', ') : 'Администратор обновил твою лавку');

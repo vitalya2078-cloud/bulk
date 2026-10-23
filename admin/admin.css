@@ -223,7 +223,7 @@ pre { margin: 0; padding: 0 14px 14px; white-space: pre-wrap; word-break: break-
 @keyframes fade { from { opacity: 0; } }
 .dlg-box { width: 100%; max-width: 460px; max-height: 88vh; overflow-y: auto; padding: 18px 16px 16px; border-radius: 14px; background: var(--s1); border: 1px solid var(--line2); animation: in .18s ease-out; }
 .dlg-box h3 { margin: 0 0 6px; font-size: 17px; font-weight: 650; }
-.dlg-box > p { margin: 0 0 14px; color: var(--mut); }
+.dlg-box > p { margin: 0 0 14px; color: var(--mut); white-space: pre-line; }
 
 /* ---------- 0.19: приложение, вход по коду ---------- */
 .glyph { width: 70%; height: 70%; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
