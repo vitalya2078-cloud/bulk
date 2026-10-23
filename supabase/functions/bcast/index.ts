@@ -301,10 +301,11 @@ function groupRef(s: string) {
 }
 async function wallResolve(links: string[]) {
   const token = await rpc("wall_token", {});
-  if (!token) return json({ error: "no token" }, 400);
+  if (!token) return json({ error: "нет ключа ВК (или он истёк) - получи его в блоке «Ключ ВК» выше" }, 400);
   const refs = [...new Set(links.map(groupRef).filter(Boolean))].slice(0, 30);
   if (!refs.length) return json({ error: "no links" }, 400);
   const r = await vk("groups.getById", { group_ids: refs.join(","), fields: "can_post" }, token);
+  if (r.error?.error_code === 5) return json({ error: "ключ ВК не подходит или истёк - получи новый в блоке «Ключ ВК» выше" }, 400);
   if (r.error) return json({ error: `${r.error.error_code}: ${r.error.error_msg}` }, 400);
   const list = (Array.isArray(r.response) ? r.response : r.response?.groups || []).map((g: any) => ({
     gid: g.id, name: g.name, screen: g.screen_name, photo: g.photo_100 || "", can_post: !!g.can_post,
