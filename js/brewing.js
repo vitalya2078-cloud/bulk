@@ -480,7 +480,7 @@ const Brew = (() => {
     top.append(h('div', { class: 'brew-head' }, pic('ui/potion_bag', 'brew-head-ico'),
       h('div', { class: 'brew-head-text' }, h('b', null, 'Зельеварня'), h('small', null, 'Сумка ' + bagCount() + '/' + B.bagMax + ' · Рецепты ' + s.book.length + '/' + D.recipeList.length)),
       h('div', { class: 'ev-candy' }, pic('ui/crystal', 'cr-ico'), h('b', null, s.cr))));
-    const tabs = [['brew', 'Варить'], ['bag', 'Сумка'], ['book', 'Книга'], ['shop', 'Торговка']];
+    const tabs = [['brew', 'Варить'], ['bag', 'Сумка'], ['book', 'Книга'], ['shop', 'Рынок']];
     top.append(h('div', { class: 'seg' }, tabs.map(([id, l]) => {
       const n = id === 'bag' ? bagCount() : 0;
       const b = h('button', { type: 'button', class: 'seg-btn' + (tab === id ? ' on' : '') }, l, n ? h('span', { class: 'seg-badge' }, n) : null);
@@ -679,7 +679,7 @@ const Brew = (() => {
       body.append(h('div', { class: 'row-card' },
         h('div', { class: 'ico' }, pic(x.img)),
         h('div', { class: 'info' }, h('div', { class: 'name' }, x.name), h('div', { class: 'ing-prop' }, propIco(x.p), PROP[x.p].name),
-          h('div', { class: 'meta' }, 'Осталось сегодня: ' + sl.left + ' · у тебя ' + count(x.id))),
+          h('div', { class: 'meta trade-meta' }, h('span', null, 'В продаже: ' + sl.left), h('span', null, 'У тебя: ' + count(x.id)))),
         btn));
     });
     const t = h('p', { class: 'note' }, 'Новый товар через ' + Fmt.time(Econ.secToMidnight()));

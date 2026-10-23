@@ -2277,3 +2277,20 @@ body[data-screen]:not([data-screen="main"]) .wallet .effects { display: none; }
 .share-row { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 /* сообщение-табличка - выше таблички цели */
 body:not(.has-modal) #toast { bottom: calc(var(--safe-bottom) + 216px); }
+
+/* ===== 0.23.2: цифры в значках по центру кружка (раньше строка была ниже высоты значка - цифра уезжала вверх) ===== */
+.badge, .brew-btn b, .seg-badge, .ing-n { display: inline-flex; align-items: center; justify-content: center; padding: 0 4px 1px; line-height: 1; font-variant-numeric: tabular-nums; }
+.tab .badge, .brew-btn b { min-width: 22px; height: 22px; font-size: 12px; }
+.comm-hero > div { flex: 1; min-width: 0; text-align: left; }
+.comm-hero b { text-align: left; line-height: 1.15; }
+.comm-hero .slogan { text-wrap: balance; }
+.trade-meta { display: flex; flex-wrap: wrap; gap: 0 12px; }
+.trade-meta span { white-space: nowrap; }
+/* просьба гостя: текст не вылезает за нарисованную ленту */
+.dlg-task.row-frame { padding: 16px 4px; line-height: 1.25; font-size: 13px; }
+.dlg-task.row-frame > span:nth-child(2) { flex: 1; min-width: 0; }
+.dlg-task.row-frame small { display: inline-block; margin-top: 2px; }
+/* крестик - снаружи, на верхнем правом углу рамки; содержимое окна больше не сдвигается под него */
+.modal > .x, .modal.sheet > .x { top: -44px; right: -34px; width: 44px; height: 44px; }
+.brew-head, .ev-head, .sk-head { margin-right: 0 !important; }
+.brew-modal .seg .seg-btn { flex: 1 1 0; min-width: 0; padding: 6px 0; font-size: 12.5px; white-space: nowrap; }

@@ -315,6 +315,11 @@ const Online = (() => {
   }
   const when = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }); };
 
+  // значок почты пересчитываем сразу на телефоне: отчёт в базу идёт не чаще раза в 45 секунд
+  let mailRows = [];
+  const isFresh = (m) => !m.read || !!(m.gift && Object.keys(m.gift).length && !m.claimed);
+  function recount() { state.mail = mailRows.filter(isFresh).length; badge(); }
+
   async function openMail() {
     if (!on()) { UI.toast('Почта работает в Telegram'); return; }
     const list = h('div', { class: 'mail-list' }, h('p', { class: 'top-empty' }, 'Открываю почту...'));
@@ -325,9 +330,10 @@ const Online = (() => {
       return;
     }
     rows = rows || [];
+    mailRows = rows; recount();
     if (!rows.length) { list.replaceChildren(h('p', { class: 'top-empty' }, 'Писем пока нет. Сова принесёт, когда будут!')); return; }
     list.replaceChildren(...rows.map((m) => {
-      const fresh = !m.read || (m.gift && Object.keys(m.gift).length && !m.claimed);
+      const fresh = isFresh(m);
       const b = h('button', { class: 'mail-row' + (fresh ? ' new' : ''), type: 'button' },
         pic(m.gift && Object.keys(m.gift).length ? (m.claimed ? 'ui/check' : 'ui/gift') : 'ui/envelope', 'mail-ico'),
         h('span', { class: 'mail-info' }, h('b', null, m.title), h('small', null, (m.personal ? 'Лично тебе · ' : '') + when(m.at))),
@@ -339,7 +345,7 @@ const Online = (() => {
 
   function letter(m) {
     const hasGift = m.gift && Object.keys(m.gift).length;
-    if (!m.read) { m.read = true; rpc('mail_read', { init_data: initData(), p_id: m.id }).then(() => hello(false)).catch(() => {}); }
+    if (!m.read) { m.read = true; recount(); rpc('mail_read', { init_data: initData(), p_id: m.id }).catch(() => {}); }
     const actions = [];
     if (hasGift && !m.claimed) {
       actions.push({ label: 'Забрать подарок', onClick: async () => {
@@ -347,7 +353,7 @@ const Online = (() => {
         try { g = await rpc('mail_claim', { init_data: initData(), p_id: m.id }); } catch (e) {
           UI.toast(/no gift/.test(String(e)) ? 'Подарки из общих писем для тебя недоступны' : 'Не получилось, попробуй позже'); return false;
         }
-        m.claimed = true;
+        m.claimed = true; recount();
         if (g) {
           const got = [];
           if (g.cr) { Econ.addCrystals(g.cr); got.push('+' + g.cr + ' ' + UI.crystalsWord(g.cr)); }
