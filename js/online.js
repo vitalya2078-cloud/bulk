@@ -123,7 +123,8 @@ const Online = (() => {
     const b = window.__boot;
     if (bootSent || !b) return;
     bootSent = true;
-    const bad = b.server !== 'ok' && b.server !== 'empty' || b.cloud === 'broken' || b.cloudMs > 4500 || b.chosen === 'fresh';
+    // новичок: в базе сохранения нет (empty) и игра началась с нуля - это не сбой
+    const bad = (b.server !== 'ok' && b.server !== 'empty') || b.cloud === 'broken' || b.cloudMs > 4500 || (b.chosen === 'fresh' && b.server !== 'empty');
     if (!bad) return;
     rpc('boot_report', { init_data: initData(), p: Object.assign({ ver: CONFIG.version, plat: Platform.kind(), online: navigator.onLine !== false,
       net: (navigator.connection && navigator.connection.effectiveType) || '' }, b) }, 8000).catch(() => {});

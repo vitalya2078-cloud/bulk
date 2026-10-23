@@ -368,7 +368,32 @@
       sec('Ранги лавок'),
       h('div', { class: 'panel pad' }, bars(RANKS.map((n, i) => [n, (s.ranks || {})[i] || 0]), total)),
       sec('Версии за неделю'),
-      h('div', { class: 'panel pad' }, bars(Object.entries(s.versions || {}).sort((a, b) => b[1] - a[1]), vTotal)));
+      h('div', { class: 'panel pad' }, bars(Object.entries(s.versions || {}).sort((a, b) => b[1] - a[1]), vTotal)),
+      sec('Надёжность', '7 дней'),
+      healthBox(id));
+  }
+
+  // сбои загрузки сохранения у игроков и сохранения, которые база не приняла (защита сработала)
+  const BOOT_SRC = { ok: 'ответила', ok2: 'ответила со 2-й попытки', empty: 'пусто', fail: 'не ответила', fail2: 'не ответила дважды', broken: 'ошибка', none: '-' };
+  function healthBox(id) {
+    const box = h('div', { class: 'panel pad' }, h('p', { class: 'hint' }, 'Загружаю...'));
+    api('adm_health').then((r) => {
+      if (stale(id)) return;
+      const k = (v, label, bad) => h('div', { class: 'kpi' + (bad && v ? ' acc' : '') }, h('b', null, num(v)), h('span', null, label));
+      const rows = (r.last || []).map((x) => {
+        const i = x.info || {};
+        return h('button', { class: 'row', onclick: () => { haptic(); openPlayer(x.uid); } },
+          h('span', { class: 'who' }, h('b', null, h('em', null, x.name), x.old_player && i.chosen === 'fresh' ? h('span', { class: 'tag red', style: { marginLeft: '6px' } }, 'старт с нуля') : null),
+            h('small', { style: { whiteSpace: 'normal' } }, 'база: ' + (BOOT_SRC[i.server] || i.server || '-') + ' (' + (i.serverMs || 0) + ' мс) · облако: ' + (BOOT_SRC[i.cloud] || i.cloud || '-') + ' (' + (i.cloudMs || 0) + ' мс) · ' + (i.plat || '') + ' ' + (i.ver || '') + (i.net ? ' · ' + i.net : ''))),
+          h('span', { class: 'mut mono', style: { fontSize: '11px', whiteSpace: 'nowrap' } }, ago(x.at)));
+      });
+      box.replaceChildren(
+        h('div', { class: 'kpis' }, k(r.rejected, 'спасено сохранений', true), k(r.boot_fail, 'база не ответила при запуске', true),
+          k(r.boot_fresh_old, 'старт с нуля у старых игроков', true), k(r.boot_total, 'отчётов о сбоях')),
+        h('p', { class: 'hint' }, '«Спасено» - игра открылась без сохранения или с чужой копией, база не дала затереть прогресс и вернула настоящий. Отчёты приходят только при сбоях.'),
+        rows.length ? h('div', { class: 'list', style: { marginTop: '8px' } }, rows) : h('p', { class: 'hint' }, 'Сбоев загрузки не было.'));
+    }).catch((e) => { if (!stale(id)) box.replaceChildren(h('p', { class: 'hint' }, errText(e))); });
+    return box;
   }
   function bars(rows, total) {
     if (!rows.length || !total) return h('div', { class: 'empty' }, 'Пока нет данных');
