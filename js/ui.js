@@ -727,18 +727,6 @@ const UI = (() => {
             linkRow('ui/padlock', 'Политика конфиденциальности', 'Какие данные мы храним', new URL('privacy.html', location.href).href)));
         box.append(about);
 
-        // команда - из базы, только имена и роли
-        if (typeof Online !== 'undefined' && Online.on()) {
-          const list = h('div', { class: 'team-list' }, h('p', { class: 'note center' }, 'Загружаю...'));
-          box.append(h('div', { class: 'panel' }, h('h3', { class: 'mini-title' }, 'Команда лавки'), list));
-          const ROLE = { creator: 'Создатель', admin: 'Администратор', moderator: 'Модератор', support: 'Поддержка' };
-          Online.team().then((t) => {
-            if (!t || !t.length) { list.replaceChildren(h('p', { class: 'note center' }, 'Команду покажем, когда будет связь.')); return; }
-            list.replaceChildren(...t.map((m) => h('div', { class: 'team-row' },
-              /^https:/.test(m.photo || '') ? h('img', { class: 'pic team-ava', src: m.photo, alt: '', referrerpolicy: 'no-referrer' }) : (m.photo ? pic('avatars/' + m.photo, 'team-ava') : pic('ui/team', 'team-ava')),
-              h('span', null, h('b', null, m.name), h('small', null, ROLE[m.role] || 'Команда')))));
-          });
-        }
       }
     },
 

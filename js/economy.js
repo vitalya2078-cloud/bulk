@@ -280,7 +280,9 @@ const Econ = (() => {
   const incomeMul = () => fxMul('income') * (potion('gold') ? 1.5 : 1) * gmul * cmul;
   const covenMul = () => cmul;
   const perHour = () => derive().perHour * incomeMul();
-  const tapValue = () => ((1 + s.scoop + rank() + sk('t1')) * Math.pow(1.25, sk('t5')) + derive().perHour * (C.tapIncomeShare + 0.0001 * sk('t3'))) * fxMul('tap')
+  // тап - целое число (не меньше 1): над котлом «+2», и баланс растёт ровно на столько же
+  const tapValue = () => Math.max(1, Math.round(tapRaw()));
+  const tapRaw = () => ((1 + s.scoop + rank() + sk('t1')) * Math.pow(1.25, sk('t5')) + derive().perHour * (C.tapIncomeShare + 0.0001 * sk('t3'))) * fxMul('tap')
     * (potion('power') ? 2 : 1) * (potion('dragon') ? 5 : 1) * (1 + petB('tap')) * gmul * cmul;
   const hoursOfIncome = (h, min) => Math.max(min || 0, basePerHour() * h);
 

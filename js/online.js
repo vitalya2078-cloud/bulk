@@ -392,8 +392,5 @@ const Online = (() => {
 
   const boost = () => (state.settings && state.settings.boost) || null;
 
-  // команда игры для вкладки «Сообщество»
-  async function team() { try { return await rpc('team_public', {}, 6000); } catch (e) { return null; } }
-
-  return { team, linked: () => linked, boost, call, start, openMail, admCode, notifyPush, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid };
+  return { linked: () => linked, boost, call, start, openMail, admCode, notifyPush, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid };
 })();
