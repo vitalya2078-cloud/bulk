@@ -1,17 +1,17 @@
 {
- "v": "4229870f20f5",
+ "v": "1849f6ca0a9f",
  "files": {
   "admin.css": {
-   "size": 31113,
-   "sha256": "bb52331a449815223f58db4713dce550cc511911bb120fb6ae933cbef73272a2"
+   "size": 30709,
+   "sha256": "016d71b98a12661601a904ef0b5b858c9f80f6ba92acc3c2e681458a82184a07"
   },
   "admin.js": {
-   "size": 170061,
-   "sha256": "cea7fb9bf67ac0bdb6ac87a2a2dc63f03ee88c3cfedbed384a0bf43aa27d6da4"
+   "size": 167839,
+   "sha256": "348858d999f88123c37a53e9f6219040205eceb6486faa10d6185eb44e881993"
   },
   "index.html": {
    "size": 1277,
-   "sha256": "a5c6985b522db096b71f05fcb985bd32ee066ff16076ba1e219d3919af74423e"
+   "sha256": "fdeda15e537ac9e60807bfd78caff79e7504b224a2a4aff4fc9b8ee375595dd6"
   }
  }
 }

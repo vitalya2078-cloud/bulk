@@ -1428,7 +1428,7 @@
   const BC_ST = { scheduled: 'запланирована', sending: 'отправляется', done: 'готово', canceled: 'отменена' };
   const kick = () => { try { fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'tick', init_data: initData }), keepalive: true }).catch(() => {}); } catch (e) { /* ignore */ } };
   let bcDraft = null; // «Повторить» кладёт сюда прошлую рассылку
-  // ---------- вложения: с телефона, из моих фото ВК, по ссылке ----------
+  // ---------- вложения: из галереи телефона или по ссылке ----------
   const fnCall = async (b) => {
     const r = await fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ init_data: initData }, b)) });
     const x = await r.json().catch(() => ({}));
@@ -1448,39 +1448,9 @@
       toast('Добавлено');
     } catch (e) { toast('Не получилось: ' + e.message, true); }
   }
-  async function pickVkPhotos(onItem, left) {
-    const grid = h('div', { class: 'vkp' }, h('p', { class: 'hint' }, 'Загружаю твои фото ВК...'));
-    const chosen = new Map();
-    let offset = 0, total = 0;
-    async function more() {
-      try {
-        const r = await fnCall({ action: 'vk_photos', offset });
-        total = r.total || 0;
-        if (!offset) grid.replaceChildren();
-        (r.items || []).forEach((x) => {
-          const b = h('button', { type: 'button', class: 'vkp-i', style: { backgroundImage: 'url("' + x.thumb + '")' }, onclick: () => {
-            if (chosen.has(x.vk)) chosen.delete(x.vk); else if (chosen.size < left) chosen.set(x.vk, x); else { toast('Не больше ' + left, true); return; }
-            b.classList.toggle('on', chosen.has(x.vk));
-          } });
-          grid.append(b);
-        });
-        offset += (r.items || []).length;
-        const old = grid.parentNode && grid.parentNode.querySelector('.vkp-more'); if (old) old.remove();
-        if (offset < total) grid.after(h('button', { type: 'button', class: 'btn ghost sm wide vkp-more', onclick: more }, 'Ещё фото'));
-        if (!offset) grid.replaceChildren(h('p', { class: 'hint' }, 'В альбомах пока нет фото. Загрузи картинку во ВК (например, в «Сохранённые»), и она появится здесь.'));
-      } catch (e) {
-        grid.replaceChildren(h('p', { class: 'hint' }, /no token/.test(e.message) ? 'Нужен ключ ВК: получи его во вкладке «Посты в группы ВК».' : 'Не загрузилось: ' + e.message));
-      }
-    }
-    more();
-    const ok = await dialog('Мои фото ВКонтакте', 'Отметь картинки - они прикрепятся к посту.', h('div', null, grid), [{ label: 'Отмена', cls: 'ghost', v: false }, { label: 'Добавить', v: true }]);
-    if (!ok) return;
-    chosen.forEach((x) => onItem({ url: x.url, thumb: x.thumb, kind: 'photo', name: 'photo.jpg', vk: x.vk }));
-  }
-  // плитки добавления: «С телефона» (выбор файла), «Из ВК», «По ссылке»
+  // плитки добавления: «Из галереи» (выбор файла на телефоне) и «По ссылке»
   const addTiles = (fileIn, onItem, left, photosOnly) => [
-    h('label', { class: 'mi add' }, icon('image'), h('small', null, 'С телефона'), fileIn),
-    h('button', { type: 'button', class: 'mi add', onclick: () => pickVkPhotos(onItem, left) }, icon('users'), h('small', null, 'Из ВК')),
+    h('label', { class: 'mi add' }, icon('image'), h('small', null, 'Из галереи'), fileIn),
     h('button', { type: 'button', class: 'mi add', onclick: () => pickUrl(onItem, photosOnly) }, icon('link'), h('small', null, 'По ссылке'))];
 
   // ---------- рассылка: игрокам или постами в группы ВК ----------
