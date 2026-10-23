@@ -2256,3 +2256,22 @@ body[data-screen]:not([data-screen="main"]) .wallet .effects { display: none; }
 .tut-skip { padding: 6px 4px; border: 0; background: none; color: #CDBBEA; font: 800 12.5px var(--body), system-ui, sans-serif; text-decoration: underline; cursor: pointer; }
 #stage.flash { animation: stage-flash 1.6s ease-out; }
 @keyframes stage-flash { 0%, 60% { filter: drop-shadow(0 0 18px #FFD36B) brightness(1.15); } 100% { filter: none; } }
+
+/* ---------- 0.22.1: раскладка - Гардероб на главном экране, табличка текущей цели ---------- */
+.goal { position: absolute; left: 50%; bottom: 76px; z-index: 6; transform: translateX(-50%); display: flex; align-items: center; gap: 8px;
+  max-width: calc(100% - 40px); padding: 5px 12px 5px 6px; border: 2px solid rgba(255, 211, 107, .75); border-radius: 16px;
+  background: linear-gradient(180deg, rgba(74, 44, 120, .94), rgba(46, 27, 77, .94)); box-shadow: 0 4px 10px rgba(10, 4, 20, .5);
+  color: #FFF6E8; font-family: var(--body); text-align: left; cursor: pointer; }
+.goal[hidden] { display: none; }
+.goal-ico { width: 30px; height: 30px; flex-shrink: 0; }
+.goal span { display: flex; flex-direction: column; min-width: 0; }
+.goal b { font-size: 13px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.goal small { font-size: 11px; color: #E8DCFF; }
+.goal i { font-style: normal; font-size: 22px; font-weight: 900; color: #FFD36B; line-height: 1; }
+.goal.ready { border-color: #FFE48A; animation: goal-glow 1.6s ease-in-out infinite; }
+.goal.ready small { color: #FFE48A; font-weight: 900; }
+@keyframes goal-glow { 50% { box-shadow: 0 0 16px #FFD36B, 0 4px 10px rgba(10, 4, 20, .5); } }
+.goal:active { transform: translateX(-50%) scale(.96); }
+.share-row { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+/* сообщение-табличка - выше таблички цели */
+body:not(.has-modal) #toast { bottom: calc(var(--safe-bottom) + 216px); }

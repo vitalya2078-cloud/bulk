@@ -148,7 +148,7 @@ const Guide = (() => {
     { sel: ['.tab[data-go="tasks"]'], text: 'Дальше подскажет «Путь алхимика» в Заданиях. Кнопка «Перейти» сама приведёт куда нужно. Удачи!', next: 'Понятно' }
   ];
   const NEWS = [
-    { sel: ['.tab[data-go="profile"]'], text: 'Новая вкладка - Профиль: ранг, коллекции, ковен и всё о твоей лавке.', next: 'Дальше' },
+    { sel: ['#btn-profile'], text: 'Нажми на свой портрет - откроется Профиль: ранг, коллекции, ковен и всё о твоей лавке.', next: 'Дальше' },
     { sel: ['.tab[data-go="friends"]'], text: 'Сообщество: наши группы ВКонтакте и Telegram, команда и поддержка прямо из игры.', next: 'Дальше' },
     { sel: ['.tab[data-go="tasks"]'], text: 'В Заданиях появился «Путь алхимика» - цепочка целей с наградами. А кнопка «Перейти» ведёт прямо к делу.', next: 'Понятно' }
   ];
@@ -207,6 +207,7 @@ const Guide = (() => {
     clearInterval(loop);
     if (layer) { layer.remove(); layer = null; }
     S().tut = { v: TUT_V, done: true };
+    setTimeout(goal, 0);
     if (window.Game) Game.save();
   }
   function run(steps) {
@@ -246,5 +247,29 @@ const Guide = (() => {
     if (!s.tut || s.tut.v < TUT_V) setTimeout(() => run(isNew ? NEWBIE : NEWS), 1200);
   }
 
-  return { start, block, key, ready, claim, go, goFor, replay, steps: STEPS };
+  // ---------- табличка текущей цели на главном экране ----------
+  let goalKey = '';
+  function goal() {
+    const el = document.getElementById('goal');
+    if (!el) return;
+    const x = step();
+    if (!x || layer || !st()) { el.hidden = true; goalKey = ''; return; }
+    const cur = curOf(x), done = cur >= x.need;
+    const prog = done ? 'Забрать награду' : x.show ? 'ранг ' + (Econ.rank() + 1) + ' из ' + (x.need + 1) : Fmt.num(Math.min(cur, x.need)) + ' / ' + Fmt.num(x.need);
+    const k = x.t + '|' + prog;
+    el.hidden = false;
+    el.classList.toggle('ready', done);
+    if (k === goalKey) return;
+    goalKey = k;
+    el.replaceChildren(pic('ui/scroll', 'goal-ico'), h('span', null, h('b', null, x.t), h('small', null, prog)), h('i', null, done ? '✓' : '›'));
+  }
+  function goalTap() {
+    const x = step();
+    if (!x) return;
+    if (doneOf(x)) { claim(); goal(); return; }
+    Sound.tap();
+    go(x.go);
+  }
+
+  return { start, block, key, ready, claim, go, goFor, replay, goal, goalTap, steps: STEPS };
 })();

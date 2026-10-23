@@ -292,10 +292,8 @@ const UI = (() => {
   const SCREENS = {
     main:    { label: 'Котёл',   img: 'ui/cauldron' },
     shop:    { label: 'Лавка',   img: 'cards/window' },
-    wardrobe: { label: 'Гардероб', img: 'ui/wardrobe' },
     tasks:   { label: 'Задания', img: 'ui/checklist' },
-    friends: { label: 'Сообщество', img: 'ui/envelope' },
-    profile: { label: 'Профиль', img: 'ui/profile' }
+    friends: { label: 'Сообщество', img: 'ui/envelope' }
   };
   const badges = {};
 
@@ -407,6 +405,7 @@ const UI = (() => {
     updateBadges();
     updateEffects();
     Events.refreshButton();
+    if (typeof Guide !== 'undefined') Guide.goal();
   }
 
   function setBadge(id, v) {
@@ -703,11 +702,8 @@ const UI = (() => {
           : 'Награду за приглашение сегодня уже получил. Звать друзей всё равно можно!'));
         box.append(panel);
 
+        // поделиться и рейтинг друзей платформы (топ алхимиков - на главном экране)
         const p2 = h('div', { class: 'panel' });
-        p2.append(h('div', { class: 'mastery' }, pic('ui/trophy', 'mastery-ico'),
-          h('div', null, h('small', null, 'Твоё мастерство'), h('b', null, Fmt.num(Econ.mastery())))));
-        p2.append(h('p', { class: 'note center' }, 'Растёт вместе с эссенцией и уровнями карточек.'));
-        p2.append(h('button', { class: 'btn', type: 'button', onclick: () => { Sound.tap(); Tops.open(1); } }, 'Топ алхимиков'));
         if (Platform.hasLeaderboard()) {
           p2.append(h('button', { class: 'btn alt', type: 'button', onclick: async () => {
             if (!(await Platform.leaderboard(Econ.mastery()))) toast('Рейтинг сейчас недоступен');
@@ -718,7 +714,7 @@ const UI = (() => {
           if (r === 'copied') toast('Текст скопирован');
           else if (r === 'fail') toast('Не получилось поделиться');
         } }, 'Рассказать о лавке'));
-        box.append(p2);
+        panel.append(p2.childNodes.length ? h('div', { class: 'share-row' }, ...p2.childNodes) : '');
 
         // об игре
         const about = h('div', { class: 'panel' },
@@ -1071,7 +1067,7 @@ const UI = (() => {
     // лавка сейчас (живые цифры)
     const live = [['ui/essence', 'Эссенция', () => ess(S().e)], ['ui/hourglass', 'Доход в час', () => '+' + ess(Econ.perHour())],
       ['ui/ladle', 'За тап', () => '+' + ess(Econ.tapValue())], ['ui/crystal', 'Кристаллы', () => String(S().cr)],
-      ['ui/basket', 'Копится без тебя', () => Econ.pantryHours() + ' ч'], ['ui/chart', 'Множитель дохода', () => '×' + (Math.round(Econ.incomeMul() * 10) / 10).toString().replace('.', ',')]];
+      ['ui/basket', 'Копится без тебя', () => Econ.pantryHours() + ' ч'], ['ui/trophy', 'Мастерство (топ)', () => Fmt.num(Econ.mastery())], ['ui/chart', 'Множитель дохода', () => '×' + (Math.round(Econ.incomeMul() * 10) / 10).toString().replace('.', ',')]];
     box.append(h('h3', { class: 'mini-title' }, 'Лавка сейчас'), h('div', { class: 'stat-grid' }, live.map(([img, t, f]) => {
       const v = h('b', null, f());
       refs.push(() => setText(v, f()));
@@ -1412,6 +1408,8 @@ const UI = (() => {
     $('btn-rune').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Daily.openRune(); });
     $('brew-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Brew.open(); });
     $('pets-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Pets.open(); });
+    $('ward-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); show('wardrobe'); });
+    $('goal').addEventListener('click', () => { Sound.unlock(); if (typeof Guide !== 'undefined') Guide.goalTap(); });
     $('games-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Games.open(); });
     $('tops-btn').addEventListener('click', () => { Sound.unlock(); Sound.tap(); Tops.open(0); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current && current.closable !== false) closeModal(); });
