@@ -321,7 +321,7 @@ const Online = (() => {
   function recount() { state.mail = mailRows.filter(isFresh).length; badge(); }
 
   async function openMail() {
-    if (!on()) { UI.toast('Почта работает в Telegram'); return; }
+    if (!on()) { UI.toast('Почта работает при подключении к сети'); return; }
     const list = h('div', { class: 'mail-list' }, h('p', { class: 'top-empty' }, 'Открываю почту...'));
     UI.modal({ title: 'Почта', sheet: true, cls: 'fixed-h mail-modal', body: h('div', { class: 'cv-wrap' }, h('div', { class: 'cv-box' }, list)) });
     let rows;
@@ -412,7 +412,7 @@ const Online = (() => {
 
   // ---------- промокоды: подарок приходит письмом ----------
   function promoDialog() {
-    if (!on()) { UI.toast('Промокоды работают во ВКонтакте и Telegram'); return; }
+    if (!on()) { UI.toast('Промокоды работают при подключении к сети'); return; }
     const inp = h('input', { class: 'promo-input', type: 'text', maxlength: '24', autocomplete: 'off', autocapitalize: 'characters', placeholder: 'КОД', 'aria-label': 'Промокод' });
     UI.modal({ title: 'Промокод', body: h('div', { class: 'promo-box' }, h('p', { class: 'center' }, 'Введи код из новостей или от друга. Подарок придёт в почту.'), inp),
       actions: [{ label: 'Получить', onClick: async () => {

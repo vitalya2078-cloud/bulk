@@ -93,12 +93,14 @@ const CHANGES = [
 
 const Changelog = (() => {
   const h = (...a) => UI.h(...a);
+  // во ВКонтакте пункты про Telegram не показываем
+  const items = (c) => (typeof Platform !== 'undefined' && Platform.kind() === 'vk' ? c.items.filter((t) => !/Telegram/.test(t)) : c.items);
   const cur = () => CHANGES.find((c) => c.v === CONFIG.version) || null;
 
   function block(c, main) {
     return h('div', { class: 'cl-block' + (main ? ' main' : '') },
       h('div', { class: 'cl-head' }, h('b', null, 'Версия ' + c.v), h('small', null, c.date)),
-      h('ul', { class: 'cl-list' }, c.items.map((t) => h('li', null, t))));
+      h('ul', { class: 'cl-list' }, items(c).map((t) => h('li', null, t))));
   }
 
   function open() {

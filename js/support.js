@@ -35,7 +35,7 @@ const Support = (() => {
   }
 
   async function open() {
-    if (typeof Online === 'undefined' || !Online.on()) { UI.toast('Поддержка работает во ВКонтакте и Telegram'); return; }
+    if (typeof Online === 'undefined' || !Online.on()) { UI.toast('Поддержка работает при подключении к сети'); return; }
     const list = h('div', { class: 'sup-list' }, h('p', { class: 'note center' }, 'Открываю переписку...'));
     const input = h('textarea', { class: 'sup-input', rows: '3', maxlength: '1000', placeholder: 'Напиши сообщение...' });
     let cid = newCid(), busy = false;

@@ -698,8 +698,9 @@ const UI = (() => {
           h('h3', { class: 'mini-title' }, 'Мы на связи'),
           h('div', { class: 'soc-block' },
             linkRow(brandIco('vk'), 'Сообщество ВКонтакте', 'Новости, конкурсы, идеи', L.vk),
-            linkRow(brandIco('tg'), 'Канал в Telegram', 'Новости игры', L.tgChannel),
-            linkRow(brandIco('tg'), 'Бульк в Telegram', 'Играй и там - прогресс общий', L.tg))));
+            // во ВКонтакте других площадок не показываем (требования каталога ВК)
+            Platform.kind() === 'vk' ? null : linkRow(brandIco('tg'), 'Канал в Telegram', 'Новости игры', L.tgChannel),
+            Platform.kind() === 'vk' ? null : linkRow(brandIco('tg'), 'Бульк в Telegram', 'Играй и там - прогресс общий', L.tg))));
         // поддержка
         if (typeof Support !== 'undefined' && typeof Online !== 'undefined' && Online.on()) {
           box.append(h('div', { class: 'panel' },
@@ -740,7 +741,7 @@ const UI = (() => {
         // об игре
         const about = h('div', { class: 'panel' },
           h('h3', { class: 'mini-title' }, 'Об игре'),
-          h('p', { class: 'note center' }, '«Бульк» - уютная лавка зелий: котёл с характером, жители со своими историями, питомцы, ковены и тайные рецепты. Один мир во ВКонтакте и в Telegram.'),
+          h('p', { class: 'note center' }, '«Бульк» - уютная лавка зелий: котёл с характером, жители со своими историями, питомцы, ковены и тайные рецепты.' + (Platform.kind() === 'vk' ? '' : ' Один мир во ВКонтакте и в Telegram.')),
           h('div', { class: 'soc-block' },
             h('button', { class: 'soc-row', type: 'button', onclick: () => { Sound.tap(); if (typeof Changelog !== 'undefined') Changelog.open(); } },
               pic('ui/sparkle', 'soc-ico'), h('span', null, h('small', null, 'Версия ' + C.version), h('b', null, 'Что нового')), h('i', null, 'Смотреть')),
@@ -922,7 +923,7 @@ const UI = (() => {
         })() : null,
         (typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/gift', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Промокод'), h('small', null, 'Есть код? Введи и получи подарок')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.promoDialog(), 0); } }, 'Ввести')) : null,
-        (typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/link', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Один прогресс'), h('small', null, 'Играй в ВК и Telegram с одним сохранением')),
+        (typeof Online !== 'undefined' && Online.on() && Platform.kind() !== 'vk') ? h('div', { class: 'set-row' }, pic('ui/link', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Один прогресс'), h('small', null, 'Играй в ВК и Telegram с одним сохранением')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.linkDialog(), 0); } }, 'Связать')) : null,
         typeof Guide !== 'undefined' ? h('div', { class: 'set-row' }, pic('ui/book', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Обучение'), h('small', null, 'Пройти подсказки для новичков ещё раз')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => { show('main'); Guide.replay(); }, 0); } }, 'Заново')) : null,
@@ -1159,7 +1160,7 @@ const UI = (() => {
       pic('ui/coven', 'soc-ico'), h('span', null, h('small', null, 'Ковен'), h('b', null, cv ? cv.name : 'Пока без ковена')), h('i', null, cv ? 'Открыть' : 'Найти')));
     const ln = Online.linked() || {};
     const both = ln.tg && ln.vk;
-    rows.push(h('button', { class: 'soc-row', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.linkDialog(), 0); } },
+    if (Platform.kind() !== 'vk') rows.push(h('button', { class: 'soc-row', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.linkDialog(), 0); } },
       pic('ui/link', 'soc-ico'), h('span', null, h('small', null, 'Один прогресс'),
         h('b', null, both ? 'ВКонтакте + Telegram' : 'Только ' + (ln.vk ? 'ВКонтакте' : 'Telegram'))), h('i', null, both ? 'Подробнее' : 'Привязать')));
     return h('div', { class: 'soc-block' }, rows);

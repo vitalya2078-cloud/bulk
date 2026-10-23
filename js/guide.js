@@ -91,7 +91,7 @@ const Guide = (() => {
     pets: () => (Econ.rank() >= CONFIG.petSlots[0] ? Pets.open() : 'Питомцы приходят на ранге «' + R(CONFIG.petSlots[0]) + '». Вари эссенцию - лавка вырастет.'),
     skills: () => SkillsUI.open(),
     games: () => Games.open(),
-    coven: () => (online() ? Coven.open() : 'Ковены работают во ВКонтакте и Telegram'),
+    coven: () => (online() ? Coven.open() : 'Ковены работают при подключении к сети'),
     tops: () => Tops.open(0),
     profile: () => UI.show('profile')
   };
@@ -149,7 +149,7 @@ const Guide = (() => {
   ];
   const NEWS = [
     { sel: ['#btn-profile'], text: 'Нажми на свой портрет - откроется Профиль: ранг, коллекции, ковен и всё о твоей лавке.', next: 'Дальше' },
-    { sel: ['.tab[data-go="friends"]'], text: 'Сообщество: наши группы ВКонтакте и Telegram, команда и поддержка прямо из игры.', next: 'Дальше' },
+    { sel: ['.tab[data-go="friends"]'], text: Platform.kind() === 'vk' ? 'Сообщество: наша группа ВКонтакте, друзья и поддержка прямо из игры.' : 'Сообщество: наши группы ВКонтакте и Telegram, команда и поддержка прямо из игры.', next: 'Дальше' },
     { sel: ['.tab[data-go="tasks"]'], text: 'В Заданиях появился «Путь алхимика» - цепочка целей с наградами. А кнопка «Перейти» ведёт прямо к делу.', next: 'Понятно' }
   ];
   const TUT_V = 1;

@@ -66,7 +66,7 @@ const Coven = (() => {
 
   // ---------- вход ----------
   async function open() {
-    if (!Online.on()) { UI.toast('Ковены работают во ВКонтакте и Telegram'); return; }
+    if (!Online.on()) { UI.toast('Ковены работают при подключении к сети'); return; }
     UI.modal({ title: 'Ковены', sheet: true, cls: 'fixed-h cv-modal', body: h('div', { class: 'cv-wrap' }, h('p', { class: 'top-empty' }, 'Открываю...')) });
     await refresh();
     UI.closeModal();
