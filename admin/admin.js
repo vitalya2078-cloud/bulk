@@ -1660,6 +1660,12 @@
 
     // каналы
     const chBox = h('div', { class: 'checks' });
+    // уведомление ВК - свой короткий текст (только текст, до 254 знаков); пусто - берём начало сообщения
+    const note = h('textarea', { class: 'input', rows: '3', maxlength: '254', placeholder: 'Например: Котёл проснулся! Загляни в лавку - тебя ждёт подарок дня 🎁' });
+    const noteN = h('span', { class: 'meta' });
+    const noteBox = h('div', { class: 'field', style: { display: 'none' } }, h('span', null, 'Текст уведомления ВК'), note,
+      h('div', { class: 'ed-foot' }, noteN), h('p', { class: 'hint' }, 'Уведомление - короткая строка без картинок и кнопок. Пусто - уйдёт начало сообщения.'));
+    note.addEventListener('input', () => upd());
     const drawCh = () => chBox.replaceChildren(...Object.keys(CH).map((k) => h('button', { type: 'button', class: 'check' + (st.ch[k] ? ' on' : ''), onclick: () => { st.ch[k] = !st.ch[k]; drawCh(); aud.count(); upd(); } },
       h('span', { class: 'box' }, st.ch[k] ? icon('check') : null), h('span', null, CH[k], st.counts ? h('b', { class: 'ch-n' }, ' ' + num(st.counts[k] || 0)) : null))));
     const chans = () => Object.keys(st.ch).filter((k) => st.ch[k]);
@@ -1754,8 +1760,11 @@
       const m = rich.get();
       const lim = st.media.length ? 1024 : 4096;
       const over = m.html.length > lim;
-      counter.textContent = num(m.text.length) + ' / ' + num(lim) + (st.media.length ? ' (подпись к картинке)' : '') + (st.ch.vkn ? ' · уведомление ВК: первые 254' : '');
-      counter.classList.toggle('bad', over || (st.ch.vkn && m.text.length > 254));
+      counter.textContent = num(m.text.length) + ' / ' + num(lim) + (st.media.length ? ' (подпись к картинке)' : '');
+      counter.classList.toggle('bad', over);
+      noteBox.style.display = st.ch.vkn ? '' : 'none';
+      noteN.textContent = note.value.length + ' / 254';
+      const noteText = (note.value.trim() || m.text).replace(/\s+/g, ' ').trim().slice(0, 254);
       const mediaPrev = st.media.filter((x) => x.kind === 'photo' || x.kind === 'animation').slice(0, 4).map((x) => h('img', { src: x.local || x.url, alt: '', class: st.opts.spoiler ? 'blur' : '' }));
       const files = st.media.filter((x) => x.kind === 'document' || x.kind === 'video').map((x) => h('div', { class: 'pf' }, icon(x.kind === 'video' ? 'play' : 'file'), x.name || 'файл'));
       const tgText = h('div', { class: 'pt' }); tgText.innerHTML = (m.html || '<span class="dim">Текст сообщения</span>').replace(/<tg-spoiler>/g, '<span class="sp">').replace(/<\/tg-spoiler>/g, '</span>').replace(/\n/g, '<br>');
@@ -1765,7 +1774,7 @@
       prev.replaceChildren(...[
         st.ch.tg ? h('div', { class: 'pv tg' }, h('small', null, 'Telegram'), h('div', { class: 'bub' }, st.opts.above ? tgText : null, mediaPrev.length ? h('div', { class: 'pm n' + mediaPrev.length }, mediaPrev) : null, files, st.opts.above ? null : tgText), kb) : null,
         st.ch.vk ? h('div', { class: 'pv vk' }, h('small', null, 'ВКонтакте'), h('div', { class: 'bub' }, vkText, mediaPrev.length ? h('div', { class: 'pm n' + mediaPrev.length }, mediaPrev.map((x) => x.cloneNode())) : null, files.map((x) => x.cloneNode(true)), kb.map((x) => x.cloneNode(true)))) : null,
-        st.ch.vkn ? h('div', { class: 'pv vk' }, h('small', null, 'Уведомление ВК'), h('div', { class: 'bub note' }, (m.text || 'Текст').replace(/\s+/g, ' ').slice(0, 254))) : null].filter(Boolean));
+        st.ch.vkn ? h('div', { class: 'pv vk' }, h('small', null, 'Уведомление ВК'), h('div', { class: 'bub note' }, noteText || 'Текст уведомления')) : null].filter(Boolean));
     }
     function vkRender(m) {
       if (!m.text) return [h('span', { class: 'dim' }, 'Текст сообщения')];
@@ -1789,7 +1798,8 @@
       const m = rich.get();
       const ch = chans();
       if (!ch.length) { toast('Выбери, куда отправить', true); return; }
-      if (!m.text.trim() && !st.media.length) { toast('Напиши текст или добавь картинку', true); return; }
+      const onlyNote = ch.length === 1 && ch[0] === 'vkn';
+      if (onlyNote ? !(note.value.trim() || m.text.trim()) : (!m.text.trim() && !st.media.length)) { toast(onlyNote ? 'Напиши текст уведомления' : 'Напиши текст или добавь картинку', true); return; }
       if (st.media.some((x) => x.busy)) { toast('Дождись загрузки файлов', true); return; }
       if (m.html.length > (st.media.length ? 1024 : 4096)) { toast('Текст длинный для Telegram: сократи', true); return; }
       const bad = st.buttons.find((b) => b.label && b.t === 'url' && !/^https?:\/\/\S+\.\S+/.test(b.url || ''));
@@ -1804,7 +1814,7 @@
         if (!(await confirmBox((sendAt ? 'Запланировать' : 'Отправить') + ' ' + num(n) + ' ' + word(n, 'сообщение', 'сообщения', 'сообщений') + '?',
           ch.map((k) => CH[k] + ': ' + num(st.counts ? st.counts[k] : 0)).join('\n') + (sendAt ? '\nОтправка ' + dateTime(sendAt) : '\nТелеграм уходит ~25 сообщений в секунду.'), sendAt ? 'Запланировать' : 'Отправить'))) return;
       }
-      const msg = { text: m.text, html: m.html, vkfmt: m.vkfmt, media: st.media.map((x) => Object.assign({ url: x.url, kind: x.kind, name: x.name }, x.vk ? { vk: x.vk, thumb: x.thumb } : {})),
+      const msg = { text: m.text, html: m.html, vkfmt: m.vkfmt, note: note.value.trim(), media: st.media.map((x) => Object.assign({ url: x.url, kind: x.kind, name: x.name }, x.vk ? { vk: x.vk, thumb: x.thumb } : {})),
         buttons: st.buttons.filter((b) => b.label).map((b) => ({ t: b.t, label: b.label, url: b.url || '', row: !!b.row })), opts: st.opts };
       const r = await act('adm_bcast_send', { p: { title: title.value.trim() || (self ? 'Проверка' : m.text.slice(0, 40)), ch, aud: a, msg, send_at: self ? null : sendAt, nodup: !!st.opts.nodup } });
       if (!r) return;
@@ -1845,6 +1855,7 @@
       st.media = (d.msg.media || []).map((x) => Object.assign({}, x));
       st.buttons = (d.msg.buttons || []).map((x) => Object.assign({}, x));
       st.opts = Object.assign({ nodup: true }, d.msg.opts || {});
+      note.value = d.msg.note || '';
       setTimeout(() => rich.set(d.msg.html || escHtml(d.msg.text || '')), 0);
     }
     drawCh(); drawMedia(); drawBtns(); upd();
@@ -1855,6 +1866,7 @@
         group('Кому', aud.el),
         field('Название', title),
         h('div', { class: 'field' }, h('span', null, 'Сообщение'), rich.el, h('div', { class: 'ed-foot' }, counter)),
+        noteBox,
         h('div', { class: 'field' }, h('span', null, 'Вложения'), mediaBox, h('p', { class: 'hint' }, 'Фото, видео, гиф или файл. До 10 штук, каждое до 50 МБ. Несколько фото и видео в Telegram придут альбомом, кнопки - следом. Во ВК видео уходит файлом.')),
         h('div', { class: 'field' }, h('span', null, 'Кнопки под сообщением'), btnBox),
         h('div', { class: 'field' }, h('span', null, 'Настройки'), optBox),

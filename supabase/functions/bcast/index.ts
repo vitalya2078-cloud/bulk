@@ -103,7 +103,7 @@ async function upload(req: Request) {
 // ---------- сообщение ----------
 type Btn = { t: string; label: string; url?: string; row?: boolean };
 type Media = { url: string; kind: string; name?: string };
-type Msg = { text?: string; html?: string; vkfmt?: unknown[]; media?: Media[]; buttons?: Btn[]; opts?: Record<string, boolean> };
+type Msg = { text?: string; html?: string; note?: string; vkfmt?: unknown[]; media?: Media[]; buttons?: Btn[]; opts?: Record<string, boolean> };
 
 function btnRows(btns: Btn[] = []) {
   const rows: Btn[][] = [];
@@ -228,7 +228,8 @@ async function vkSend(token: string, row: any, m: Msg, att: string): Promise<{ s
   return { st: "fail", err: `${c}: ${d}` };
 }
 async function vkNotify(token: string, rows: any[], m: Msg): Promise<Res[]> {
-  const text = (m.text || "").replace(/\s+/g, " ").trim().slice(0, 254);
+  // свой текст уведомления из админки, иначе начало сообщения
+  const text = ((m.note || "").trim() || m.text || "").replace(/\s+/g, " ").trim().slice(0, 254);
   const r = await vk("notifications.sendMessage", { user_ids: rows.map((x) => x.peer).join(","), message: text, random_id: rows[0].id }, token);
   if (r.error) return rows.map((x) => ({ id: x.id, st: r.error.error_code === 6 ? "q" : "fail", err: `${r.error.error_code}: ${r.error.error_msg}` }));
   const by = new Map<number, any>((r.response || []).map((s: any) => [Number(s.user_id), s]));
