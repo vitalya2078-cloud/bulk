@@ -388,6 +388,8 @@ const Online = (() => {
     if (!on()) return;
     Platform.profile().then((p) => { platPhoto = (p && p.photo) || ''; }).catch(() => {});
     setTimeout(() => hello(true), 1500);
+    // Telegram сказал, что боту можно писать - отмечаем, чтобы рассылки до игрока доходили
+    if (Platform.botAllowed && Platform.botAllowed()) setTimeout(() => { call('subs_set', { p: { tg: true } }, 8000).catch(() => {}); }, 6000);
     setInterval(() => { if (!document.hidden) hello(false); }, 60000);
     // свернул - сразу отправляем прогресс; вернулся - проверяем, не открыта ли игра в другом месте
     document.addEventListener('visibilitychange', () => { hello(false, true); notifyPush(document.hidden); });
@@ -396,7 +398,39 @@ const Online = (() => {
 
   const call = (fn, body, ms) => rpc(fn, Object.assign({ init_data: initData() }, body || {}), ms);
 
+  // ---------- новости лавки (рассылки команды) ----------
+  const subsKey = () => (Platform.kind() === 'vk' ? 'vk' : 'tg');
+  async function newsState() {
+    try { const r = await call('subs_get', {}, 8000); return !!r[subsKey()]; } catch (e) { return null; }
+  }
+  async function setNews(v) {
+    if (v && !(await Platform.allowNews())) { UI.toast(Platform.kind() === 'vk' ? 'ВКонтакте не разрешил сообщения от сообщества' : 'Бот не сможет писать без разрешения'); return false; }
+    try { await call('subs_set', { p: { [subsKey()]: !!v } }, 8000); } catch (e) { UI.toast('Не получилось, проверь интернет'); return false; }
+    UI.toast(v ? 'Будем присылать новости лавки, подарки и акции' : 'Новости выключены');
+    return true;
+  }
+
+  // ---------- промокоды: подарок приходит письмом ----------
+  function promoDialog() {
+    if (!on()) { UI.toast('Промокоды работают во ВКонтакте и Telegram'); return; }
+    const inp = h('input', { class: 'promo-input', type: 'text', maxlength: '24', autocomplete: 'off', autocapitalize: 'characters', placeholder: 'КОД', 'aria-label': 'Промокод' });
+    UI.modal({ title: 'Промокод', body: h('div', { class: 'promo-box' }, h('p', { class: 'center' }, 'Введи код из новостей или от друга. Подарок придёт в почту.'), inp),
+      actions: [{ label: 'Получить', onClick: async () => {
+        const code = inp.value.trim();
+        if (code.length < 3) { UI.toast('Введи код'); return false; }
+        try { await call('promo_redeem', { p_code: code }, 10000); } catch (e) {
+          const m = String(e && e.message || e);
+          UI.toast(/used/.test(m) ? 'Ты уже получил подарок по этому коду' : /run out/.test(m) ? 'Подарки по этому коду закончились' : /too many/.test(m) ? 'Много попыток. Попробуй через час' : /play first/.test(m) ? 'Сначала поиграй чуть-чуть' : /bad code/.test(m) ? 'Такого кода нет или он уже не действует' : 'Не получилось, проверь интернет');
+          Sound.deny(); return false;
+        }
+        Sound.coin(); UI.toast('Подарок ждёт в почте!');
+        lastHello = 0; hello(false);
+        setTimeout(openMail, 400);
+      } }, { label: 'Отмена', alt: true }] });
+    setTimeout(() => inp.focus(), 300);
+  }
+
   const boost = () => (state.settings && state.settings.boost) || null;
 
-  return { linked: () => linked, boost, call, start, openMail, admCode, notifyPush, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid };
+  return { linked: () => linked, boost, call, start, openMail, promoDialog, newsState, setNews, admCode, notifyPush, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid };
 })();

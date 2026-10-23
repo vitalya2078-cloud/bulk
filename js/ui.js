@@ -912,6 +912,16 @@ const UI = (() => {
           b.addEventListener('click', async () => { Sound.tap(); const v = !st.notif; if (await Social.setNotify(v)) { b.classList.toggle('on', v); b.setAttribute('aria-checked', v ? 'true' : 'false'); } });
           return h('div', { class: 'set-row' }, pic('ui/envelope', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Напоминания'), h('small', null, 'Лавка полна, питомец вернулся, пришёл босс')), b);
         })() : null,
+        (typeof Online !== 'undefined' && Online.on() && Platform.canNews()) ? (() => {
+          const b = h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': 'false', 'aria-label': 'Новости лавки' });
+          const set = (v) => { b.classList.toggle('on', v); b.setAttribute('aria-checked', v ? 'true' : 'false'); };
+          Online.newsState().then((v) => { if (v !== null) set(v); });
+          b.addEventListener('click', async () => { Sound.tap(); const v = !b.classList.contains('on'); if (await Online.setNews(v)) set(v); });
+          return h('div', { class: 'set-row' }, pic('ui/gift', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Новости лавки'),
+            h('small', null, Platform.kind() === 'vk' ? 'Подарки и акции в сообщениях от сообщества' : 'Подарки и акции от бота в Telegram')), b);
+        })() : null,
+        (typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/gift', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Промокод'), h('small', null, 'Есть код? Введи и получи подарок')),
+          h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.promoDialog(), 0); } }, 'Ввести')) : null,
         (typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/link', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Один прогресс'), h('small', null, 'Играй в ВК и Telegram с одним сохранением')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.linkDialog(), 0); } }, 'Связать')) : null,
         typeof Guide !== 'undefined' ? h('div', { class: 'set-row' }, pic('ui/book', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Обучение'), h('small', null, 'Пройти подсказки для новичков ещё раз')),

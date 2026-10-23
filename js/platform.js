@@ -289,6 +289,16 @@ const Platform = (() => {
     return false;
   }
 
+  // ---------- новости лавки: ВК - сообщения от сообщества, Telegram - бот может писать ----------
+  const canNews = () => (kind === 'vk' && !!(CONFIG.links && CONFIG.links.vkGroupId)) || (kind === 'tg' && canNotify());
+  async function allowNews() {
+    if (kind === 'vk') { try { const r = await withTimeout(vkCall('VKWebAppAllowMessagesFromGroup', { group_id: CONFIG.links.vkGroupId }), 60000); return !!(r && r.result); } catch (e) { return false; } }
+    if (kind === 'tg') return allowNotify();
+    return false;
+  }
+  // Telegram сам сообщает, разрешено ли боту писать игроку
+  const botAllowed = () => !!(kind === 'tg' && tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.allows_write_to_pm);
+
   // ---------- истории ----------
   const canStory = () => kind === 'vk' || (kind === 'tg' && tgVer('7.8') && typeof tg.shareToStory === 'function');
   // blob - картинка (data:image/jpeg) для ВК; url - картинка на сайте для Telegram; text - подпись
@@ -318,7 +328,7 @@ const Platform = (() => {
 
   return {
     init, kind: () => kind, label, userId, referrer, profile, authData, setUid,
-    storageGet, storageSet, adsAvailable, rewardedAd, haptic, canFavorite, addFavorite, canStory, shareStory, canNotify, allowNotify,
+    storageGet, storageSet, adsAvailable, rewardedAd, haptic, canFavorite, addFavorite, canStory, shareStory, canNotify, allowNotify, canNews, allowNews, botAllowed,
     invite, share, hasLeaderboard, leaderboard, openUrl
   };
 })();
