@@ -264,6 +264,7 @@ const Pets = (() => {
     const p = st(), L = LOC[locId], T = D.tripLengths[lenIdx];
     if (!p.own[id] || p.trip[id] || !L || !T || !locOpen(L)) return false;
     p.trip[id] = { loc: locId, len: lenIdx, end: Date.now() + T.min * 60000, start: Date.now() };
+    p.trips = (p.trips || 0) + 1;
     p.room = p.room.filter((x) => x !== id);
     const a = actors.find((q) => q.id === id);
     if (a) a.leaving = true;

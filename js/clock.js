@@ -14,7 +14,8 @@ const Clock = (() => {
   try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && isFinite(v.off)) off = v.off; } catch (e) { /* ignore */ }
   // опорная точка: в момент aPerf время игры было aNow
   let aNow = real() + off, aPerf = perf();
-  const now = () => aNow + (perf() - aPerf);
+  // целые миллисекунды, как у настоящего Date.now() (по ним строятся номера и ключи)
+  const now = () => Math.floor(aNow + (perf() - aPerf));
   const anchor = (t) => { aNow = t; aPerf = perf(); };
 
   Date.now = now;

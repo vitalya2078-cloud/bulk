@@ -484,6 +484,7 @@ const Games = (() => {
       Econ.earn(ess);
       Econ.addXp(10 + stars * 10);
       if (Econ.progress) Econ.progress('games', 1);
+      Econ.s.stat.games = (Econ.s.stat.games || 0) + 1;
       save();
       Sound.fanfare();
       const body = h('div', { class: 'game-result' },

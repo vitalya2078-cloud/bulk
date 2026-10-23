@@ -422,7 +422,7 @@ const UI = (() => {
     D.cards.forEach((c) => { if (!Econ.cardLock(c) && Econ.level(c.id) < C.cardMaxLevel && Econ.cardCost(c, Econ.level(c.id)) <= s.e) affordable++; });
     setBadge('shop', affordable);
     const daily = Econ.dailyState().available ? 1 : 0;
-    setBadge('tasks', Econ.claimableQuests() + daily + Story.readyList().length + Requests.readyCount());
+    setBadge('tasks', Econ.claimableQuests() + daily + Story.readyList().length + Requests.readyCount() + (typeof Guide !== 'undefined' && Guide.ready() ? 1 : 0));
     setBadge('main', screen !== 'main' && Visitors.active() ? '!' : 0);
   }
 
@@ -594,7 +594,7 @@ const UI = (() => {
     tasks: {
       key: () => {
         const s = S();
-        return s.jtab + '|' + (s.q ? s.q.d + s.q.l.map((q) => q.c).join('') : '') + '|' + s.daily.l + '|' + s.served + '|' + JSON.stringify(s.story) + Story.readyList().join(',')
+        return (typeof Guide !== 'undefined' ? Guide.key() : '') + s.jtab + '|' + (s.q ? s.q.d + s.q.l.map((q) => q.c).join('') : '') + '|' + s.daily.l + '|' + s.served + '|' + JSON.stringify(s.story) + Story.readyList().join(',')
           + '|' + Requests.list().map((r) => r.id + (Requests.ready(r) ? 1 : 0)).join(',');
       },
       render(box) {
@@ -603,6 +603,7 @@ const UI = (() => {
         const dayN = Econ.claimableQuests() + (Econ.dailyState().available ? 1 : 0);
         const tabs = [['req', 'Просьбы', Requests.readyCount() + Story.readyList().length], ['day', 'На сегодня', dayN], ['people', 'Жители', 0]];
         if (!tabs.some((t) => t[0] === s.jtab)) s.jtab = 'req';
+        if (typeof Guide !== 'undefined') Guide.block(box); // «Путь алхимика» - главная цель, всегда сверху
         box.append(h('div', { class: 'seg', role: 'tablist' }, tabs.map(([id, l, n]) => h('button', {
           type: 'button', class: 'seg-btn' + (s.jtab === id ? ' on' : ''), role: 'tab',
           onclick: () => { s.jtab = id; Sound.tap(); rebuild(true); }
@@ -641,14 +642,20 @@ const UI = (() => {
               const v = Econ.claimQuest(i);
               if (v) { Sound.coin(); toast('+' + ess(v) + ' эссенции и +' + C.crystals.quest + ' ' + crystalsWord(C.crystals.quest)); save(); refresh(true); }
             } }, 'Забрать');
+          } else if (q.c === 0 && typeof Guide !== 'undefined' && Guide.goFor(t.type)) {
+            // «Перейти» - прямо к делу; сколько сделано - в строке награды
+            btn = h('button', { class: 'pill-btn alt go-btn', type: 'button', onclick: () => { Sound.tap(); Guide.go(Guide.goFor(t.type)); } }, 'Перейти');
           } else {
             btn = h('span', { class: 'quest-state' });
           }
+          const cnt = h('span', { class: 'q-cnt' });
+          if (q.c === 0) reward.append(cnt);
           box.append(card(t.img, t.text(q.n), null, [h('div', { class: 'bar' }, fill), reward], btn, q.c === 2 ? 'done' : ''));
           refs.push(() => {
             fill.style.width = (100 * q.p / q.n) + '%';
             setText(rewardM.v, ess(Econ.questReward(q)));
-            if (q.c === 2) { if (!btn.querySelector('.ok-ico')) btn.replaceChildren(pic('hud/check', 'ok-ico')); } else if (q.c !== 1) setText(btn, Fmt.num(q.p) + '/' + Fmt.num(q.n));
+            if (q.c === 2) { if (!btn.querySelector('.ok-ico')) btn.replaceChildren(pic('hud/check', 'ok-ico')); } else if (q.c !== 1 && btn.classList.contains('quest-state')) setText(btn, Fmt.num(q.p) + '/' + Fmt.num(q.n));
+            if (q.c === 0) setText(cnt, ' · сделано ' + Fmt.num(q.p) + ' из ' + Fmt.num(q.n));
           });
         });
         const timer = h('p', { class: 'note' });
@@ -902,6 +909,8 @@ const UI = (() => {
         })() : null,
         (typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/link', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Один прогресс'), h('small', null, 'Играй в ВК и Telegram с одним сохранением')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.linkDialog(), 0); } }, 'Связать')) : null,
+        typeof Guide !== 'undefined' ? h('div', { class: 'set-row' }, pic('ui/book', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Обучение'), h('small', null, 'Пройти подсказки для новичков ещё раз')),
+          h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => { show('main'); Guide.replay(); }, 0); } }, 'Заново')) : null,
         (typeof Support !== 'undefined' && typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/support', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Поддержка'), h('small', null, 'Ошибка, вопрос или идея - напиши команде')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Support.open(), 0); } }, 'Написать')) : null,
         (typeof Online !== 'undefined' && Online.isAdmin()) ? h('div', { class: 'set-row' }, pic('ui/key', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Приложение админки'), h('small', null, 'Код для входа, только для команды')),

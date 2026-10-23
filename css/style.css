@@ -2221,3 +2221,38 @@ body[data-screen]:not([data-screen="main"]) .wallet .effects { display: none; }
 .sup-modal .sup-msg p { color: #FFF6E8; }
 .sup-modal .sup-msg.team p { color: #3A1F00; }
 .sup-modal .sup-msg.team small { color: #6A3A1E; }
+
+/* ---------- 0.22: «Путь алхимика» ---------- */
+.panel.path { margin-bottom: 10px; }
+.path-head { display: flex; align-items: center; gap: 10px; }
+.path-ico { width: 44px; height: 44px; flex-shrink: 0; filter: drop-shadow(0 3px 2px rgba(10, 4, 20, .5)); }
+.path-head small { display: block; font-size: 11px; color: var(--muted); line-height: 1.25; }
+.path-head b { display: block; font-family: var(--head); font-size: 17px; color: #FFE48A; line-height: 1.2;
+  text-shadow: -1px 0 #3A1050, 1px 0 #3A1050, 0 -1px #3A1050, 0 2px 0 #3A1050; }
+.path-text { margin: 6px 0 8px; font-size: 13.5px; line-height: 1.35; color: var(--text); }
+.path-row { display: flex; align-items: center; gap: 10px; }
+.path-prog { flex: 1; min-width: 0; }
+.path-prog small { display: block; margin-top: 3px; font-size: 11.5px; color: var(--muted); }
+.path-reward { margin-top: 6px; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.path-reward b { color: #FFD36B; }
+.path-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
+.path-dots i { width: 10px; height: 10px; border-radius: 50%; background: rgba(10, 4, 20, .6); border: 1px solid rgba(255, 211, 107, .35); }
+.path-dots i.done { background: #FFD36B; }
+.path-dots i.on { background: #F2A23A; box-shadow: 0 0 6px #FFD36B; }
+.go-btn { white-space: nowrap; }
+.q-cnt { color: var(--muted); }
+
+/* ---------- 0.22: обучение - подсветка места и подсказка Булька ---------- */
+.tut { position: fixed; inset: 0; z-index: 25; pointer-events: none; }
+.tut-ring { position: fixed; border: 3px solid #FFD36B; border-radius: 18px; box-shadow: 0 0 0 9999px rgba(10, 4, 20, .55), 0 0 18px #FFD36B;
+  transition: left .25s, top .25s, width .25s, height .25s; animation: tut-pulse 1.4s ease-in-out infinite; }
+@keyframes tut-pulse { 50% { border-color: #FFF3C4; box-shadow: 0 0 0 9999px rgba(10, 4, 20, .55), 0 0 28px #FFE48A; } }
+.tut-box { position: fixed; left: 12px; right: 12px; display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: 18px;
+  background: linear-gradient(180deg, #4A2C78, #2E1B4D); border: 2px solid #FFD36B; box-shadow: 0 8px 20px rgba(10, 4, 20, .6); pointer-events: auto; }
+.tut-ico { width: 52px; height: 52px; flex-shrink: 0; }
+.tut-main { flex: 1; min-width: 0; }
+.tut-main p { margin: 0 0 8px; font-size: 14px; line-height: 1.4; color: #FFF6E8; }
+.tut-btns { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tut-skip { padding: 6px 4px; border: 0; background: none; color: #CDBBEA; font: 800 12.5px var(--body), system-ui, sans-serif; text-decoration: underline; cursor: pointer; }
+#stage.flash { animation: stage-flash 1.6s ease-out; }
+@keyframes stage-flash { 0%, 60% { filter: drop-shadow(0 0 18px #FFD36B) brightness(1.15); } 100% { filter: none; } }

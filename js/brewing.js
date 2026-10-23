@@ -291,6 +291,7 @@ const Brew = (() => {
       s.sleepPot = true;
     }
     s.bag[k]--;
+    s.stat.drunk = (s.stat.drunk || 0) + 1; // для «Пути алхимика»
     if (!s.bag[k]) delete s.bag[k];
     let essence = 0;
     if (p.id === 'haste') { essence = Econ.hoursOfIncome(quality ? 1.5 : 1, 2000); Econ.earn(essence); }
@@ -356,6 +357,7 @@ const Brew = (() => {
     if (!slot || slot.left <= 0 || s.cr < B.shopPrice) return false;
     s.cr -= B.shopPrice;
     s.shop.b[i] = (s.shop.b[i] || 0) + 1;
+    s.stat.bought = (s.stat.bought || 0) + 1;
     add(slot.x.id);
     return slot.x;
   }

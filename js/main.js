@@ -228,6 +228,7 @@
   if (typeof Changelog !== 'undefined') Changelog.check();
   if (typeof Back !== 'undefined') Back.start();
   if (typeof Social !== 'undefined') Social.start();
+  if (typeof Guide !== 'undefined') Guide.start();
   setTimeout(() => UI.say(pick(saved ? D.phrases.welcome : ['Привет! Я ' + Econ.s.wear.name + ', волшебный котёл. Тапай по мне, и я сварю эссенцию']), 3200), 500);
 
   // ---------- главный цикл ----------
