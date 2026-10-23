@@ -2571,3 +2571,15 @@ body:not(.has-modal) #toast { bottom: calc(var(--safe-bottom) + 216px); }
 .daily b { font-size: 11px; letter-spacing: -.1px; }
 .daily small { font-size: 10px; }
 @media (max-width: 370px) { .daily-row { gap: 4px; padding: 0 6px; } .daily .d-ico { width: 28px; height: 28px; margin-top: -6px; } .daily b { font-size: 10.5px; } }
+
+/* 0.29: выбран вариант B - навигация без подложек и обводок */
+.side-btns .brew-btn::before, .side-btns .event-btn::before { content: none; }
+.side-btns { gap: 8px; }
+.side-btns .brew-btn .pic, .side-btns .event-btn .pic { width: 44px; height: 44px; margin-bottom: 0; filter: drop-shadow(0 3px 3px rgba(10,4,20,.75)) drop-shadow(0 0 6px rgba(10,4,20,.35)); }
+.daily, .daily:active { border: 0; background: none; box-shadow: none; padding: 0 2px; }
+.daily .d-ico { width: 38px; height: 38px; margin-top: 0; filter: drop-shadow(0 3px 3px rgba(10,4,20,.75)); }
+.daily b { color: #FFF6E8; font-size: 12px; text-shadow: -1.5px 0 #1A0E2C, 1.5px 0 #1A0E2C, 0 -1.5px #1A0E2C, 0 1.5px #1A0E2C, 0 2px 2px #1A0E2C; }
+.daily small { color: #FFE48A; font-size: 10.5px; text-shadow: -1px 0 #1A0E2C, 1px 0 #1A0E2C, 0 -1px #1A0E2C, 0 1px #1A0E2C; }
+.daily .dot { top: -2px; right: auto; left: 28px; }
+.topbar .rank, .crystal-pill, #btn-settings { border-color: transparent; background: rgba(20,8,38,.55); box-shadow: none; }
+@media (max-width: 370px) { .daily .d-ico { width: 32px; height: 32px; } .daily b { font-size: 11px; } }
