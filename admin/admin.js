@@ -392,12 +392,45 @@
       sec('14 дней'),
       h('div', { class: 'panel pad chart' }, chart(s.days || []),
         h('div', { class: 'legend' }, h('span', null, h('i', { style: { background: 'var(--acc)' } }), 'новые'), h('span', null, h('i', { style: { background: 'var(--blue)' } }), 'активные'))),
+      sec('Удержание', 'по дню прихода'),
+      retentionBox(id),
       sec('Ранги лавок'),
       h('div', { class: 'panel pad' }, bars(RANKS.map((n, i) => [n, (s.ranks || {})[i] || 0]), total)),
       sec('Версии за неделю'),
       h('div', { class: 'panel pad' }, bars(Object.entries(s.versions || {}).sort((a, b) => b[1] - a[1]), vTotal)),
       Object.assign(sec('Надёжность', '7 дней'), { id: 'health' }),
       healthBox(id));
+  }
+
+  // удержание: сколько из пришедших в день вернулись через 1/3/7/14 дней и на каком этапе уходят
+  const GONE_TIME = ['меньше 2 мин', '2-10 мин', '10-30 мин', '30 мин - 2 ч', 'больше 2 ч'];
+  function retentionBox(id) {
+    const box = h('div', { class: 'panel pad' }, h('p', { class: 'hint' }, 'Загружаю...'));
+    api('adm_retention').then((r) => {
+      if (stale(id)) return;
+      const k = (v, label) => h('div', { class: 'kpi' }, h('b', null, v), h('span', null, label));
+      const pc = (v) => (v == null ? '-' : v + '%');
+      const cell = (v) => h('td', { class: v == null ? 'na' : v >= 40 ? 'hi' : v >= 20 ? 'mid' : 'lo' }, v == null ? '·' : v + '%');
+      const rows = (r.cohorts || []).filter((c) => c.n > 0);
+      const av = r.avg || {};
+      const gone = r.gone || 0;
+      box.replaceChildren(
+        h('div', { class: 'kpis', style: { gridTemplateColumns: '1fr 1fr' } }, k(pc(av.r1), 'вернулись на 2-й день'), k(pc(av.r7), 'вернулись через неделю'),
+          k(av.days == null ? '-' : String(av.days).replace('.', ','), 'дней в игре в среднем'), k(num(gone), 'ушли (нет 3+ дня)')),
+        rows.length ? h('div', { class: 'coh-wrap' }, h('table', { class: 'coh' },
+          h('thead', null, h('tr', null, h('th', null, 'Пришли'), h('th', null, 'Сколько'), h('th', null, '1 д'), h('th', null, '3 д'), h('th', null, '7 д'), h('th', null, '14 д'))),
+          h('tbody', null, rows.map((c) => h('tr', null, h('td', null, c.d), h('td', null, num(c.n)), cell(c.r1), cell(c.r3), cell(c.r7), cell(c.r14))))))
+          : h('p', { class: 'hint' }, 'За 20 дней новых игроков не было.'),
+        h('p', { class: 'hint' }, 'Процент - сколько из пришедших в этот день заходили хотя бы раз спустя 1, 3, 7, 14 дней. «·» - срок ещё не наступил.'),
+        gone ? h('div', null,
+          h('h4', { class: 'sub' }, 'Где уходят'),
+          h('p', { class: 'hint', style: { marginTop: 0 } }, 'Из ушедших ' + num(r.gone_one || 0) + ' (' + Math.round(100 * (r.gone_one || 0) / gone) + '%) не вернулись после первого захода.'),
+          h('h4', { class: 'sub' }, 'Сколько успели поиграть'),
+          bars(GONE_TIME.map((n, i) => [n, (r.gone_time || [])[i] || 0]), gone),
+          h('h4', { class: 'sub' }, 'На каком ранге ушли'),
+          bars(RANKS.map((n, i) => [n, (r.gone_rank || {})[i] || 0]).filter((x) => x[1]), gone)) : null);
+    }).catch((e) => { if (!stale(id)) box.replaceChildren(h('p', { class: 'hint' }, errText(e))); });
+    return box;
   }
 
   // сбои загрузки сохранения у игроков и сохранения, которые база не приняла (защита сработала)

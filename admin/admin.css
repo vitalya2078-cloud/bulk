@@ -373,3 +373,15 @@ pre { margin: 0; padding: 0 14px 14px; white-space: pre-wrap; word-break: break-
 .mi.add { cursor: pointer; }
 .mi.add small { white-space: normal; }
 .file-hit { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; }
+
+/* 0.27: удержание */
+.coh-wrap { overflow-x: auto; margin-top: 12px; }
+.coh { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.coh th { font-weight: 500; color: var(--mut); text-align: center; padding: 4px 2px 8px; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
+.coh td { text-align: center; padding: 6px 2px; border-top: 1px solid var(--line); }
+.coh td:first-child, .coh th:first-child { text-align: left; }
+.coh td.hi { color: var(--green); font-weight: 600; }
+.coh td.mid { color: var(--amber); }
+.coh td.lo { color: var(--red); }
+.coh td.na { color: var(--mut); opacity: .5; }
+h4.sub { margin: 16px 0 8px; font-size: 12px; font-weight: 500; color: var(--mut); letter-spacing: .06em; text-transform: uppercase; }
