@@ -226,14 +226,16 @@ const Brew = (() => {
     if (r && bagCount() >= B.bagMax) return { error: 'Сумка полна: выпей что-нибудь' };
     for (const id in need) s.ing[id] -= need[id];
     if (r) {
-      const quality = ids.some((id) => ING[id].rare);
+      // 0.30: лунное зелье - ночью звёздный ингредиент делает зелье отличным
+      const moon = !ids.some((id) => ING[id].rare) && ids.some((id) => ING[id].p === 'star') && typeof TimeDay !== 'undefined' && TimeDay.isNight();
+      const quality = moon || ids.some((id) => ING[id].rare);
       putInBag(r, quality);
       s.brewed++;
       const first = learn(r.id);
       Econ.addXp(C.xp.brew);
       Econ.progress('brew', 1);
       if (typeof Story !== 'undefined') Story.event('brew', r.p.id);
-      return { potion: r.p, recipe: r, quality, first };
+      return { potion: r.p, recipe: r, quality, first, moon };
     }
     // бурда: немного эссенции и подсказка от Булька
     const v = Econ.hoursOfIncome(0.05, 100);
@@ -513,6 +515,7 @@ const Brew = (() => {
         body.append(h('div', { class: 'brew-result ok' + (last.quality ? ' gold' : '') }, pic(last.potion.img, 'res-pic'),
           h('div', null, h('b', null, last.potion.name + (last.quality ? ' · отличное' : '')),
             h('p', null, last.potion.desc + durText(last.potion, last.quality)),
+            last.moon ? h('small', { class: 'new' }, 'Лунное зелье: ночью звёздный ингредиент делает его отличным') : null,
             last.first ? h('small', { class: 'new' }, 'Новый рецепт! +' + B.firstCrystals + ' ' + UI.crystalsWord(B.firstCrystals)) : h('small', null, 'Зелье в сумке'))));
       }
     }
@@ -668,7 +671,22 @@ const Brew = (() => {
     const face = pic(Date.now() < happyT ? 'chars/marfa_happy' : 'chars/marfa_wait', 'merchant-pic');
     body.append(h('div', { class: 'merchant' }, h('div', { class: 'merchant-ico' }, face),
       h('div', null, h('b', null, 'Торговка Марфа'),
-        h('p', null, '«Свежие травы и всякая всячина! Товар меняю каждый день. Редкое не продаю - его только найти можно.»'))));
+        h('p', null, '«Свежие травы и всякая всячина! Товар меняю каждый день. А по утрам привожу одну редкую диковинку.»'))));
+    // 0.30: утренний привоз - один редкий ингредиент в день, только игровым утром
+    if (typeof TimeDay !== 'undefined') {
+      const mx = TimeDay.morningItem(), left = TimeDay.morningLeft(), price = CONFIG.timeday.morningPrice;
+      const mb = h('button', { class: 'pill-btn', type: 'button', disabled: !left }, left ? UI.money(price, 'ui/crystal') : TimeDay.isMorning() ? 'Нет' : 'Утром');
+      mb.addEventListener('click', () => {
+        if (s.cr < price) { Sound.deny(); UI.toast('Не хватает кристаллов'); return; }
+        const got = TimeDay.buyMorning();
+        if (got) { Sound.buy(); happyT = Date.now() + 1500; UI.toast('Редкий ингредиент: ' + got.name); if (window.Game) Game.save(); redraw(); UI.refresh(); }
+      });
+      body.append(h('div', { class: 'row-card morning' + (left ? '' : ' off') },
+        h('div', { class: 'ico' }, pic(mx.img)),
+        h('div', { class: 'info' }, h('div', { class: 'name' }, mx.name, h('span', { class: 'rare-tag' }, 'редкий')),
+          h('div', { class: 'meta' }, TimeDay.isMorning() ? (left ? 'Утренний привоз: только до 10:00 по часам лавки' : 'Сегодня уже куплен. Завтра утром будет новый') : 'Утренний привоз: Марфа продаёт его с 06:00 до 10:00 по часам лавки')),
+        mb));
+    }
     shopToday().forEach((sl) => {
       const x = sl.x;
       const btn = h('button', { class: 'pill-btn', type: 'button', disabled: sl.left <= 0 }, sl.left > 0 ? UI.money(B.shopPrice, 'ui/crystal') : 'Нет');

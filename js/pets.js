@@ -424,6 +424,10 @@ const Pets = (() => {
       if (m.kind === 'yarn') {
         const im = Sprites.get('pets/yarn');
         if (im) { const w = p.s * 1.3, hh = w * im.naturalHeight / im.naturalWidth; ctx.drawImage(im, -w / 2, -hh / 2, w, hh); }
+      } else if (Sprites.get('guests/dust')) {
+        const im = Sprites.get('guests/dust'), w = p.s * 1.2, hh = w * im.naturalHeight / im.naturalWidth;
+        ctx.translate(0, Math.sin(G.t * 2 + m.ph) * p.s * 0.03);
+        ctx.drawImage(im, -w / 2, -hh / 2, w, hh);
       } else {
         // комок пыли: серый пушок с глазками
         ctx.fillStyle = 'rgba(150,140,170,.85)';
@@ -475,7 +479,9 @@ const Pets = (() => {
   function decide(a) {
     const idle = (performance.now() - lastInput) / 1000;
     const bedOk = !!S().wear.bed;
-    if (idle > 30 && a.st !== 'sleep') {
+    // 0.30: ночью питомцы сонные - засыпают быстрее
+    const nap = typeof DayTime !== 'undefined' && DayTime.name() === 'night' ? 12 : 30;
+    if (idle > nap && a.st !== 'sleep') {
       if (bedOk && !a.perch && !bedTaken(a)) { const b = bedPos(); return goTo(a, clamp(b.x + b.w * 0.6, 0, G.W), G.front ? BED_D + 0.04 : 0.55, 'tobed'); }
       if (a.perch) return jumpDown(a);
       return setState(a, 'sleep', 999);

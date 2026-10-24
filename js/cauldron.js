@@ -441,8 +441,11 @@ function createCauldron() {
     });
     ctx.restore();
     drawWeather(r);
+    if (hooks.sky && m.window) { const wn = m.window; hooks.sky(ctx, { cx: bgX(wn.x), cy: bgY(wn.y), rr: wn.r * bgGeom.dw, ox: -par.x * 5, oy: -par.y * 3, t }); }
   }
 
+  // 0.30: что рисуют другие модули: на стене (часы) и в окне (звездопад) - timeday.js
+  let hooks = {};
   // ---------- комната: мебель и украшения по рангу ----------
   let sceneKey = '', roomItems = [];
   const isDyn = (it) => it.layer === 'hang' || it.layer === 'top' || it.bob;
@@ -775,6 +778,7 @@ function createCauldron() {
       ctx.save(); ctx.translate(-par.x * 5, -par.y * 3);
       if (room) {
         drawRoomProps();
+        if (hooks.wall) hooks.wall(ctx, { bx: bgX, by: bgY, dw: bgGeom.dw, ox: -par.x * 5, oy: -par.y * 3, dpr, t });
         drawDayLight();
       }
       drawLights();
@@ -1797,6 +1801,7 @@ function createCauldron() {
     init, resize, update, render, hit, onClick, floatText, poke,
     spawnGolden, popGolden, hasGolden: () => !!golden,
     setMood, mood: () => face.mood, setWear, setSpoon, setStand, setBackground, setAmbient,
+    setHooks(x) { hooks = x || {}; },
     setExtra(back, front, ui) { extra.back = back; extra.front = front; extra.ui = ui || null; frontToExtra = !!front; }, geom,
     propAt, tapProp, propRect,
     warm(n) { fireBoost = Math.min(1, fireBoost + (n || 0.2)); },

@@ -1,5 +1,5 @@
 // =====================================================================
-//  Мини-игры (0.12). Первая - «Полка зелий» (три в ряд), ведёт торговка Марфа.
+//  Мини-игры (0.12). «Полка зелий» (три в ряд) ведёт торговка Марфа, «Мемори» (0.30) - Варя.
 //  Награды: первые CONFIG.games.full игр в день - полная награда (эссенция,
 //  ингредиенты, кристаллы за 3 звезды); дальше играть можно сколько угодно,
 //  ради рекорда - награда маленькая. Ещё CONFIG.games.adFull полных - за рекламу.
@@ -12,7 +12,7 @@ DATA.games = [
   { id: 'rhythm', name: 'Ритм помешивания', host: null, icon: 'games/rhythm' },
   { id: 'catch', name: 'Ловля трав', host: 'savva', icon: 'games/catch' },
   { id: 'fishing', name: 'Рыбалка', host: 'miron', icon: 'games/fishing' },
-  { id: 'memory', name: 'Мемори', host: 'varya', icon: 'games/memory' },
+  { id: 'memory', name: 'Мемори', host: 'varya', icon: 'games/memory', ready: true, desc: 'Открывай по две карты и находи пары. Чем меньше ошибок и быстрее, тем больше очков.' },
   { id: 'mandrake', name: 'Грядка мандрагор', host: 'tikhon', icon: 'games/mandrake' },
   { id: 'find', name: 'Найди предмет', host: 'grisha', icon: 'games/find' },
   { id: 'runes', name: 'Руны', host: 'tishka', icon: 'games/runes' }
@@ -73,6 +73,7 @@ const Games = (() => {
   let layer = null, cur = null, raf = 0, exitFn = null;
   function start(id) {
     if (id === 'match3') runMatch3();
+    else if (id === 'memory') runMemory();
   }
   function close() {
     cancelAnimationFrame(raf); raf = 0;
@@ -467,39 +468,7 @@ const Games = (() => {
     function finish() {
       if (G2.over) return;
       G2.over = true;
-      const m = st();
-      const stars = STARS.filter((v) => G2.score >= v).length;
-      const best = m.best.match3 || 0;
-      const record = G2.score > best;
-      if (record) m.best.match3 = G2.score;
-      const full = fullLeft() > 0;
-      let ess = 0, ingr = [], cr = 0;
-      if (full) {
-        m.n = (m.n || 0) + 1;
-        ess = Econ.hoursOfIncome([0.1, 0.25, 0.5, 1][stars], [200, 500, 1000, 2000][stars]);
-        ingr = Brew.give([1, 2, 4, 6][stars], [0, 0.05, 0.1, 0.2][stars]);
-        cr = stars >= 3 ? 2 : 0;
-        if (cr) Econ.addCrystals(cr);
-      } else {
-        ess = Econ.hoursOfIncome(0.03, 100);
-      }
-      Econ.earn(ess);
-      Econ.addXp(10 + stars * 10);
-      if (Econ.progress) Econ.progress('games', 1);
-      Econ.s.stat.games = (Econ.s.stat.games || 0) + 1;
-      save();
-      Sound.fanfare();
-      const body = h('div', { class: 'game-result' },
-        h('div', { class: 'res-stars' }, [0, 1, 2].map((i) => h('span', { class: i < stars ? 'on' : '' }, '★'))),
-        h('div', { class: 'res-score' }, h('small', null, record ? 'Новый рекорд!' : 'Очки'), h('b', null, Fmt.num(G2.score))),
-        record ? null : h('p', { class: 'small center' }, 'Рекорд: ' + Fmt.num(best)),
-        h('div', { class: 'reward-list' },
-          h('span', null, UI.money(UI.ess(ess))),
-          cr ? h('span', null, UI.money(cr, 'ui/crystal')) : null,
-          ingr.map((x) => h('span', null, pic(x.img, 'money-ico'), x.name))),
-        h('p', { class: 'small center' }, full ? 'Игр с полной наградой сегодня осталось: ' + fullLeft() : 'Полные награды на сегодня собраны - это игра ради рекорда.'));
-      UI.modal({ title: stars ? 'Отличная полка!' : 'Партия окончена', closable: false, body,
-        actions: [{ label: 'Ещё раз', onClick: () => { setTimeout(() => { close(); start('match3'); }, 0); } }, { label: 'В лавку', alt: true, onClick: () => { setTimeout(close, 0); } }] });
+      result('match3', G2.score, STARS.filter((v) => G2.score >= v).length, 'Отличная полка!');
     }
 
     size();
@@ -508,6 +477,156 @@ const Games = (() => {
     // первое падение зелий на полку
     waitSettle(() => { G2.busy = false; if (!hasMove()) shuffle(); });
     cur = { id: 'match3', grid, G2, trySwap, findRuns, swapCells, COLS, ROWS };
+  }
+
+  // ---------- итог партии: награда (полная - первые G.full игр в день), рекорд, окно ----------
+  function result(id, score, stars, goodTitle) {
+    const m = st();
+    const best = m.best[id] || 0;
+    const record = score > best;
+    if (record) m.best[id] = score;
+    const full = fullLeft() > 0;
+    let ess = 0, ingr = [], cr = 0;
+    if (full) {
+      m.n = (m.n || 0) + 1;
+      ess = Econ.hoursOfIncome([0.1, 0.25, 0.5, 1][stars], [200, 500, 1000, 2000][stars]);
+      ingr = Brew.give([1, 2, 4, 6][stars], [0, 0.05, 0.1, 0.2][stars]);
+      cr = stars >= 3 ? 2 : 0;
+      if (cr) Econ.addCrystals(cr);
+    } else {
+      ess = Econ.hoursOfIncome(0.03, 100);
+    }
+    Econ.earn(ess);
+    Econ.addXp(10 + stars * 10);
+    if (Econ.progress) Econ.progress('games', 1);
+    Econ.s.stat.games = (Econ.s.stat.games || 0) + 1;
+    save();
+    Sound.fanfare();
+    const body = h('div', { class: 'game-result' },
+      h('div', { class: 'res-stars' }, [0, 1, 2].map((i) => h('span', { class: i < stars ? 'on' : '' }, '★'))),
+      h('div', { class: 'res-score' }, h('small', null, record ? 'Новый рекорд!' : 'Очки'), h('b', null, Fmt.num(score))),
+      record ? null : h('p', { class: 'small center' }, 'Рекорд: ' + Fmt.num(best)),
+      h('div', { class: 'reward-list' },
+        h('span', null, UI.money(UI.ess(ess))),
+        cr ? h('span', null, UI.money(cr, 'ui/crystal')) : null,
+        ingr.map((x) => h('span', null, pic(x.img, 'money-ico'), x.name))),
+      h('p', { class: 'small center' }, full ? 'Игр с полной наградой сегодня осталось: ' + fullLeft() : 'Полные награды на сегодня собраны - это игра ради рекорда.'));
+    UI.modal({ title: stars ? goodTitle : 'Партия окончена', closable: false, body,
+      actions: [{ label: 'Ещё раз', onClick: () => { setTimeout(() => { close(); start(id); }, 0); } }, { label: 'В лавку', alt: true, onClick: () => { setTimeout(close, 0); } }] });
+  }
+
+  // общая шапка мини-игры: крестик, счётчик, полоса очков со звёздами, ведущий
+  function gameHead(statName, statVal, stars, host, onExit) {
+    const statEl = h('b', null, statVal), scoreEl = h('b', null, '0'), bar = h('i');
+    const head = h('div', { class: 'game-head' },
+      h('button', { class: 'x game-x', type: 'button', 'aria-label': 'Выйти', onclick: () => { Sound.tap(); onExit(); } }),
+      h('div', { class: 'game-stat' }, h('small', null, statName), statEl),
+      h('div', { class: 'game-goal' }, h('div', { class: 'game-bar' }, bar, stars.map((v) => h('span', { class: 'gstar', style: 'left:' + (100 * v / stars[2]) + '%' }, '★'))), h('small', null, 'Очки'), scoreEl),
+      h('div', { class: 'game-host' }, pic('chars/' + host + '_happy', 'game-host-pic')));
+    const upd = (stat, score, low) => {
+      UI.setText(statEl, stat); UI.setText(scoreEl, Fmt.num(score));
+      bar.style.width = Math.min(100, 100 * score / stars[2]) + '%';
+      head.querySelectorAll('.gstar').forEach((el, i) => el.classList.toggle('on', score >= stars[i]));
+      statEl.classList.toggle('low', !!low);
+    };
+    return { head, upd };
+  }
+
+  // =====================================================================
+  //  «Мемори» Вари (0.30): 16 карт, 8 пар, 75 секунд.
+  //  Пара - 100 очков, вторая подряд без ошибки - 200, дальше по 300; оставшиеся секунды - по 10.
+  // =====================================================================
+  const MEM_FACES = ['moon', 'mushroom', 'owl', 'flame', 'crystal', 'leaf', 'star', 'cat', 'potion', 'frog', 'dragon', 'pumpkin', 'hat', 'lavender', 'key', 'eye'];
+  const MEM_TIME = 75, MEM_STARS = [800, 1400, 2000];
+
+  function runMemory() {
+    document.body.classList.add('in-game');
+    const M = { score: 0, left: MEM_TIME, open: [], found: 0, streak: 0, miss: 0, over: false, busy: false, started: 0 };
+    const hd = gameHead('Время', String(MEM_TIME), MEM_STARS, 'varya', () => confirmExit());
+    const faces = MEM_FACES.slice().sort(() => Math.random() - 0.5).slice(0, 8);
+    const deck = faces.concat(faces).map((f, i) => ({ f, i, k: Math.random() })).sort((a, b) => a.k - b.k);
+    const say = h('div', { class: 'mem-say' }, 'Запоминай, где какая картинка!');
+    const grid = h('div', { class: 'mem-grid' }, deck.map((c) => {
+      c.el = h('button', { class: 'mem-card', type: 'button', 'aria-label': 'Карта' },
+        h('span', { class: 'mem-in' },
+          h('span', { class: 'mem-back' }, pic('memory/back', 'mem-bg')),
+          h('span', { class: 'mem-front' }, pic('memory/front', 'mem-bg'), pic('memory/' + c.f, 'mem-ico'))));
+      c.el.addEventListener('click', () => flip(c));
+      return c.el;
+    }));
+    layer = h('div', { class: 'game-layer mem' }, hd.head, h('div', { class: 'game-board mem-board' }, say, h('div', { class: 'mem-table' }, pic('memory/table', 'mem-table-bg'), grid)));
+    document.getElementById('app').append(layer);
+    const upd = () => hd.upd(String(Math.max(0, Math.ceil(M.left))), M.score, M.left <= 10 && !M.over);
+    upd();
+    const talk = (t) => { UI.setText(say, t); say.classList.remove('pop'); void say.offsetWidth; say.classList.add('pop'); };
+
+    // в начале на 2 секунды показываем все карты
+    M.busy = true;
+    setTimeout(() => { if (!layer) return; deck.forEach((c) => c.el.classList.add('up')); Sound.pop(); }, 350);
+    setTimeout(() => {
+      if (!layer) return;
+      deck.forEach((c) => c.el.classList.remove('up'));
+      M.busy = false; M.started = performance.now();
+      talk('Найди все 8 пар!');
+      tick();
+    }, 2600);
+
+    let last = 0;
+    function tick(now) {
+      if (!layer || M.over) return;
+      if (now && last) M.left -= (now - last) / 1000;
+      last = now || 0;
+      if (M.left <= 0) { M.left = 0; upd(); end(false); return; }
+      upd();
+      raf = requestAnimationFrame(tick);
+    }
+
+    function flip(c) {
+      if (M.busy || M.over || c.done || c.el.classList.contains('up')) return;
+      Sound.tap();
+      c.el.classList.add('up');
+      M.open.push(c);
+      if (M.open.length < 2) return;
+      const [a, b] = M.open; M.open = [];
+      if (a.f === b.f) {
+        M.streak++; M.found++;
+        const pts = 100 * Math.min(3, M.streak);
+        M.score += pts;
+        a.done = b.done = true;
+        setTimeout(() => { a.el.classList.add('done'); b.el.classList.add('done'); }, 250);
+        if (M.streak > 1) { Sound.coin(); talk(M.streak + ' подряд! +' + pts); } else { Sound.pop(); talk(['Есть пара!', 'Здорово!', 'Точно!', 'Молодец!'][M.found % 4] + ' +' + pts); }
+        upd();
+        if (M.found === deck.length / 2) {
+          const bonus = Math.ceil(M.left) * 10;
+          M.score += bonus;
+          talk('Все пары! За время +' + bonus);
+          upd();
+          setTimeout(() => end(true), 700);
+        }
+      } else {
+        M.streak = 0; M.miss++;
+        M.busy = true;
+        setTimeout(() => { Sound.deny(); }, 300);
+        setTimeout(() => { a.el.classList.remove('up'); b.el.classList.remove('up'); M.busy = false; }, 800);
+        if (M.miss % 4 === 0) talk(['Не то... Вспоминай!', 'Почти!', 'Ой, мимо'][(M.miss / 4) % 3]);
+      }
+    }
+
+    function end(all) {
+      if (M.over) return;
+      M.over = true; cancelAnimationFrame(raf); raf = 0;
+      upd();
+      if (!all) { talk('Время вышло!'); deck.forEach((c) => c.el.classList.add('up')); }
+      setTimeout(() => { if (layer) result('memory', M.score, MEM_STARS.filter((v) => M.score >= v).length, 'Отличная память!'); }, all ? 300 : 900);
+    }
+
+    exitFn = () => confirmExit();
+    function confirmExit() {
+      if (M.over) { close(); return; }
+      UI.modal({ title: 'Выйти из игры?', body: h('p', { class: 'center' }, 'Очки этой партии не сохранятся.'),
+        actions: [{ label: 'Играть дальше' }, { label: 'Выйти', alt: true, onClick: () => { M.over = true; setTimeout(close, 0); } }] });
+    }
+    cur = { id: 'memory', M, deck, flip, end };
   }
 
   // кнопка «Назад» телефона в мини-игре: открыто окно - закрываем его, иначе то же, что крестик

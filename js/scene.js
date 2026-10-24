@@ -23,22 +23,27 @@ DATA.room = {
     { img: 'r2/podium', layer: 'front', x: 0.5, y: 0.665, w: 0.46, rank: 0, under: true, notap: true },
     // --- задняя стена ---
     { img: 'r2/shelf_s', layer: 'wall', x: 0.285, y: 0.415, w: 0.16, rank: 0, snd: 'glass' },
-    { img: 'r2/shelf_l', layer: 'wall', x: 0.715, y: 0.415, w: 0.18, rank: 1, snd: 'glass' },
-    { img: 'r2/wreath', layer: 'wall', x: 0.73, y: 0.31, w: 0.075, rank: 1, until: 3 },
+    { img: 'r2/shelf_l', layer: 'wall', x: 0.715, y: 0.392, w: 0.17, rank: 1, snd: 'glass' },
+    { img: 'r2/wreath', layer: 'wall', x: 0.762, y: 0.31, w: 0.072, rank: 1, until: 3 },
     { img: 'r2/map', layer: 'wall', x: 0.27, y: 0.315, w: 0.12, rank: 0, open: 'trips', snd: 'paper' },
     { img: 'r2/horseshoe', layer: 'wall', x: 0.5, y: 0.405, w: 0.05, rank: 3 },
-    { img: 'r2/tablet', layer: 'wall', x: 0.73, y: 0.315, w: 0.075, rank: 4, until: 5, snd: 'magic', lights: [{ k: 'ball', x: 0.5, y: 0.5, r: 0.9, c: '#B07BFF' }] },
+    { img: 'r2/tablet', layer: 'wall', x: 0.762, y: 0.315, w: 0.072, rank: 4, until: 5, snd: 'magic', lights: [{ k: 'ball', x: 0.5, y: 0.5, r: 0.9, c: '#B07BFF' }] },
     { img: 'r2/banner', layer: 'wall', x: 0.205, y: 0.37, w: 0.06, rank: 5 },
-    { img: 'r2/portrait', layer: 'wall', x: 0.73, y: 0.315, w: 0.105, rank: 6 },
+    { img: 'r2/portrait', layer: 'wall', x: 0.768, y: 0.315, w: 0.092, rank: 6 },
     { img: 'r2/candles', layer: 'wall', x: 0.5, y: 0.17, w: 0.12, rank: 8, bob: true, snd: 'metal',
       lights: [{ k: 'candle', x: 0.5, y: 0.2, r: 1.2, c: '#FFC266' }] },
     // --- у задней стены на полу ---
     { img: 'r2/chest', layer: 'floor', x: 0.76, y: 0.49, w: 0.1, rank: 1, until: 2 },
     { img: 'r2/cabinet', layer: 'floor', x: 0.25, y: 0.48, w: 0.13, rank: 2, until: 4 },
     { img: 'r2/rack', layer: 'floor', x: 0.355, y: 0.475, w: 0.07, rank: 4, until: 5, snd: 'glass' },
-    { img: 'r2/orb', layer: 'floor', x: 0.645, y: 0.478, w: 0.055, rank: 4, until: 5, snd: 'magic', lights: [{ k: 'ball', x: 0.5, y: 0.25, r: 1.0, c: '#B07BFF' }] },
-    { img: 'r2/telescope', layer: 'floor', x: 0.645, y: 0.48, w: 0.085, rank: 6, snd: 'metal' },
+    { img: 'r2/orb', layer: 'floor', x: 0.6, y: 0.478, w: 0.055, rank: 4, until: 5, snd: 'magic', lights: [{ k: 'ball', x: 0.5, y: 0.25, r: 1.0, c: '#B07BFF' }] },
+    { img: 'r2/telescope', layer: 'floor', x: 0.6, y: 0.48, w: 0.085, rank: 6, snd: 'metal' },
     { img: 'r2/bookcase', layer: 'floor', x: 0.25, y: 0.48, w: 0.135, rank: 5 },
+    // 0.30: камин (огонь рисует timeday.js) и зеркало - кнопка гардероба
+    { img: 'r2/fireplace', layer: 'floor', x: 0.725, y: 0.492, w: 0.125, rank: 0, snd: 'wood', fire: { x: 0.44, y: 0.86, w: 0.24 },
+      lights: [{ k: 'lantern', x: 0.44, y: 0.72, r: 1.1, c: '#FF9A3A' }] },
+    { img: 'r2/mirror', layer: 'front', x: 0.27, y: 0.585, w: 0.07, rank: 0, open: 'ward', snd: 'glass',
+      lights: [{ k: 'ball', x: 0.5, y: 0.45, r: 0.7, c: '#C9A0FF' }] },
     // --- на полу ближе к нам ---
     { img: 'r2/crates', layer: 'front', x: 0.13, y: 0.7, w: 0.14, rank: 0, until: 2 },
     { img: 'r2/barrel', layer: 'front', x: 0.13, y: 0.705, w: 0.1, rank: 3 },
@@ -78,7 +83,7 @@ if (DATA.eventDefs && DATA.eventDefs.halloween) DATA.eventDefs.halloween.shop.pu
 DATA.bgMeta = DATA.bgMeta || {};
 DATA.bgMeta['backgrounds/room'] = { room: true, counter: true, window: { x: 0.5, y: 0.25, r: 0.17 } };
 // окно новой комнаты прозрачное: за ним рисуется небо r2/sky
-DATA.bgMeta['r2/room'] = { room: true, counter: true, window: { x: 0.5, y: 0.26, r: 0.124 }, skies: { night: 'r2/sky', dawn: 'r2/sky_dawn' } };
+DATA.bgMeta['r2/room'] = { room: true, counter: true, window: { x: 0.5, y: 0.26, r: 0.124 }, skies: { night: 'r2/sky', dawn: 'r2/sky_dawn', day: 'r2/sky_day', dusk: 'r2/sky_dusk' } };
 
 // =====================================================================
 //  Игровые сутки (0.29): своё время, не часы телефона. Одни сутки - 2 реальных часа,

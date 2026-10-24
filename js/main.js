@@ -57,6 +57,7 @@
   // resume - игру просто сворачивали (она оставалась открытой): начисляем молча, без окна
   function handleGap(sec, resume) {
     Pets.onAway(sec);
+    TimeDay.onAway(sec);
     const amount = Econ.offlineEarnings(sec);
     if (!(amount > 0)) return;
     if (sec < 60) { Econ.earn(amount); return; }
@@ -139,6 +140,8 @@
     if (ph === 'egg') { Pets.open('eggs'); return; }
     if (ph === 'mess') return;
     if (ph === 'bed') { Sound.tap(); seenProp('pets'); Pets.open(); return; }
+    // 0.30: часы с кукушкой и звёзды в окне
+    if (TimeDay.hit(x, y)) return;
     const wasSleepy = Cauldron.poke();
     const hit = Cauldron.hit(x, y);
     if (hit === 'golden') { if (e.isTrusted) popBubble(); return; }
@@ -170,7 +173,7 @@
     if (it.open) {
       seenProp(it.open);
       // дать предмету качнуться, потом открыть
-      setTimeout(() => { if (UI.isModalOpen() || UI.screen() !== 'main') return; if (it.open === 'brew') Brew.open(); else if (it.open === 'trips') Pets.open('trips'); }, 260);
+      setTimeout(() => { if (UI.isModalOpen() || UI.screen() !== 'main') return; if (it.open === 'brew') Brew.open(); else if (it.open === 'trips') Pets.open('trips'); else if (it.open === 'ward') UI.show('wardrobe'); }, 260);
       return;
     }
     const r = Econ.s.room || (Econ.s.room = {});
@@ -215,9 +218,11 @@
   (D.pets || []).forEach((pt) => { for (let i = 0; i < 16; i++) preload.add('pets/' + pt.id + '/' + String(i).padStart(2, '0')); });
   Object.values(D.eggs || {}).forEach((e) => e.img && preload.add(e.img));
   (D.locations || []).forEach((l) => l.img && preload.add(l.img));
-  ['r2/sky', 'r2/sky_dawn', 'pets/nest', 'pets/shell', 'pets/bowl', 'cauldron/pot', 'cauldron/liquid', 'cauldron/bubble', 'r2/counter', 'ui/paw_heart', 'ui/steam', 'ui/heat'].forEach((n) => preload.add(n));
+  ['moon', 'pepper', 'star'].forEach((p) => { for (let i = 1; i <= 3; i++) preload.add('plants/' + p + i); });
+  ['r2/sky', 'r2/sky_dawn', 'r2/sky_day', 'r2/sky_dusk', 'r2/cobweb', 'guests/dust', 'guests/owl', 'guests/witch', 'guests/cat', 'clock/case', 'clock/hour', 'clock/minute', 'clock/pendulum', 'clock/bird', 'clock/door', 'r2/flame', 'memory/back', 'memory/front', 'memory/table', 'pets/nest', 'pets/shell', 'pets/bowl', 'cauldron/pot', 'cauldron/liquid', 'cauldron/bubble', 'r2/counter', 'ui/paw_heart', 'ui/steam', 'ui/heat'].forEach((n) => preload.add(n));
 
   Cauldron.init(canvas);
+  TimeDay.init(() => UI.screen() === 'main' && !UI.isModalOpen());
   UI.init({
     save: () => saveNow(true),
     reset: () => { Econ.reset(); saveNow(true); setTimeout(() => location.reload(), 300); }

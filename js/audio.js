@@ -250,6 +250,8 @@ const Sound = (() => {
         default: if (!file('tap', 0.65, 0.55 * vary(0.08))) tone(190, 120, 0.09, 'triangle', 0.09);
       }
     },
+    // 0.30: «ку-ку» часов
+    cuckoo() { tone(760, 735, 0.2, 'sine', 0.08); tone(600, 580, 0.3, 'sine', 0.08, 0.28); },
     hatch() { if (!file('hatch', 0.8)) [784, 988, 1175, 1568].forEach((f, i) => tone(f, f, 0.12, 'sine', 0.09, i * 0.05)); }
   };
 })();

@@ -30,13 +30,6 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Отладочная сборка (для проверки входа)
-        run: |
-          W=android-game/app/src/main/assets/www
-          mkdir -p $W
-          cp -r index.html privacy.html terms.html version.json js css assets $W/
-          gradle -p android-game assembleDebug --no-daemon -q
-          cp android-game/app/build/outputs/apk/debug/app-debug.apk bulk-debug.apk
       - name: Скачать сборку
         env:
           GH_TOKEN: ${{ github.token }}
@@ -73,14 +66,6 @@ jobs:
             sleep 3
             adb exec-out screencap -p > 4_back.png
             adb shell pidof ru.bulk.game > pid.txt || echo "нет процесса" > pid.txt
-            # вход через ВК: отладочная сборка сама вызывает вход через 25 с после загрузки
-            adb uninstall ru.bulk.game || true
-            adb install -r bulk-debug.apk
-            adb shell am start -n ru.bulk.game/.MainActivity --es bulk_js "Online.appLoginFlow(); 'started'" --ei bulk_js_delay 25000
-            sleep 35
-            adb exec-out screencap -p > 5_login.png
-            sleep 10
-            adb exec-out screencap -p > 6_login2.png
             adb logcat -d -v time > logcat_full.txt
             grep -iE "BulkWeb|AndroidRuntime|FATAL" logcat_full.txt | tail -400 > log.txt || true
       - name: SDK RuStore - какие есть версии
@@ -101,4 +86,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete apk-test -y --cleanup-tag -R ${{ github.repository }} || true
-          gh release create apk-test 1_start.png 2_game.png 3_taps.png 4_back.png 5_login.png 6_login2.png log.txt pid.txt badging.txt sdk.txt -R ${{ github.repository }} --target ${{ github.sha }} --title "Проверка APK на эмуляторе" --notes "Сборка ${{ github.run_number }}" --prerelease --latest=false
+          gh release create apk-test 1_start.png 2_game.png 3_taps.png 4_back.png log.txt pid.txt badging.txt sdk.txt -R ${{ github.repository }} --target ${{ github.sha }} --title "Проверка APK на эмуляторе" --notes "Сборка ${{ github.run_number }}" --prerelease --latest=false
