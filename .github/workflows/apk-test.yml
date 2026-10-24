@@ -3,14 +3,15 @@
 # Для установки APK подписывается временным ключом; в RuStore идёт сборка с ключом владельца.
 name: apk-test
 on:
-  push:
-    branches: [ccr-1931aaac-ojah34]
-    paths: ['.github/workflows/apk-test.yml']
+  workflow_run:
+    workflows: [game-apk]
+    types: [completed]
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
   test:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Включить KVM
@@ -40,7 +41,7 @@ jobs:
             adb install -r bulk-test.apk
             adb logcat -c
             adb shell am start -n ru.bulk.game/.MainActivity
-            sleep 40
+            sleep 25
             adb exec-out screencap -p > 1_start.png
             adb shell input tap 540 1700
             sleep 3
@@ -57,7 +58,7 @@ jobs:
             adb exec-out screencap -p > 4_back.png
             adb shell pidof ru.bulk.game > pid.txt || echo "нет процесса" > pid.txt
             adb logcat -d -v time > logcat_full.txt
-            grep -iE "chromium|AndroidRuntime|FATAL|ru.bulk.game|Console" logcat_full.txt | tail -400 > log.txt || true
+            grep -iE "BulkWeb|AndroidRuntime|FATAL" logcat_full.txt | tail -400 > log.txt || true
       - name: SDK RuStore - какие есть версии
         run: |
           R=https://artifactory-external.vkpartner.ru/artifactory/maven/ru/rustore/sdk

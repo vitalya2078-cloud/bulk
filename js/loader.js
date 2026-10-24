@@ -19,8 +19,10 @@ const Loader = (() => {
     if (typeof createImageBitmap === 'function') return createImageBitmap(blob).then((b) => { if (b.close) b.close(); });
     return new Promise((res, rej) => { const u = URL.createObjectURL(blob), im = new Image(); im.onload = () => { URL.revokeObjectURL(u); res(); }; im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('img')); }; im.src = u; });
   }
+  // в приложении для телефона (APK) файлы уже на устройстве: копировать их в память незачем
+  const inApp = !!window.BulkApp;
   function fetchOne(k, attempt) {
-    if (ASSET_BLOBS[k]) return Promise.resolve(true);
+    if (ASSET_BLOBS[k] || inApp) return Promise.resolve(true);
     const url = 'assets/' + k + '?v=' + ASSET_V + (attempt ? '&r=' + attempt + '.' + Date.now() : '');
     const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const to = setTimeout(() => ctl && ctl.abort(), 20000);
@@ -405,10 +407,20 @@ const Loader = (() => {
     const all = [...new Set(critical.concat(rest).map(keyOf).concat(Object.keys(files)))].filter((k) => !lazy.some((p) => k.startsWith(p)));
     let doneN = 0;
     const finish = () => {
+      if (inApp) console.info('BulkBoot ready ' + Math.round(performance.now()) + ' ms');
       setCssVars(); swapImages();
       if (typeof Sprites !== 'undefined' && Sprites.refresh) Sprites.refresh();
       ready();
     };
+    // приложение: файлы на телефоне - ждём только картинки первого экрана (не дольше 8 с), остальное по мере надобности
+    if (inApp) {
+      const first = critical.filter((u) => /\.(webp|png|jpg)/.test(u));
+      let n = 0;
+      const one = (u) => new Promise((res) => { const im = new Image(); im.onload = im.onerror = () => { n++; target = Math.round(100 * n / Math.max(1, first.length)); res(); }; im.src = u; });
+      Promise.race([Promise.all(first.map(one)), wait(8000)])
+        .then(() => setTimeout(finish, Math.max(0, 1200 - (performance.now() - t0))));
+      return;
+    }
     // не держим игрока дольше 90 секунд, даже если сеть совсем плохая (недостающее докачается в игре)
     const guard = setTimeout(finish, 90000);
     load(all, 0, () => { doneN++; target = Math.round(100 * doneN / all.length); })

@@ -141,8 +141,13 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** Выбор файла для поддержки (скриншот ошибки). */
+    /** Выбор файла для поддержки (скриншот ошибки); сообщения игры - в журнал Android (тег BulkWeb). */
     class Chrome extends WebChromeClient {
+        @Override
+        public boolean onConsoleMessage(android.webkit.ConsoleMessage m) {
+            android.util.Log.i("BulkWeb", m.messageLevel() + " " + m.message() + " @" + m.sourceId() + ":" + m.lineNumber());
+            return true;
+        }
         @Override
         public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
             if (filePick != null) filePick.onReceiveValue(null);
