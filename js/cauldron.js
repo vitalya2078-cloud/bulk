@@ -45,6 +45,8 @@ function createCauldron() {
   const STAND = { w: 0.9, aspect: 230 / 420, seat: 0.42, front: 0.3 };
 
   let cv, ctx, W = 300, H = 300, dpr = 1;
+  // 0.29.1: потолок плотности холста; телефон не успевает - снижаем сами (см. perfGuard)
+  let dprCap = 2;
   const g = { cx: 0, cy: 0, r: 80, rimY: 0, pot: null, liq: null };
   let t = 0;
 
@@ -197,7 +199,7 @@ function createCauldron() {
     const rc = cv.getBoundingClientRect();
     W = Math.max(1, rc.width); H = Math.max(1, rc.height);
     // чёткость: до 3× на экранах с высокой плотностью, в режиме слабых эффектов - до 2×
-    dpr = Math.min(window.devicePixelRatio || 1, RenderOpts.lowfx ? 2 : 3);
+    dpr = Math.min(window.devicePixelRatio || 1, RenderOpts.lowfx ? 1.5 : dprCap);
     bgDirty = true;
     cv.width = Math.round(W * dpr);
     cv.height = Math.round(H * dpr);
@@ -296,6 +298,8 @@ function createCauldron() {
     face.look.y += (face.target.y - face.look.y) * Math.min(1, dt * 8);
 
     checkRoom();
+    frameDt = dt;
+    perfGuard(dt);
     updateDay(dt);
     updateFire(dt);
     updateLights(dt);
@@ -369,7 +373,7 @@ function createCauldron() {
       c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.filter = 'brightness(1.14) saturate(1.15)';
       c.clearRect(0, 0, bgCv.width, bgCv.height); c.drawImage(tmp, 0, 0); c.restore();
     }
-    if (bgMeta().room) { buildSkies(); buildVeil(); return; }
+    if (bgMeta().room) { buildSkies(); buildVeil(); roomDirty = true; return; }
     veil(c);
   }
   // общий тон и виньетка: в комнате кладутся поверх мебели каждый кадр (мебель теперь живая)
@@ -585,6 +589,57 @@ function createCauldron() {
     bakeShadows(c, props);
     roomLights();
   }
+  // 0.29.1: всё неподвижное в комнате - одна готовая картинка (roomCv): фон с тенями, мебель, общий тон
+  // и свет суток. Каждый кадр она только копируется. Пересобирается, когда сдвинулись сутки
+  // (раз в ~75 с, с плавной сменой за 1,5 с) или когда предмет начал/закончил отзываться на тап.
+  const TINT_STEPS = 96;
+  let roomCv = null, roomPrev = null, roomDirty = true, tintKey = -1, roomFade = 1;
+  // свет суток поверх готовой картинки (прозрачное окно остаётся прозрачным)
+  function dayTint(cv2) {
+    if (RenderOpts.lowfx || !bgMeta().room) return;
+    const w = DayTime.weights(DayTime.phase());
+    const c = cv2.getContext('2d'), cw = cv2.width, chh = cv2.height;
+    const m = document.createElement('canvas'); m.width = cw; m.height = chh;
+    m.getContext('2d').drawImage(cv2, 0, 0);
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0);
+    const fill = (op, col, a) => { if (a < 0.01) return; c.globalCompositeOperation = op; c.globalAlpha = a; c.fillStyle = col; c.fillRect(0, 0, cw, chh); };
+    fill('multiply', '#6E66B4', 0.38 * w.night);
+    const a1 = 0.4 * w.day, a2 = 0.4 * w.dawn, a3 = 0.45 * w.dusk, sa = a1 + a2 + a3;
+    if (sa > 0.01) {
+      const mixc = (i) => Math.round(([0xFF, 0xD7, 0x9A][i] * a1 + [0xFF, 0x9F, 0x8A][i] * a2 + [0xFF, 0x9A, 0x4A][i] * a3) / sa);
+      fill('soft-light', 'rgb(' + mixc(0) + ',' + mixc(1) + ',' + mixc(2) + ')', sa);
+    }
+    c.globalAlpha = 1; c.globalCompositeOperation = 'destination-in'; c.drawImage(m, 0, 0);
+    c.restore();
+  }
+  const isLive = (p) => !!p.it._tap;
+  const inExtra = (p) => frontToExtra && p.it.layer === 'front' && !p.it.under;
+  function buildRoomCv(fade) {
+    roomDirty = false;
+    tintKey = Math.floor(DayTime.phase() * TINT_STEPS);
+    const w = Math.round(W * dpr), h = Math.round(H * dpr);
+    if (fade && roomCv && roomCv.width === w && roomCv.height === h) { const x = roomPrev; roomPrev = roomCv; roomCv = x; roomFade = 0; }
+    else roomFade = 1;
+    roomCv = roomCv || document.createElement('canvas');
+    if (roomCv.width !== w || roomCv.height !== h) { roomCv.width = w; roomCv.height = h; }
+    const c = roomCv.getContext('2d');
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+    c.clearRect(0, 0, w, h);
+    if (bgCv) c.drawImage(bgCv, 0, 0);
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    props.forEach((p) => { if (!isLive(p) && !inExtra(p)) c.drawImage(p.cv, p.R.x, p.R.y, p.R.w, p.R.h); });
+    if (veilCv) { c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(veilCv, 0, 0); }
+    dayTint(roomCv);
+  }
+  // предмет, который сейчас отзывается на тап, рисуется отдельно - в тоне комнаты (копия под свет суток)
+  function liveSprite(p) {
+    if (p.tk === tintKey && p.tcv) return p.tcv;
+    const x = document.createElement('canvas'); x.width = p.cv.width; x.height = p.cv.height;
+    x.getContext('2d').drawImage(p.cv, 0, 0); dayTint(x);
+    p.tk = tintKey; p.tcv = x;
+    return x;
+  }
+
   // предмет комнаты: обычный или в отклике на тап (пружинит)
   // предмет-кнопка, который ещё ни разу не нажимали, мягко светится
   const propSeen = (k) => typeof Econ !== 'undefined' && Econ.s && Econ.s.room && Econ.s.room.seen && Econ.s.room.seen[k];
@@ -598,31 +653,38 @@ function createCauldron() {
       c.restore();
     }
     const k = a ? t - a.t0 : 99;
-    if (k > PROP_TAP || k < 0) { if (a) p.it._tap = null; c.drawImage(p.cv, R.x, R.y, R.w, R.h); return; }
+    const im = a && !inExtra(p) ? liveSprite(p) : p.cv;
+    if (k > PROP_TAP || k < 0) { if (a) { p.it._tap = null; roomDirty = true; } c.drawImage(im, R.x, R.y, R.w, R.h); return; }
     c.save();
     if (p.it.layer === 'wall') {
       // качнулся на гвозде
       c.translate(R.x + R.w / 2, R.y);
       c.rotate(0.075 * a.dir * Math.sin(k * 13) * Math.exp(-3.6 * k));
-      c.drawImage(p.cv, -R.w / 2, 0, R.w, R.h);
+      c.drawImage(im, -R.w / 2, 0, R.w, R.h);
     } else {
       // подпрыгнул, приземлился и пружинит
       const up = 0.3, hop = k < up ? Math.sin(k / up * Math.PI) * R.h * 0.07 : 0;
       const sq = k < up ? -0.03 * Math.sin(k / up * Math.PI) : 0.08 * Math.sin((k - up) * 17) * Math.exp(-5.5 * (k - up));
       c.translate(R.x + R.w / 2, R.y + R.h - hop);
       c.scale(1 + sq, 1 - sq);
-      c.drawImage(p.cv, -R.w / 2, -R.h, R.w, R.h);
+      c.drawImage(im, -R.w / 2, -R.h, R.w, R.h);
     }
     c.restore();
   }
   // сколько мебели рисует сам котёл (передний ряд может забрать слой питомцев - для глубины)
   let frontToExtra = false;
+  // каждый кадр - только те, кто сейчас пружинит (остальные уже в готовой картинке)
   function drawRoomProps() {
-    props.forEach((p) => { if (!(frontToExtra && p.it.layer === 'front' && !p.it.under)) drawProp(ctx, p); });
+    props.forEach((p) => { if (isLive(p) && !inExtra(p)) drawProp(ctx, p); });
   }
   // передний ряд мебели для слоя питомцев: низ предмета (для сортировки) и как его нарисовать
+  let frontCache = null;
   function frontProps() {
-    if (!frontToExtra) return [];
+    if (frontCache) return frontCache;
+    if (!frontToExtra) return (frontCache = []);
+    return (frontCache = buildFront());
+  }
+  function buildFront() {
     return props.filter((p) => p.it.layer === 'front' && !p.it.under).map((p) => ({
       y: p.R.y + p.R.h - par.y * 3, x0: p.R.x - par.x * 5, x1: p.R.x + p.R.w - par.x * 5,
       draw: (c) => { c.save(); c.translate(-par.x * 5, -par.y * 3); drawProp(c, p); c.restore(); }
@@ -668,14 +730,22 @@ function createCauldron() {
         ctx.fillStyle = '#1F1336'; ctx.fillRect(0, 0, W, H);
         ctx.save(); ctx.translate(-par.x * 5, -par.y * 3); drawSky(); ctx.restore();
       }
+      const room = bgMeta().room;
+      if (room) {
+        const tk = Math.floor(DayTime.phase() * TINT_STEPS);
+        if (roomDirty || tk !== tintKey) buildRoomCv(tk !== tintKey && tintKey >= 0);
+        roomFade = Math.min(1, roomFade + frameDt / 1.5);
+      }
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.drawImage(bgCv, -par.x * 5 * dpr, -par.y * 3 * dpr);
+      if (room && roomCv) {
+        ctx.drawImage(roomCv, -par.x * 5 * dpr, -par.y * 3 * dpr);
+        if (roomFade < 1 && roomPrev) { ctx.globalAlpha = 1 - roomFade; ctx.drawImage(roomPrev, -par.x * 5 * dpr, -par.y * 3 * dpr); ctx.globalAlpha = 1; }
+      } else ctx.drawImage(bgCv, -par.x * 5 * dpr, -par.y * 3 * dpr);
       ctx.restore();
       ctx.save(); ctx.translate(-par.x * 5, -par.y * 3);
-      if (bgMeta().room) {
+      if (room) {
         drawRoomProps();
-        if (veilCv) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(veilCv, 0, 0); ctx.restore(); }
         drawDayLight();
       }
       drawLights();
@@ -696,6 +766,18 @@ function createCauldron() {
       ctx.beginPath(); ctx.arc(d.x * W, y * H * 0.85, d.s, 0, TAU); ctx.fill();
     });
     ctx.globalAlpha = 1;
+  }
+
+  // ---------- 0.29.1: телефон не успевает - снижаем плотность холста ----------
+  // Средний кадр дольше 1/40 с несколько секунд подряд - холст 1.5x вместо 2x (заливка дешевле почти вдвое).
+  let frameDt = 1 / 60, perfAcc = 0, perfN = 0;
+  function perfGuard(dt) {
+    if (dprCap <= 1.5 || document.hidden || dt > 0.25) return;
+    perfAcc += dt; perfN++;
+    if (perfAcc < 4) return;
+    const avg = perfAcc / perfN;
+    perfAcc = 0; perfN = 0;
+    if (avg > 1 / 40) { dprCap = 1.5; resize(); }
   }
 
   // ---------- 0.29: время суток и погода ----------
@@ -757,20 +839,12 @@ function createCauldron() {
     ctx.restore();
   }
   // общий свет комнаты по времени суток: утро розовое, день тёплый, вечер оранжевый, ночь синяя
+  // свет суток уже в готовой картинке комнаты; каждый кадр - только вспышка молнии
   function drawDayLight() {
-    if (RenderOpts.lowfx) return;
-    const w = DayTime.weights(DayTime.phase()), wk = weather ? weather.k : 0;
+    if (RenderOpts.lowfx || !(flashK > 0 && weather)) return;
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-    const cw = Math.round(W * dpr), chh = Math.round(H * dpr);
-    const fill = (op, col, a) => { if (a < 0.01) return; ctx.globalCompositeOperation = op; ctx.globalAlpha = a; ctx.fillStyle = col; ctx.fillRect(0, 0, cw, chh); };
-    fill('multiply', '#6E66B4', 0.38 * w.night + 0.12 * wk);
-    // утро, день и вечер - один тёплый слой своего оттенка (одно наложение на кадр)
-    const a1 = 0.4 * w.day * (1 - 0.6 * wk), a2 = 0.4 * w.dawn, a3 = 0.45 * w.dusk, sa = a1 + a2 + a3;
-    if (sa > 0.01) {
-      const mixc = (i) => Math.round(([0xFF, 0xD7, 0x9A][i] * a1 + [0xFF, 0x9F, 0x8A][i] * a2 + [0xFF, 0x9A, 0x4A][i] * a3) / sa);
-      fill('soft-light', 'rgb(' + mixc(0) + ',' + mixc(1) + ',' + mixc(2) + ')', sa);
-    }
-    if (flashK > 0 && weather) fill('screen', '#EDEBFF', 0.22 * flashK * weather.k);
+    ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = 0.22 * flashK * weather.k; ctx.fillStyle = '#EDEBFF';
+    ctx.fillRect(0, 0, Math.round(W * dpr), Math.round(H * dpr));
     ctx.restore();
   }
 
@@ -813,6 +887,7 @@ function createCauldron() {
     if (!p) return null;
     const it = p.it, R = p.R;
     it._tap = { t0: t, dir: x < R.x + R.w / 2 ? 1 : -1 };
+    roomDirty = true;
     lights.forEach((L) => { if (L.it === it) L.flash = 1; });
     if (!RenderOpts.lowfx) burst(x, y, it.snd === 'magic' ? ['#D9B8FF', '#B07BFF', '#FFFFFF'] : ['#FFE6A0', '#FFFFFF'], 6, 90, 120);
     return it;
@@ -1523,14 +1598,11 @@ function createCauldron() {
     c.globalCompositeOperation = 'multiply';
     const k = dpr, fx = g.cx * k, fy = footY() * k;
     const tone = c.createRadialGradient(fx, fy, g.r * 0.6 * k, fx, fy, Math.max(W, H) * 0.8 * k);
-    tone.addColorStop(0, '#FFFFFF'); tone.addColorStop(0.5, '#EEE6F8'); tone.addColorStop(1, '#C4B4DE');
+    // ночью котёл и питомцы тоже в синей тени, днём чуть теплее - вшито в тот же тон
+    const nt = bgMeta().room && !RenderOpts.lowfx ? [255 - 35 * nightK, 255 - 37 * nightK - 6 * (1 - nightK), 255 - 15 * nightK - 22 * (1 - nightK)] : [255, 255, 255];
+    const tc = (hex) => { const n = parseInt(hex.slice(1), 16); return 'rgb(' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v, i) => Math.round(v * nt[i] / 255)).join(',') + ')'; };
+    tone.addColorStop(0, tc('#FFFFFF')); tone.addColorStop(0.5, tc('#EEE6F8')); tone.addColorStop(1, tc('#C4B4DE'));
     c.fillStyle = tone; c.fillRect(0, 0, w, hh);
-    // ночью котёл и питомцы тоже в синей тени, днём чуть теплее
-    if (bgMeta().room && !RenderOpts.lowfx) {
-      const n = nightK * 0.5, s2 = 1 - nightK;
-      c.fillStyle = 'rgb(' + Math.round(255 - 70 * n) + ',' + Math.round(255 - 74 * n - 6 * s2) + ',' + Math.round(255 - 30 * n - 22 * s2) + ')';
-      c.fillRect(0, 0, w, hh);
-    }
     // 3) свет круга рун на всём, что рядом
     c.globalCompositeOperation = 'soft-light';
     const fi = fireIntensity(), lc = hexRgb(liquid);
@@ -1550,6 +1622,7 @@ function createCauldron() {
     return { W, H, cx: g.cx, cy: g.cy, r: g.r, liq: g.liq, pot: g.pot, ground: bgMeta().room ? footY() : L.y + L.h * 0.86, front: bgMeta().counter && showCounter() ? counterTop() : null, props: frontProps(), night: nightK, t, squash, potBottom: g.pot.y + g.pot.h, liquid };
   }
   function render() {
+    frontCache = null;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawBg();
     drawAmbient();
