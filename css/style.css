@@ -2546,7 +2546,8 @@ body:not(.has-modal) #toast { bottom: calc(var(--safe-bottom) + 216px); }
 .seg-btn.on { border-color: var(--gold); background: linear-gradient(180deg, #FFE38A, #F2A23A); color: var(--ink); }
 
 /* остальные экраны: та же комната, размытая и притемнённая, - одно пространство */
-.screen:not([data-screen="main"]) { position: relative; isolation: isolate; background: #1E0F34; }
+/* position: absolute (как у всех экранов) - экран ровно по высоте окна, иначе список не прокручивается */
+.screen:not([data-screen="main"]) { position: absolute; inset: 0; isolation: isolate; overflow: hidden; background: #1E0F34; }
 .screen:not([data-screen="main"])::before { content: ''; position: absolute; inset: -24px; z-index: -1; pointer-events: none;
   background: radial-gradient(ellipse at 50% 26%, rgba(150,170,255,.18), transparent 60%), var(--i-r2-room) center 30% / cover no-repeat;
   filter: blur(10px) brightness(.42) saturate(1.15); }
