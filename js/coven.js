@@ -358,6 +358,11 @@ const Coven = (() => {
       drawHp();
       if (hp - pending <= 0) flush();
     }
+    // награды за победу - те же, что выдаёт база (boss_hit, update12.sql)
+    const rewards = () => h('div', { class: 'cv-rewards' },
+      h('div', { class: 'cv-rw-title' }, 'Награда за победу - в почту каждому, кто бился'),
+      h('div', { class: 'cv-rw-grid' }, [['1 место', 40, 10], ['2 место', 30, 10], ['3 место', 25, 10], ['Остальным', 15, 6]].map(([n, cr, hr]) =>
+        h('div', { class: 'cv-rw' }, h('b', null, n), h('span', null, pic('ui/crystal', 'cv-rw-ico'), '+' + cr), h('small', null, '+' + hr + ' ч дохода')))));
     async function load() {
       try { st = await call('boss_state', {}); } catch (e) { box.replaceChildren(h('p', { class: 'top-empty' }, errText(e))); return; }
       if (!st) return;
@@ -368,7 +373,7 @@ const Coven = (() => {
           h('img', { class: 'pic cv-boss sleep', src: IMG('boss/' + (st.next || 'cauldron')), alt: '' }),
           h('div', { class: 'cv-boss-name' }, b.name)),
           h('p', { class: 'center cv-boss-info' }, 'Босс выходных придёт в пятницу. До битвы: ', h('b', null, dur(st.starts_in))),
-          h('p', { class: 'note center' }, 'Бейте его тапами всем ковеном с пятницы по воскресенье. Победа - сундук с кристаллами каждому бойцу, тройке лучших - сундук героя.'));
+          h('p', { class: 'note center' }, 'Бейте его тапами всем ковеном с пятницы по воскресенье.'), rewards());
         return;
       }
       if (st.dead) {
@@ -385,6 +390,7 @@ const Coven = (() => {
         h('div', { class: 'cv-hp' }, h('div', { class: 'cv-hp-bar' }, hpFill), hpText),
         arena,
         h('p', { class: 'center cv-boss-info' }, 'Тапай по боссу! Твой урон: ', mine, ' · до конца ', dur(st.ends_in)),
+        rewards(),
         h('h3', { class: 'cv-sub' }, 'Лучшие бойцы'), top);
       mine.textContent = Fmt.num(Math.floor(st.mine || 0));
       drawHp(); drawTop();

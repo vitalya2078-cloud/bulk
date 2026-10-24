@@ -2597,3 +2597,13 @@ body:not(.has-modal) #toast { bottom: calc(var(--safe-bottom) + 216px); }
 .daily .d-ico { width: 34px; height: 34px; margin: -6px 0 -2px; }
 .daily .dot { left: 24px; }
 @media (max-width: 370px) { .daily, .daily:active { padding: 3px 7px 3px 2px; } .daily .d-ico { width: 30px; height: 30px; } }
+/* 0.29.4: награды за босса и значок на вкладке ковена (не обрезается сверху) */
+.cv-seg { padding-top: 10px; }
+.cv-rewards { margin: 12px 0 4px; padding: 10px 10px 12px; border: 1.5px solid var(--card-line); border-radius: 16px; background: var(--card); }
+.cv-rw-title { margin-bottom: 8px; color: #FFE48A; font-weight: 900; font-size: 13px; text-align: center; }
+.cv-rw-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.cv-rw { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 12px; background: rgba(20,8,38,.45); }
+.cv-rw b { color: #FFF6E8; font-size: 12px; }
+.cv-rw span { display: inline-flex; align-items: center; gap: 2px; color: #FFE48A; font-weight: 900; font-size: 15px; }
+.cv-rw small { color: #D7C6F2; font-size: 10px; text-align: center; line-height: 1.15; }
+.cv-rw-ico { width: 18px; height: 18px; }

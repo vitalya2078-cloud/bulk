@@ -356,7 +356,7 @@ const Pets = (() => {
     if (!G || actors.some((a) => a.id === id && !a.leaving)) return;
     lastInput = performance.now();
     const side = actors.length % 2 ? 1 : -1;
-    actors.push({ id, x: G.cx + side * G.r * rand(1.1, 1.6), y: 0, depth: rand(0.2, 0.8), vx: 0, face: -side,
+    actors.push({ id, x: G.cx + side * G.r * rand(1.35, 1.8), y: 0, depth: rand(0.2, 0.8), vx: 0, face: -side,
       st: 'idle', t: 0, dur: rand(1.5, 3), frame: F.sit, blinkIn: rand(1, 4), jump: null, perch: 0, say: null, sayT: 0,
       squash: 0, wake: 0, enter: 1 });
   }
@@ -495,8 +495,11 @@ const Pets = (() => {
         // за шкафом или столом питомца не видно - туда не ходим
         const ty = G.ground + td * (floorFront() - G.ground), pw = G.r * 0.5;
         if ((G.props || []).some((p) => ty < p.y && tx > p.x0 - pw && tx < p.x1 + pw)) continue;
+        // прямо перед котлом у помоста питомец закрывает Бульку лицо - туда не ходим
+        if (G.front && td < 0.45 && Math.abs(tx - G.cx) < G.r * 1.25) continue;
         if (!actors.some((q) => q !== a && Math.abs((q.tx !== undefined && q.st === 'walk' ? q.tx : q.x) - tx) < G.r * 0.55)) break;
       }
+      if (G.front && (tx - G.cx) * (a.x - G.cx) < 0) td = Math.max(td, 0.5);
       return goTo(a, tx, td);
     }
     if (r < 0.5 && G.front && !actors.some((q) => q !== a && q.then === 'eat')) {
@@ -576,7 +579,9 @@ const Pets = (() => {
           const dx = a.tx - a.x, dd = a.tdepth - a.depth;
           const span = Math.max(1, floorFront() - G.ground), sp = G.r * 0.95 * depthScale(a.y) * dt;
           if (Math.abs(dx) >= 2) a.face = dx >= 0 ? 1 : -1;
-          a.x += Math.sign(dx) * Math.min(Math.abs(dx), sp);
+          // путь мимо котла: сначала выйти вперёд с помоста, потом идти вбок (не по треноге)
+          const pass = G.front && a.depth < 0.42 && a.tdepth >= 0.45 && ((a.x < G.cx) !== (a.tx < G.cx) || Math.abs(a.tx - G.cx) < G.r * 1.25);
+          if (!pass) a.x += Math.sign(dx) * Math.min(Math.abs(dx), sp);
           a.depth += Math.sign(dd) * Math.min(Math.abs(dd), sp * 0.7 / span);
           a.frame = F.walk[Math.floor(a.t * 8) % 4];
           if (Math.abs(dx) < 2 && Math.abs(a.tdepth - a.depth) < 0.01) {

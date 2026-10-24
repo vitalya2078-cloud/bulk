@@ -236,6 +236,61 @@ const Visitors = (() => {
     vis.hit = { x: x - w / 2 + ox, y: top + oy - hh * 0.5, w, h: Math.min(hh * 1.4, o.counterTop - top + hh * 0.5) };
     // облачко над головой
     if (st.phase === 'waiting' || (st.phase === 'leaving' && (st.result === 'happy' || st.result === 'ok'))) drawCloud(ctx, x, top + hh * 0.04, Math.max(74, w * 0.66), o, k, dt);
+    if (st.phase === 'waiting' && st.mode !== 'deliver') drawSpeech(ctx, x, top, w, o, now);
+  }
+
+  // Слова жителя: пришёл - несколько секунд говорит, зачем пришёл; потом под ним подсказка «тапни».
+  function speechText() {
+    if (st.mode === 'remind') return Requests.line(st.v.id, 'remind', 'Как там моя просьба? Я загляну попозже!');
+    if (st.r && st.r.text) return st.r.text;
+    return 'Можно попросить о помощи?';
+  }
+  function wrap(ctx, text, maxW) {
+    const words = String(text).split(' '), lines = [];
+    let cur = '';
+    words.forEach((wd) => { const t = cur ? cur + ' ' + wd : wd; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = wd; } else cur = t; });
+    if (cur) lines.push(cur);
+    return lines.slice(0, 4);
+  }
+  function drawSpeech(ctx, vx, headY, vw, o, now) {
+    const age = (now - vis.enterAt) / 1000;
+    ctx.save();
+    if (age < 6.5) {
+      // облачко с репликой справа от жителя, хвостик к нему
+      const a = Math.min(1, (age - 0.5) * 4, (6.5 - age) * 3);
+      if (a > 0) {
+        const fs = Math.max(12, Math.round(o.size * 0.15));
+        ctx.font = '800 ' + fs + 'px Nunito, system-ui, sans-serif';
+        const maxW = Math.min(o.W * 0.5, 230);
+        const lines = wrap(ctx, speechText(), maxW);
+        const tw = Math.max(...lines.map((l) => ctx.measureText(l).width));
+        const bw = tw + 22, bh = lines.length * fs * 1.22 + 14;
+        const bx = clamp(vx + vw * 0.3, 6, o.W - bw - 6), by = clamp(headY + vw * 0.05, o.H * 0.18, o.H - bh - 10);
+        ctx.globalAlpha = a;
+        ctx.fillStyle = '#FFF6E8'; ctx.strokeStyle = '#1A0E2C'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 14) : ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
+        // хвостик к жителю (влево-вниз)
+        const ty = by + bh * 0.62;
+        ctx.beginPath(); ctx.moveTo(bx + 1, ty - 8); ctx.lineTo(bx - 10, ty + 6); ctx.lineTo(bx + 1, ty + 6); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(bx, ty - 8); ctx.lineTo(bx - 10, ty + 6); ctx.lineTo(bx, ty + 6); ctx.stroke();
+        ctx.fillStyle = '#1A0E2C'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        lines.forEach((l, i) => ctx.fillText(l, bx + 11, by + 7 + i * fs * 1.22));
+      }
+    } else {
+      // подсказка под облачком: что делать
+      const fs = Math.max(11, Math.round(o.size * 0.12));
+      ctx.font = '900 ' + fs + 'px Nunito, system-ui, sans-serif';
+      const t = st.mode === 'remind' ? 'Тапни: как дела?' : 'Тапни, помоги!';
+      const tw = ctx.measureText(t).width, bw = tw + 18, bh = fs + 10;
+      const c = vis.cloud || { x: vx - 40, y: headY - 60, w: 80, h: 60 };
+      const bx = clamp(c.x + c.w / 2 - bw / 2, 4, o.W - bw - 4), by = Math.max(4, c.y - bh - 2);
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = 'rgba(28,12,48,.86)'; ctx.strokeStyle = '#FFD27A'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, bh / 2) : ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#FFE48A'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(t, bx + bw / 2, by + bh / 2 + 1);
+    }
+    ctx.restore();
   }
 
   function drawCloud(ctx, cx, headY, cw, o, k, dt) {
@@ -247,6 +302,7 @@ const Visitors = (() => {
     const s = (0.6 + 0.4 * k) * (1 + vis.pop * 0.12);
     const ch = cw * cl.naturalHeight / cl.naturalWidth;
     const x0 = clamp(cx - cw * 0.22, 4, o.W - cw - 4), y0 = Math.max(o.H * 0.2, headY - ch * 0.95) + bob;
+    vis.cloud = { x: x0, y: y0, w: cw, h: ch };
     ctx.save();
     ctx.translate(x0 + cw / 2, y0 + ch / 2); ctx.scale(s, s); ctx.translate(-cw / 2, -ch / 2);
     // свечение, пока ждёт
