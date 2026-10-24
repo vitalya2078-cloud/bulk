@@ -219,7 +219,7 @@
   Object.values(D.eggs || {}).forEach((e) => e.img && preload.add(e.img));
   (D.locations || []).forEach((l) => l.img && preload.add(l.img));
   ['moon', 'pepper', 'star'].forEach((p) => { for (let i = 1; i <= 3; i++) preload.add('plants/' + p + i); });
-  ['r2/sky', 'r2/sky_dawn', 'r2/sky_day', 'r2/sky_dusk', 'r2/cobweb', 'guests/dust', 'guests/owl', 'guests/witch', 'guests/cat', 'clock/case', 'clock/hour', 'clock/minute', 'clock/pendulum', 'clock/bird', 'clock/door', 'r2/flame', 'memory/back', 'memory/front', 'memory/table', 'pets/nest', 'pets/shell', 'pets/bowl', 'cauldron/pot', 'cauldron/liquid', 'cauldron/bubble', 'r2/counter', 'ui/paw_heart', 'ui/steam', 'ui/heat'].forEach((n) => preload.add(n));
+  ['r2/sky', 'r2/sky_dawn', 'r2/sky_day', 'r2/sky_dusk', 'r2/cobweb', 'r2/sill', 'guests/dust', 'guests/owl', 'guests/witch', 'guests/cat', 'clock/case', 'clock/hour', 'clock/minute', 'clock/pendulum', 'clock/bird', 'clock/door', 'r2/flame', 'memory/back', 'memory/front', 'memory/table', 'pets/nest', 'pets/shell', 'pets/bowl', 'cauldron/pot', 'cauldron/liquid', 'cauldron/bubble', 'r2/counter', 'ui/paw_heart', 'ui/steam', 'ui/heat'].forEach((n) => preload.add(n));
 
   Cauldron.init(canvas);
   TimeDay.init(() => UI.screen() === 'main' && !UI.isModalOpen());

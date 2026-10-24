@@ -22,12 +22,13 @@ CONFIG.timeday = {
   guestsMax: 8,
   // горшки на окне: x - центр (доли картинки комнаты), растёт часов (реальных), что даёт
   pots: [
-    { id: 'pepper', x: 0.44, hours: 2, give: [['chili', 2], ['ember', 0.3]] },
+    { id: 'pepper', x: 0.415, hours: 2, give: [['chili', 2], ['ember', 0.3]] },
     { id: 'star', x: 0.5, hours: 3, give: [['stardust', 1], ['firefly', 0.5]] },
-    { id: 'moon', x: 0.56, hours: 4, give: [['moonflower', 1]] }
+    { id: 'moon', x: 0.585, hours: 4, give: [['moonflower', 1]] }
   ],
-  potY: 0.336, potW: 0.052,
-  clock: { x: 0.771, y: 0.19, w: 0.075 }  // доли картинки комнаты r2/room: центр, верх корпуса, ширина
+  potY: 0.338, potW: 0.072,
+  sill: { x: 0.5, w: 0.33, top: 0.735 },   // подвесной подоконник: центр, ширина, где верх доски на картинке (доля высоты)
+  clock: { x: 0.735, y: 0.165, w: 0.115 }  // доли картинки комнаты r2/room: центр, верх корпуса, ширина
 };
 
 const TimeDay = (() => {
@@ -343,16 +344,19 @@ const TimeDay = (() => {
   function drawPots(ctx, g) {
     potR = [];
     if (!S()) return;
-    // полочка-подоконник под горшками
-    const sx0 = g.bx(C.pots[0].x - C.potW * 0.9), sx1 = g.bx(C.pots[C.pots.length - 1].x + C.potW * 0.9), sy = g.by(C.potY) - g.dw * 0.004, th = g.dw * 0.012;
-    ctx.save();
-    ctx.fillStyle = 'rgba(20,8,30,.35)'; ctx.fillRect(sx0 + th * 0.4, sy + th, sx1 - sx0 - th * 0.8, th * 0.7);
-    const wg = ctx.createLinearGradient(0, sy, 0, sy + th); wg.addColorStop(0, '#B36A3A'); wg.addColorStop(1, '#6E3A20');
-    ctx.fillStyle = wg; ctx.strokeStyle = '#2A1530'; ctx.lineWidth = Math.max(1, th * 0.18);
-    ctx.beginPath(); ctx.rect(sx0, sy, sx1 - sx0, th); ctx.fill(); ctx.stroke();
-    const wt = DayTime.weights(DayTime.phase());
-    if (wt.night > 0.01) { ctx.globalAlpha = 0.4 * wt.night; ctx.fillStyle = '#2A2260'; ctx.fillRect(sx0, sy, sx1 - sx0, th); }
-    ctx.restore();
+    // подвесной подоконник на цепях (r2/sill), цепи продолжаются вверх до балки
+    const sim = Sprites.get('r2/sill');
+    if (sim) {
+      const sw = C.sill.w * g.dw, shh = sw * sim.naturalHeight / sim.naturalWidth, sx = g.bx(C.sill.x) - sw / 2, sy = g.by(C.potY) - shh * C.sill.top;
+      const top = g.by(0.12), seg = shh * 0.5, iw = sim.naturalWidth, ih = sim.naturalHeight;
+      [[0.1, 0.19], [0.81, 0.9]].forEach(([a0, a1]) => {
+        for (let y = sy - seg; y > top - seg; y -= seg) {
+          const cut = Math.max(0, top - y);
+          ctx.drawImage(sim, iw * a0, ih * 0.02 + ih * 0.5 * cut / seg, iw * (a1 - a0), ih * 0.5 * (1 - cut / seg), sx + sw * a0, y + cut, sw * (a1 - a0), seg - cut);
+        }
+      });
+      ctx.drawImage(sim, sx, sy, sw, shh);
+    }
     C.pots.forEach((p) => {
       const stg = potStage(p), im = Sprites.get('plants/' + p.id + stg);
       if (!im) return;
