@@ -79,6 +79,13 @@ public class MainActivity extends Activity {
         setContentView(root);
         if (b != null) web.restoreState(b);
         else web.loadUrl(START);
+        // только для отладочной сборки (проверка на эмуляторе): выполнить JS из параметра запуска
+        if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            final String js = getIntent().getStringExtra("bulk_js");
+            final int delay = getIntent().getIntExtra("bulk_js_delay", 30000);
+            if (js != null) ui.postDelayed(() -> web.evaluateJavascript(js, (r) -> android.util.Log.i("BulkWeb", "bulk_js -> " + r)), delay);
+            WebView.setWebContentsDebuggingEnabled(true);
+        }
     }
 
     @Override
