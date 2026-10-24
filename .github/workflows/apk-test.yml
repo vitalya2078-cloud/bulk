@@ -6,6 +6,9 @@ on:
   workflow_run:
     workflows: [game-apk]
     types: [completed]
+  push:
+    branches: [main]
+    paths: ['.github/workflows/apk-test.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -41,17 +44,15 @@ jobs:
             adb install -r bulk-test.apk
             adb logcat -c
             adb shell am start -n ru.bulk.game/.MainActivity
-            sleep 25
+            sleep 45
             adb exec-out screencap -p > 1_start.png
-            adb shell input tap 540 1700
-            sleep 3
-            adb shell input tap 540 1500
-            sleep 20
+            # кнопка «Нажми, чтобы начать» - внизу экрана (1080x2400)
+            adb shell input tap 540 2060
+            sleep 12
             adb exec-out screencap -p > 2_game.png
-            adb shell input tap 540 1250
-            sleep 1
-            adb shell input tap 560 1260
-            sleep 8
+            # тапы по котлу (середина экрана) и закрыть возможное окно «Назад»
+            for i in 1 2 3 4 5; do adb shell input tap 540 1150; sleep 0.4; done
+            sleep 6
             adb exec-out screencap -p > 3_taps.png
             adb shell input keyevent KEYCODE_BACK
             sleep 3
