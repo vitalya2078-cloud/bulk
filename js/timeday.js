@@ -51,7 +51,7 @@ const TimeDay = (() => {
     const s = S();
     if (!s.td || typeof s.td !== 'object') s.td = {};
     const t = s.td;
-    if (t.d !== Econ.today()) { t.d = Econ.today(); t.stars = 0; t.ck = 0; t.mr = 0; }
+    if (t.d !== Econ.today()) { t.d = Econ.today(); t.stars = 0; t.ck = 0; t.mr = 0; t.gs = 0; }
     return t;
   };
   const save = () => { if (window.Game) Game.save(); };

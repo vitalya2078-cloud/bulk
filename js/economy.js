@@ -84,6 +84,8 @@ const Econ = (() => {
       pd: [],          // 0.20.1: номера применённых правок из админки - чтобы правка не применилась дважды
       pth: null,       // 0.22: «Путь алхимика» { i: текущий шаг, at: когда начат }; null - ещё не начат
       rel: {},         // 0.28: диковинки, сундуки, осколки, колесо (см. relics.js)
+      room: {},        // 0.29: мебель комнаты: { seen: нажатые предметы-кнопки, d, n: капли эссенции за день }
+      td: {},          // 0.30: дела по времени суток (timeday.js): огород, звёзды, гости, утренний привоз
       tut: null        // 0.22: обучение { v: версия, done: true } ; null - не показывалось
     };
   }
@@ -117,6 +119,7 @@ const Econ = (() => {
     for (const k of ['ing', 'bag', 'pa', 'hints']) if (!f[k] || typeof f[k] !== 'object' || Array.isArray(f[k])) f[k] = {};
     if (!Array.isArray(f.book)) f.book = ['power', 'gold'];
     if (!f.shop || !Array.isArray(f.shop.b)) f.shop = { d: '', b: [] };
+    for (const k of ['room', 'td']) if (!f[k] || typeof f[k] !== 'object' || Array.isArray(f[k])) f[k] = {};
     s = f;
     invalidate();
   }

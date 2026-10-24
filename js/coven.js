@@ -222,7 +222,7 @@ const Coven = (() => {
         h('div', { class: 'cv-lvl-main' },
           h('div', { class: 'cv-lvl-top' }, h('b', null, 'Уровень ' + c.level), h('span', null, c.need ? Fmt.num(Math.floor(c.xp)) + ' / ' + Fmt.num(c.need) : 'максимум')),
           h('div', { class: 'cv-bar' }, h('i', { style: 'width:' + (lvlFrac * 100) + '%' })),
-          h('small', null, 'Бонус всем участникам: ', h('b', null, '+' + c.bonus + '% к доходу'), ' · за неделю ' + Fmt.num(Math.floor(c.week)) + ' очк.'))),
+          h('small', null, 'Бонус всем участникам: ', h('b', null, '+' + c.bonus + '% к доходу'), ' · за неделю ' + Fmt.num(Math.floor(c.week)) + ' ' + Fmt.plural(Math.floor(c.week), ['очко', 'очка', 'очков'])))),
       questCard(my.quest),
       h('p', { class: 'note center' }, 'Каждая минута в игре любого участника - очко ковену. Чем больше вас играет, тем быстрее растёт уровень.')
     ];
