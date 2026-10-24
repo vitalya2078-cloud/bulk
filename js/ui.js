@@ -924,7 +924,14 @@ const UI = (() => {
         })() : null,
         (typeof Online !== 'undefined' && Online.on()) ? h('div', { class: 'set-row' }, pic('ui/gift', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Промокод'), h('small', null, 'Есть код? Введи и получи подарок')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.promoDialog(), 0); } }, 'Ввести')) : null,
-        (typeof Online !== 'undefined' && Online.on() && Platform.kind() !== 'vk') ? h('div', { class: 'set-row' }, pic('ui/link', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Один прогресс'), h('small', null, 'Играй в ВК и Telegram с одним сохранением')),
+        Platform.isApp() ? (() => {
+          // приложение для телефона: вход через ВКонтакте (прогресс общий с мини-приложением ВК)
+          const u = Platform.appUser();
+          return h('div', { class: 'set-row' }, pic('ui/link', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'ВКонтакте'),
+            h('small', null, u ? 'Вход выполнен' + (u.name ? ': ' + u.name : '') + '. Прогресс общий с игрой в ВК' : 'Войди, чтобы перенести прогресс из ВК и играть с ним здесь')),
+            h('button', { class: 'pill-btn' + (u ? ' alt' : ''), type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => (u ? Online.appLogoutDialog() : Online.appLoginFlow()), 0); } }, u ? 'Выйти' : 'Войти'));
+        })() : null,
+        (typeof Online !== 'undefined' && Online.on() && Platform.kind() !== 'vk' && !Platform.isApp()) ? h('div', { class: 'set-row' }, pic('ui/link', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Один прогресс'), h('small', null, 'Играй в ВК и Telegram с одним сохранением')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => Online.linkDialog(), 0); } }, 'Связать')) : null,
         typeof Guide !== 'undefined' ? h('div', { class: 'set-row' }, pic('ui/book', 'set-ico'), h('div', { class: 'set-main' }, h('div', { class: 'set-label' }, 'Обучение'), h('small', null, 'Пройти подсказки для новичков ещё раз')),
           h('button', { class: 'pill-btn', type: 'button', onclick: () => { Sound.tap(); closeModal(); setTimeout(() => { show('main'); Guide.replay(); }, 0); } }, 'Заново')) : null,

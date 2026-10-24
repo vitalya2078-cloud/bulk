@@ -6,11 +6,18 @@ const Platform = (() => {
   let vk = window.vkBridge || null;
   const tg = (window.Telegram && window.Telegram.WebApp) || null;
   const qs = new URLSearchParams(location.search);
+  // 0.29: приложение для телефона (APK) - оболочка даёт window.BulkApp. Игрок входит через ВК:
+  // сервер (функция applogin) выдаёт такие же подписанные параметры запуска, как мини-приложение ВК.
+  const app = window.BulkApp || null;
+  const APP_KEY = 'bulk_app_vk';
+  let appVk = null;
+  try { appVk = JSON.parse(localStorage.getItem(APP_KEY) || 'null'); } catch (e) { /* ignore */ }
 
   let kind = 'web';
   try {
     if (tg && tg.initData) kind = 'tg';
     else if (qs.has('vk_app_id') && qs.has('vk_user_id')) kind = 'vk';
+    else if (app) kind = 'app';
   } catch (e) { /* ignore */ }
 
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -56,8 +63,48 @@ const Platform = (() => {
     };
   }
 
+  // ---------- приложение для телефона: вход через ВК ----------
+  function appCall(body, ms) {
+    const T = CONFIG.tops;
+    const url = T.url.replace(/\/rest\/v1\/rpc\/?$/, '/functions/v1/applogin');
+    return withTimeout(fetch(url, { method: 'POST', headers: { apikey: T.key, Authorization: 'Bearer ' + T.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then((r) => r.json()), ms || 12000);
+  }
+  function appSetUser(v) {
+    appVk = v || null;
+    try { if (appVk) localStorage.setItem(APP_KEY, JSON.stringify(appVk)); else localStorage.removeItem(APP_KEY); } catch (e) { /* ignore */ }
+  }
+  // параметры запуска живут 7 дней: за 3 дня до конца берём новые по ключу продления
+  async function appRefresh() {
+    if (!appVk || !appVk.refresh) return;
+    const ts = +(new URLSearchParams(appVk.params || '').get('vk_ts') || 0);
+    if (Date.now() / 1000 - ts < 4 * 86400) return;
+    try {
+      const r = await appCall({ action: 'refresh', uid: appVk.uid, refresh: appVk.refresh }, 4000);
+      if (r && r.params) appSetUser(Object.assign({}, appVk, { params: r.params }));
+    } catch (e) { /* без сети - играем как есть */ }
+  }
+  // окно входа ВК (в оболочке) -> код -> сервер. Возвращает { ok, user } или { error }; сохраняет вызывающий.
+  function appLogin() {
+    return new Promise((res) => {
+      if (!app || !app.vkLogin) { res({ error: 'no app' }); return; }
+      window.__vkLoginDone = async (r) => {
+        window.__vkLoginDone = null;
+        if (!r || !r.code) { res({ error: (r && r.error) || 'cancel' }); return; }
+        try {
+          const x = await appCall({ action: 'login', code: r.code });
+          if (!x || !x.params) { res({ error: (x && x.error) || 'server' }); return; }
+          res({ ok: true, user: { uid: x.uid, params: x.params, refresh: x.refresh, name: x.name || '', photo: x.photo || '' } });
+        } catch (e) { res({ error: 'net' }); }
+      };
+      try { app.vkLogin(); } catch (e) { res({ error: 'no app' }); }
+    });
+  }
+  function appLogout() { appSetUser(null); try { app && app.vkLogout && app.vkLogout(); } catch (e) { /* ignore */ } }
+
   // ---------- запуск ----------
   async function init() {
+    if (kind === 'app') { await appRefresh(); return; }
     if (kind === 'vk') {
       // ждём настоящий модуль ВК (грузится в фоне), но не дольше 4 секунд
       if (!vk) vk = window.vkBridge || await Promise.race([window.__vkBridge || Promise.resolve(null), wait(4000).then(() => null)]) || window.vkBridge || miniBridge();
@@ -106,6 +153,7 @@ const Platform = (() => {
   function userId() {
     if (kind === 'vk') return qs.get('vk_user_id') || '';
     if (kind === 'tg') return String((tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || '');
+    if (kind === 'app') return appVk ? String(appVk.uid) : '';
     return '';
   }
 
@@ -113,6 +161,7 @@ const Platform = (() => {
   function authData() {
     if (kind === 'tg') return (tg && tg.initData) || '';
     if (kind === 'vk') return qs.has('sign') && qs.has('vk_user_id') ? 'vk:' + location.search.slice(1) : '';
+    if (kind === 'app') return appVk && appVk.params ? 'vk:' + appVk.params : '';
     return '';
   }
 
@@ -143,6 +192,7 @@ const Platform = (() => {
         const u = (tg.initDataUnsafe && tg.initDataUnsafe.user) || {};
         return { name: u.first_name || '', photo: u.photo_url || '' };
       }
+      if (kind === 'app' && appVk) return { name: appVk.name || '', photo: appVk.photo || '' };
     } catch (e) { console.warn(e); }
     return { name: '', photo: '' };
   }
@@ -213,6 +263,7 @@ const Platform = (() => {
     try {
       if (kind === 'tg' && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
       else if (kind === 'vk') vkCall('VKWebAppTapticImpactOccurred', { style: 'light' }).catch(() => {});
+      else if (kind === 'app' && app.vibrate) app.vibrate(12);
     } catch (e) { /* ignore */ }
   }
 
@@ -315,7 +366,7 @@ const Platform = (() => {
     return false;
   }
 
-  const label = () => ({ vk: 'ВКонтакте', tg: 'Telegram', web: 'браузер' }[kind]);
+  const label = () => ({ vk: 'ВКонтакте', tg: 'Telegram', web: 'браузер', app: 'приложение' }[kind]);
 
   // внешняя ссылка: в Telegram - его способом (ссылки t.me открываются внутри Telegram), иначе новое окно
   function openUrl(url) {
@@ -329,6 +380,7 @@ const Platform = (() => {
   return {
     init, kind: () => kind, label, userId, referrer, profile, authData, setUid,
     storageGet, storageSet, adsAvailable, rewardedAd, haptic, canFavorite, addFavorite, canStory, shareStory, canNotify, allowNotify, canNews, allowNews, botAllowed,
-    invite, share, hasLeaderboard, leaderboard, openUrl
+    invite, share, hasLeaderboard, leaderboard, openUrl,
+    isApp: () => kind === 'app', appUser: () => appVk, appLogin, appLogout, appSetUser
   };
 })();

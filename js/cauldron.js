@@ -499,6 +499,15 @@ function createCauldron() {
     if (it.flip) { ac.translate(w, 0); ac.scale(-1, 1); }
     ac.drawImage(im, 0, 0, w, hh);
     gradeCanvas(a, it.layer === 'wall' ? '#EAE0F6' : '#F0E8FA');
+    // низ предмета в тени пола: так он «садится» на пол, а не висит над ним
+    if (it.layer !== 'wall') {
+      ac.setTransform(1, 0, 0, 1, 0, 0);
+      ac.globalCompositeOperation = 'source-atop';
+      const og = ac.createLinearGradient(0, hh * 0.7, 0, hh);
+      og.addColorStop(0, 'rgba(26,12,40,0)'); og.addColorStop(1, 'rgba(26,12,40,.42)');
+      ac.fillStyle = og; ac.fillRect(0, 0, w, hh);
+      ac.globalCompositeOperation = 'source-over';
+    }
     if (!('filter' in ac)) return a;
     // комната чуть ярче и сочнее - как фон
     const b = document.createElement('canvas'); b.width = w; b.height = hh;
@@ -512,7 +521,7 @@ function createCauldron() {
       sun, wx: wn ? bgX(wn.x) : W / 2, wy: bgY(DATA.room.wallY) - bgGeom.dh * 0.05,
       px: g.cx, py: footY() - g.r * 0.3,
       len: 0.32 + 0.55 * (w.dawn + w.dusk) + 0.12 * w.day + 0.18 * w.night,
-      alpha: 0.2 + 0.16 * sun
+      alpha: 0.26 + 0.18 * sun
     };
   }
   function bakeShadows(c, list) {
@@ -550,13 +559,17 @@ function createCauldron() {
       if ('filter' in c) c.filter = 'blur(' + Math.round(bl * dpr) + 'px)';
       c.drawImage(cv2, 0, 0); c.restore();
     });
-    // тень касания: там, где предмет стоит на полу, темнее всего
-    c.save(); c.fillStyle = '#12061F';
+    // тень касания: мягкое пятно по всему основанию (в ракурсе сверху основание глубокое),
+    // в центре темнее всего - предмет стоит на полу всем весом
+    c.save();
     list.forEach((p) => {
       if (p.it.layer === 'wall' || p.it.under) return;
-      const R = p.R;
-      c.globalAlpha = 0.38;
-      c.beginPath(); c.ellipse(R.x + R.w / 2, R.y + R.h * 0.985, R.w * 0.44, Math.max(3, R.h * 0.05), 0, 0, TAU); c.fill();
+      const R = p.R, cx = R.x + R.w / 2, cy = R.y + R.h * 0.95, rx = R.w * 0.58, ry = Math.max(5, R.h * 0.14);
+      c.save(); c.translate(cx, cy); c.scale(1, ry / rx);
+      const gr = c.createRadialGradient(0, 0, 0, 0, 0, rx);
+      gr.addColorStop(0, 'rgba(18,6,31,.62)'); gr.addColorStop(0.55, 'rgba(18,6,31,.4)'); gr.addColorStop(1, 'rgba(18,6,31,0)');
+      c.fillStyle = gr; c.beginPath(); c.arc(0, 0, rx, 0, TAU); c.fill();
+      c.restore();
     });
     c.restore();
   }

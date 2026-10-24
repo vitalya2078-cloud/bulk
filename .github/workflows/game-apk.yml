@@ -1,0 +1,45 @@
+# Сборка игры «Бульк» в APK (для RuStore и установки по ссылке).
+# Все файлы игры кладутся внутрь APK - игра работает без интернета.
+# Сборка выдаёт НЕподписанный APK (релиз game-apk-unsigned): подписывает его владелец игры
+# своим ключом (ключ в репозиторий не кладётся, без него обновление в RuStore не выпустить).
+name: game-apk
+on:
+  push:
+    branches: [main, ccr-1931aaac-ojah34]
+    paths: ['android-game/**', '.github/workflows/game-apk.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Встроить игру
+        run: |
+          W=android-game/app/src/main/assets/www
+          mkdir -p $W
+          cp -r index.html privacy.html terms.html version.json js css assets $W/
+      - name: Сборка
+        env:
+          APP_BUILD: '0'
+        run: gradle -p android-game assembleRelease --no-daemon --stacktrace
+      - name: Выравнивание
+        run: |
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -P 16 -f 4 android-game/app/build/outputs/apk/release/app-release-unsigned.apk bulk-unsigned.apk
+          $BT/zipalign -c -P 16 4 bulk-unsigned.apk
+          ls -la bulk-unsigned.apk
+      - name: Релиз
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete game-apk-unsigned -y --cleanup-tag || true
+          gh release create game-apk-unsigned bulk-unsigned.apk --target ${{ github.sha }} --title "Бульк APK (без подписи)" --notes "Сборка ${{ github.run_number }} из ${{ github.sha }}. Перед установкой подписать ключом владельца." --prerelease --latest=false

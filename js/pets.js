@@ -402,8 +402,7 @@ const Pets = (() => {
     const im = Sprites.get('pets/bowl'), p = bowlPos();
     if (!im) return;
     const hh = p.w * im.naturalHeight / im.naturalWidth;
-    ctx.save(); ctx.globalAlpha = 0.3; ctx.fillStyle = '#12061F';
-    ctx.beginPath(); ctx.ellipse(p.x, p.y - 2, p.w * 0.45, hh * 0.08, 0, 0, TAU); ctx.fill(); ctx.restore();
+    softShadow(ctx, p.x, p.y - hh * 0.1, p.w * 0.62, hh * 0.22, 0.55);
     ctx.drawImage(im, p.x - p.w / 2, p.y - hh, p.w, hh);
   }
 
@@ -796,9 +795,17 @@ const Pets = (() => {
     for (let i = 1; i <= 4; i++) ctx.lineTo(x + (w / 4) * i, y + (i % 2 ? 1 : -1) * w * 0.12 * dir);
     ctx.stroke();
   }
+  // мягкая тень под вещью на полу: в центре темнее, к краям тает - вещь стоит, а не висит
+  function softShadow(ctx, x, y, rx, ry, a) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(1, ry / rx);
+    const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+    gr.addColorStop(0, 'rgba(18,6,31,' + a + ')'); gr.addColorStop(0.55, 'rgba(18,6,31,' + a * 0.65 + ')'); gr.addColorStop(1, 'rgba(18,6,31,0)');
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, rx, 0, TAU); ctx.fill(); ctx.restore();
+  }
   function drawBed(ctx) {
     const b = S().wear.bed && owned().length ? bedPos() : null;
     if (!b || !b.im) return;
+    if (G.front) softShadow(ctx, b.x, b.top + b.h * 0.9, b.w * 0.6, b.h * 0.24, 0.55);
     ctx.drawImage(b.im, b.left, b.top, b.w, b.h);
     actors.filter((a) => a.inBed).forEach((a) => drawPet(ctx, a));
   }

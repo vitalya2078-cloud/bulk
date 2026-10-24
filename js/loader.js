@@ -107,7 +107,8 @@ const Loader = (() => {
 
   // кэш через Service Worker (работает на https и на localhost)
   function registerSW() {
-    if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+    // в приложении для телефона файлы и так лежат на устройстве - сервис-воркер не нужен
+    if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol) || window.BulkApp) return;
     // сразу, а не после загрузки страницы: так в кэш попадёт уже первая загрузка
     navigator.serviceWorker.register('sw.js?v=' + ASSET_V).catch(() => {});
   }

@@ -1,0 +1,34 @@
+plugins { id 'com.android.application' }
+
+// Версия приложения = версия игры из js/config.js (0.29.0 -> код 2900)
+def cfg = file('../../js/config.js').text
+def ver = (cfg =~ /version:\s*'([^']+)'/)[0][1]
+def parts = ver.tokenize('.').collect { it as int }
+def code = parts[0] * 1000000 + parts[1] * 1000 + parts[2] * 10 + ((System.getenv('APP_BUILD') ?: '0') as int)
+
+android {
+    namespace 'ru.bulk.game'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'ru.bulk.game'
+        minSdk 24
+        targetSdk 35
+        versionCode code
+        versionName ver
+    }
+    // Подпись делается отдельно, ключом владельца игры (ключ в репозиторий не кладётся):
+    // сборка выдаёт неподписанный APK, его подписывают apksigner'ом.
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    // картинки и звуки игры уже сжаты - в APK кладём как есть, так они читаются быстрее
+    androidResources {
+        noCompress += ['webp', 'mp3', 'png', 'jpg', 'woff2']
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

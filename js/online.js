@@ -432,5 +432,48 @@ const Online = (() => {
 
   const boost = () => (state.settings && state.settings.boost) || null;
 
-  return { linked: () => linked, boost, call, start, openMail, promoDialog, newsState, setNews, admCode, notifyPush, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid };
+  // ---------- 0.29: приложение для телефона - вход через ВКонтакте ----------
+  const brief = (x) => 'уровень ' + ((x && x.lvl) || 1) + ', эссенции ' + Fmt.num((x && x.le) || 0) + ' за всё время';
+  // вошёл - сразу перезапуск: при запуске игра сама возьмёт свежий прогресс (из базы, если он от другой игры)
+  const switchTo = (u) => { Platform.appSetUser(u); location.reload(); };
+  async function appLoginFlow() {
+    UI.toast('Открываю вход ВКонтакте');
+    const r = await Platform.appLogin();
+    if (!r.ok) {
+      if (r.error !== 'cancel') UI.toast(r.error === 'net' ? 'Нет связи. Вход через ВК работает при подключении к сети' : 'ВК не пустил: ' + r.error);
+      return;
+    }
+    let srv;
+    try { srv = await rpc('load_save', { init_data: 'vk:' + r.user.params }, 12000); } catch (e) { UI.toast('Нет связи. Вход через ВК работает при подключении к сети'); return; }
+    const sv = srv && srv.save && typeof srv.save === 'object' ? srv.save : null;
+    const hi = 'Привет' + (r.user.name ? ', ' + r.user.name : '') + '!';
+    if (!sv) {
+      UI.modal({ title: hi, body: h('p', { class: 'center' }, 'Во ВКонтакте у тебя ещё нет прогресса. Игра с этого телефона сохранится в твой аккаунт ВК - сможешь играть и тут, и в мини-приложении.'),
+        actions: [{ label: 'Отлично', onClick: () => switchTo(r.user) }] });
+      return;
+    }
+    UI.modal({ title: hi, body: h('div', null,
+      h('p', { class: 'center' }, 'Во ВКонтакте: ' + brief(sv) + '.'),
+      h('p', { class: 'center' }, 'На этом телефоне: ' + brief(Econ.s) + '.'),
+      h('p', { class: 'note center' }, 'Прогресс из ВК загрузится сюда и заменит игру на телефоне.')),
+    actions: [{ label: 'Загрузить из ВК', onClick: () => switchTo(r.user) }, { label: 'Отмена', alt: true }] });
+  }
+  function appLogoutDialog() {
+    UI.modal({ title: 'Выйти из ВКонтакте?', body: h('p', { class: 'center' }, 'Прогресс останется в твоём аккаунте ВК. На телефоне можно играть дальше без входа, но топы, ковен и почта работают только со входом.'),
+      actions: [{ label: 'Выйти', onClick: () => { Platform.appLogout(); location.reload(); } }, { label: 'Остаться', alt: true }] });
+  }
+  // первый запуск приложения: предложить вход (один раз)
+  function appWelcome() {
+    if (!Platform.isApp() || Platform.appUser() || ls('bulk_app_asked')) return;
+    const show = () => {
+      if (UI.isModalOpen() || document.querySelector('.tut')) { setTimeout(show, 3000); return; }
+      ls('bulk_app_asked', '1');
+      UI.modal({ title: 'Играл во ВКонтакте?', body: h('p', { class: 'center' }, 'Войди через ВК - и прогресс из мини-приложения перенесётся сюда. Можно и без входа: игра работает без интернета, а войти получится потом в настройках.'),
+        actions: [{ label: 'Войти через ВК', onClick: () => { setTimeout(appLoginFlow, 0); } }, { label: 'Играть без входа', alt: true }] });
+    };
+    setTimeout(show, 2500);
+  }
+
+  return { linked: () => linked, boost, call, start, openMail, promoDialog, newsState, setNews, admCode, notifyPush, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid,
+    appLoginFlow, appLogoutDialog, appWelcome };
 })();
