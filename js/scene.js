@@ -33,16 +33,16 @@ DATA.room = {
     { img: 'r2/candles', layer: 'wall', x: 0.5, y: 0.17, w: 0.12, rank: 8, bob: true, snd: 'metal',
       lights: [{ k: 'candle', x: 0.5, y: 0.2, r: 1.2, c: '#FFC266' }] },
     // --- у задней стены на полу ---
-    { img: 'r2/chest', layer: 'floor', x: 0.76, y: 0.49, w: 0.1, rank: 1, until: 2 },
-    { img: 'r2/cabinet', layer: 'floor', x: 0.25, y: 0.48, w: 0.13, rank: 2, until: 4, flip: true },
+    { img: 'r2/chest', layer: 'floor', x: 0.645, y: 0.49, w: 0.1, rank: 1, until: 2 },
+    { img: 'r2/cabinet', layer: 'floor', x: 0.27, y: 0.55, w: 0.145, rank: 2, until: 4, flip: true },
     { img: 'r2/rack', layer: 'floor', x: 0.355, y: 0.475, w: 0.07, rank: 4, until: 5, snd: 'glass', flip: true },
     { img: 'r2/orb', layer: 'floor', x: 0.6, y: 0.478, w: 0.055, rank: 4, until: 5, snd: 'magic', lights: [{ k: 'ball', x: 0.5, y: 0.25, r: 1.0, c: '#B07BFF' }] },
     { img: 'r2/telescope', layer: 'floor', x: 0.6, y: 0.48, w: 0.085, rank: 6, snd: 'metal' },
-    { img: 'r2/bookcase', layer: 'floor', x: 0.25, y: 0.48, w: 0.135, rank: 5, flip: true },
+    { img: 'r2/bookcase', layer: 'floor', x: 0.27, y: 0.55, w: 0.15, rank: 5, flip: true },
     // 0.30: камин (огонь рисует timeday.js) и зеркало - кнопка гардероба
-    { img: 'r2/fireplace', layer: 'floor', x: 0.725, y: 0.492, w: 0.125, rank: 0, snd: 'wood', fire: { x: 0.44, y: 0.86, w: 0.24 },
+    { img: 'r2/fireplace', layer: 'floor', x: 0.79, y: 0.56, w: 0.14, rank: 0, snd: 'wood', fire: { x: 0.44, y: 0.86, w: 0.24 },
       lights: [{ k: 'lantern', x: 0.44, y: 0.72, r: 1.1, c: '#FF9A3A' }] },
-    { img: 'r2/mirror', layer: 'front', x: 0.27, y: 0.585, w: 0.07, rank: 0, open: 'ward', snd: 'glass',
+    { img: 'r2/mirror', layer: 'front', x: 0.215, y: 0.645, w: 0.075, rank: 0, open: 'ward', snd: 'glass',
       lights: [{ k: 'ball', x: 0.5, y: 0.45, r: 0.7, c: '#C9A0FF' }] },
     // --- на полу ближе к нам ---
     { img: 'r2/crates', layer: 'front', x: 0.13, y: 0.7, w: 0.14, rank: 0, until: 2, flip: true },
