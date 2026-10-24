@@ -2,13 +2,8 @@
 # снять экраны и журнал ошибок. Результат - в релизе apk-test (картинки и log.txt).
 # Для установки APK подписывается временным ключом; в RuStore идёт сборка с ключом владельца.
 name: apk-test
+# 24.10: APK отложен - проверка только вручную.
 on:
-  workflow_run:
-    workflows: [game-apk]
-    types: [completed]
-  push:
-    branches: [main]
-    paths: ['.github/workflows/apk-test.yml']
   workflow_dispatch:
 permissions:
   contents: write

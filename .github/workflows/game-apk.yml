@@ -3,10 +3,8 @@
 # Сборка выдаёт НЕподписанный APK (релиз game-apk-unsigned): подписывает его владелец игры
 # своим ключом (ключ в репозиторий не кладётся, без него обновление в RuStore не выпустить).
 name: game-apk
+# 24.10: APK отложен (работаем только с ВК и Telegram) - сборка только вручную (Actions → Run workflow).
 on:
-  push:
-    branches: [main, ccr-1931aaac-ojah34]
-    paths: ['android-game/**', '.github/workflows/game-apk.yml', 'js/**', 'css/**', 'assets/**', 'index.html']
   workflow_dispatch:
 permissions:
   contents: write
