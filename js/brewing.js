@@ -426,7 +426,7 @@ const Brew = (() => {
   function fly(item, x, y) {
     const stage = document.getElementById('stage');
     const btn = document.getElementById('brew-btn');
-    if (!stage || !btn || UI.screen() !== 'main' || RenderOpts.lowfx) return;
+    if (!stage || !btn || !btn.offsetParent || UI.screen() !== 'main' || RenderOpts.lowfx) return;
     const sr = stage.getBoundingClientRect(), br = btn.getBoundingClientRect();
     const el = h('img', { class: 'ing-fly', src: IMG(item.img), alt: '', draggable: 'false' });
     el.style.left = x + 'px'; el.style.top = y + 'px';

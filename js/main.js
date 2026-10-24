@@ -259,6 +259,7 @@
   Pets.init();
   Pass.init();
   Market.init();
+  Hud.init();
   const evFinished = Events.init();
   if (evFinished) setTimeout(() => Events.finishedModal(evFinished), 600);
   Econ.checkAchievements();
@@ -315,8 +316,8 @@
     if (!paused) {
       phraseIn -= dt;
       if (phraseIn <= 0) {
-        phraseIn = rand(25, 45);
-        if (UI.sinceSay() > 8000 && !Visitors.active()) {
+        phraseIn = rand(50, 90);
+        if (UI.sinceSay() > 12000 && !Visitors.active()) {
           UI.say(Cauldron.mood() === 'sleepy' ? pick(D.phrases.sleepy) : (Events.phrase() || pick(D.phrases.idle)), 3000);
         }
       }

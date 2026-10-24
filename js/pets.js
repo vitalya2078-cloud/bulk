@@ -654,7 +654,9 @@ const Pets = (() => {
     // разговоры
     talkIn -= dt;
     if (talkIn <= 0 && actors.length && !UI.isModalOpen()) {
-      talkIn = rand(14, 28);
+      // 0.32: реже и никогда поверх другой реплики (Булька или другого питомца)
+      talkIn = rand(35, 60);
+      if (UI.sinceSay() < 8000 || actors.some((q) => q.sayT > 0)) return;
       const a = pickOne(actors.filter((q) => q.st !== 'sleep' && !q.leaving) || []);
       if (a) {
         const pairs = D.petTalks[a.id];
