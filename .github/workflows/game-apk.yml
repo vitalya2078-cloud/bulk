@@ -6,7 +6,7 @@ name: game-apk
 on:
   push:
     branches: [main, ccr-1931aaac-ojah34]
-    paths: ['android-game/**', '.github/workflows/game-apk.yml']
+    paths: ['android-game/**', '.github/workflows/game-apk.yml', 'js/**', 'css/**', 'assets/**', 'index.html']
   workflow_dispatch:
 permissions:
   contents: write
