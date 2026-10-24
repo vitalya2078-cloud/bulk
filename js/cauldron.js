@@ -691,6 +691,22 @@ function createCauldron() {
     }));
   }
   // подвижные предметы: висят под потолком, качаются, парят
+  // передний план (балки с травами) - чуть размыт и темнее; размытие считается один раз
+  const blurCache = new Map();
+  function blurred(im, w, h) {
+    if (RenderOpts.lowfx || !('filter' in ctx)) return null;
+    const key = im.src + '|' + Math.round(w * dpr) + 'x' + Math.round(h * dpr);
+    let c = blurCache.get(key);
+    if (c) return c;
+    const pad = 4, cw = Math.round(w * dpr) + pad * 2, chh = Math.round(h * dpr) + pad * 2;
+    c = document.createElement('canvas'); c.width = cw; c.height = chh;
+    const x = c.getContext('2d'); x.filter = 'blur(' + (0.8 * dpr).toFixed(2) + 'px) brightness(.95)';
+    x.drawImage(im, pad, pad, cw - pad * 2, chh - pad * 2);
+    c.pad = pad / dpr;
+    if (blurCache.size > 12) blurCache.clear();
+    blurCache.set(key, c);
+    return c;
+  }
   function drawRoomDyn(which) {
     if (!bgMeta().room) return;
     roomItems.forEach((it) => {
@@ -707,7 +723,9 @@ function createCauldron() {
         if (a && k > 3) it._tap = null;
         const kick = k < 3 ? 0.22 * a.dir * Math.sin(k * 4.2) * Math.exp(-1.3 * k) : 0;
         ctx.rotate((it.swing ? Math.sin(t * 1.3 + it.x * 9) * 0.05 : Math.sin(t * 0.8 + it.x * 7) * 0.015) + kick);
-        ctx.drawImage(im, -R.w / 2, 0, R.w, R.h);
+        const bl = which === 'top' ? blurred(im, R.w, R.h) : null;
+        if (bl) ctx.drawImage(bl, -R.w / 2 - bl.pad, -bl.pad, R.w + bl.pad * 2, R.h + bl.pad * 2);
+        else ctx.drawImage(im, -R.w / 2, 0, R.w, R.h);
       } else {
         const a = it._tap, k = a ? t - a.t0 : 99;
         if (a && k > PROP_TAP) it._tap = null;
@@ -770,14 +788,17 @@ function createCauldron() {
 
   // ---------- 0.29.1: телефон не успевает - снижаем плотность холста ----------
   // Средний кадр дольше 1/40 с несколько секунд подряд - холст 1.5x вместо 2x (заливка дешевле почти вдвое).
-  let frameDt = 1 / 60, perfAcc = 0, perfN = 0;
+  // Ступени: 1) холст 1.5x; 2) без тонового слоя котла и питомцев; 3) 30 кадров в секунду.
+  let frameDt = 1 / 60, perfAcc = 0, perfN = 0, perfLvl = 0, lastDraw = 0;
   function perfGuard(dt) {
-    if (dprCap <= 1.5 || document.hidden || dt > 0.25) return;
+    if (perfLvl >= 3 || document.hidden || dt > 0.25) return;
     perfAcc += dt; perfN++;
     if (perfAcc < 4) return;
     const avg = perfAcc / perfN;
     perfAcc = 0; perfN = 0;
-    if (avg > 1 / 40) { dprCap = 1.5; resize(); }
+    if (avg <= 1 / 40) return;
+    perfLvl++;
+    if (perfLvl === 1 && dprCap > 1.5) { dprCap = 1.5; resize(); }
   }
 
   // ---------- 0.29: время суток и погода ----------
@@ -1569,8 +1590,9 @@ function createCauldron() {
     if (!m.props && !m.room) return;
     ctx.save();
     ctx.translate(par.x * 12, par.y * 5);
-    if (!RenderOpts.lowfx && 'filter' in ctx) ctx.filter = 'blur(0.8px) brightness(.95)';
+    if (m.props && !RenderOpts.lowfx && 'filter' in ctx) ctx.filter = 'blur(0.8px) brightness(.95)';
     drawProps('fg');
+    ctx.filter = 'none';
     drawRoomDyn('top');
     ctx.restore();
   }
@@ -1622,6 +1644,8 @@ function createCauldron() {
     return { W, H, cx: g.cx, cy: g.cy, r: g.r, liq: g.liq, pot: g.pot, ground: bgMeta().room ? footY() : L.y + L.h * 0.86, front: bgMeta().counter && showCounter() ? counterTop() : null, props: frontProps(), night: nightK, t, squash, potBottom: g.pot.y + g.pot.h, liquid };
   }
   function render() {
+    // 3-я ступень: телефон совсем не успевает - рисуем через кадр (~30 в секунду)
+    if (perfLvl >= 3) { const now = performance.now(); if (now - lastDraw < 30) return; lastDraw = now; }
     frontCache = null;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawBg();
@@ -1631,7 +1655,7 @@ function createCauldron() {
     drawFireLight();
     // всё, что стоит в комнате (котёл, костёр, питомцы, лежанка), рисуем отдельным слоем
     // и «вписываем» в комнату: обводка в цвет теней, общий тон, тёплый свет от огня
-    const grade = !RenderOpts.lowfx && W > 1;
+    const grade = !RenderOpts.lowfx && W > 1 && perfLvl < 2;
     const main = ctx;
     if (grade) ctx = beginLayer();
     ctx.save(); ctx.translate(-par.x * 2, -par.y * 1);
