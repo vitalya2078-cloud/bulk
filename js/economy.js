@@ -548,6 +548,7 @@ const Econ = (() => {
       const e = D.eventDefs[how.event];
       return { owned: false, event: how.event, reason: '«' + (e ? e.name : '') + '»' };
     }
+    if (how.pass) return { owned: false, reason: 'Звёздный гримуар' };
     if (how.cr) return { owned: false, price: how.cr };
     return { owned: false, reason: '' };
   }

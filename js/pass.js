@@ -17,6 +17,11 @@ CONFIG.pass = {
   tapInk: 50              // +1 чернила за каждые 50 тапов
 };
 
+// вещи гардероба - награды гримуара
+DATA.wardrobe.push(
+  { id: 'star_glasses', slot: 'face', name: 'Очки звездочёта', how: { pass: 1 }, w: 1.05 },
+  { id: 'star_ladle', slot: 'spoon', name: 'Звёздный половник', how: { pass: 1 }, img: 'spoons/star' }
+);
 // титулы гримуара
 DATA.titles.push(
   { id: 'stargazer', name: 'Звездочёт', test: (s) => Array.isArray(s.stat.ttl) && s.stat.ttl.includes('stargazer') },
@@ -35,7 +40,7 @@ const Pass = (() => {
     { k: 'ess', h: 1 }, { k: 'ing', n: 3 }, { k: 'cr', n: 3 }, { k: 'chest', c: 'w' }, { k: 'sh', n: 20 },
     { k: 'ess', h: 2 }, { k: 'ing', n: 4, rare: 0.3 }, { k: 'cr', n: 5 }, { k: 'fx', id: 'inspire', min: 10 }, { k: 'egg', t: 'mystery' },
     { k: 'ess', h: 3 }, { k: 'chest', c: 'w' }, { k: 'cr', n: 5 }, { k: 'sh', n: 30 }, { k: 'chest', c: 's' },
-    { k: 'ess', h: 4 }, { k: 'ing', n: 5, rare: 0.3 }, { k: 'cr', n: 6 }, { k: 'scroll' }, { k: 'chest', c: 's' },
+    { k: 'ess', h: 4 }, { k: 'ing', n: 5, rare: 0.3 }, { k: 'cr', n: 6 }, { k: 'scroll' }, { k: 'ward', id: 'star_ladle' },
     { k: 'ess', h: 5 }, { k: 'sh', n: 40 }, { k: 'cr', n: 8 }, { k: 'ing', n: 6, rare: 0.4 }, { k: 'chest', c: 'g' },
     { k: 'ess', h: 6 }, { k: 'cr', n: 10 }, { k: 'sh', n: 50 }, { k: 'ess', h: 8 }, [{ k: 'title', id: 'stargazer' }, { k: 'chest', c: 'g' }]
   ];
@@ -45,7 +50,7 @@ const Pass = (() => {
     { k: 'cr', n: 10 }, { k: 'ess', h: 5 }, { k: 'egg', t: 'dragon' }, { k: 'ing', n: 8, rare: 0.5 }, { k: 'chest', c: 'g' },
     { k: 'cr', n: 12 }, { k: 'sh', n: 60 }, { k: 'ess', h: 6 }, { k: 'chest', c: 's' }, { k: 'chest', c: 't' },
     { k: 'cr', n: 15 }, { k: 'ing', n: 10, rare: 0.6 }, { k: 'sh', n: 80 }, { k: 'ess', h: 8 }, { k: 'chest', c: 't' },
-    { k: 'cr', n: 20 }, { k: 'egg', t: 'mystery' }, { k: 'sh', n: 100 }, { k: 'cr', n: 25 }, [{ k: 'title', id: 'grimoire' }, { k: 'chest', c: 't' }, { k: 'cr', n: 30 }]
+    { k: 'cr', n: 20 }, { k: 'egg', t: 'mystery' }, { k: 'sh', n: 100 }, { k: 'cr', n: 25 }, [{ k: 'ward', id: 'star_glasses' }, { k: 'title', id: 'grimoire' }, { k: 'chest', c: 't' }, { k: 'cr', n: 30 }]
   ];
   const BONUS = [{ k: 'chest', c: 'w' }, { k: 'ess', h: 1 }];
   const list = (x) => (Array.isArray(x) ? x : [x]);
@@ -238,10 +243,10 @@ const Pass = (() => {
     body.append(top);
     const inPage = pg >= C.pages ? (b.ink - C.pages * C.perPage) % C.bonusEvery : b.ink % C.perPage;
     const need = pg >= C.pages ? C.bonusEvery : C.perPage;
-    top.append(h('div', { class: 'brew-head pass-head' }, pic('chars/orion_wait', 'pass-orion'),
+    top.append(h('div', { class: 'brew-head pass-head' }, pic('pass/book', 'pass-book'),
       h('div', { class: 'brew-head-text' }, h('b', null, 'Звёздный гримуар'),
         h('small', null, 'Сезон ' + b.sid + ' · ещё ' + daysLeft() + ' ' + Fmt.plural(daysLeft(), ['день', 'дня', 'дней'])),
-        h('div', { class: 'pass-prog' }, h('span', { class: 'pass-pg' }, pg >= C.pages ? '★' : String(pg + 1)),
+        h('div', { class: 'pass-prog' }, pic('pass/ink', 'pass-ink'), h('span', { class: 'pass-pg' }, pg >= C.pages ? '★' : String(pg + 1)),
           h('div', { class: 'bar' }, h('i', { style: 'width:' + Math.round(100 * inPage / need) + '%' })),
           h('small', null, inPage + '/' + need)))));
     const nTasks = b.dt.filter((t) => t.c === 1).length + b.wt.filter((t) => t.c === 1).length + (b.rv && b.rv.c === 1 ? 1 : 0);
@@ -264,11 +269,11 @@ const Pass = (() => {
       btn.addEventListener('click', () => {
         if (s.cr < C.goldPrice) { Sound.deny(); UI.toast('Не хватает кристаллов'); return; }
         UI.modal({ title: 'Золотой гримуар', body: h('div', null,
-          h('p', { class: 'center' }, 'Золотые страницы до конца сезона: кристаллы, золотые и звёздные сундуки, яйцо дракона и титул «Хранитель гримуара».'),
+          h('p', { class: 'center' }, 'Золотые страницы до конца сезона: кристаллы, золотые и звёздные сундуки, яйцо дракона, очки звездочёта и титул «Хранитель гримуара».'),
           h('p', { class: 'small center' }, 'Награды золотых страниц, которые ты уже открыл, можно забрать сразу.')),
           actions: [{ label: 'Открыть за ' + C.goldPrice + ' ' + UI.crystalsWord(C.goldPrice), onClick: () => { if (buyGold()) { Sound.fanfare(); UI.toast('Золотой гримуар открыт!'); UI.refresh(); setTimeout(redraw, 0); } } }, { label: 'Не сейчас', alt: true }] });
       });
-      body.append(h('div', { class: 'pass-gold' }, h('div', null, h('b', null, 'Золотой гримуар'), h('small', null, 'Вторая дорожка наград: на 125 кристаллов, 5 звёздных и золотых сундуков, яйцо дракона.')), btn));
+      body.append(h('div', { class: 'pass-gold' }, h('div', null, h('b', null, 'Золотой гримуар'), h('small', null, 'Вторая дорожка наград: 125 кристаллов, звёздные и золотые сундуки, яйцо дракона, очки звездочёта.')), btn));
     }
     const rows = h('div', { class: 'pass-rows' });
     rows.append(h('div', { class: 'pass-row pass-cap' }, h('span'), h('small', null, 'Бесплатно'), h('small', { class: 'gold' }, 'Золото')));
@@ -285,7 +290,7 @@ const Pass = (() => {
         });
         return el;
       };
-      rows.append(h('div', { class: 'pass-row' + (open ? ' open' : '') + (i === pg ? ' next' : '') }, h('span', { class: 'pass-n' }, String(i + 1)), cell(false), cell(true)));
+      rows.append(h('div', { class: 'pass-row' + (open ? ' open' : '') + (i === pg ? ' next' : '') }, h('span', { class: 'pass-n' }, pic(open ? (i % 5 === 4 ? 'pass/token_gold' : 'pass/token') : 'pass/token_lock', 'pass-tok'), h('b', null, String(i + 1))), cell(false), cell(true)));
     }
     body.append(rows);
     // бонусные страницы
@@ -327,7 +332,7 @@ const Pass = (() => {
           h('div', { class: 'ico' }, pic(def.img)),
           h('div', { class: 'info' }, h('div', { class: 'name' }, def.text(def.n)),
             h('div', { class: 'bar' }, h('i', { style: 'width:' + Math.round(100 * t.p / def.n) + '%' })),
-            h('div', { class: 'meta' }, '+' + def.ink + ' чернил')),
+            h('div', { class: 'meta' }, pic('pass/ink', 'ink-mini'), '+' + def.ink + ' чернил')),
           btn));
       });
       body.append(h('p', { class: 'note' }, sub));

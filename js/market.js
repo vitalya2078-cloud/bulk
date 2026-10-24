@@ -38,9 +38,9 @@ const Market = (() => {
   ];
   // за эссенцию: цена - доход за hours часов (не меньше min)
   const ESS = [
-    { id: 'e_basket', hours: 2, min: 3000, max: 3, g: { k: 'ing', n: 4, rare: 0.15 }, name: 'Корзинка трав' },
-    { id: 'e_scroll', hours: 1.5, min: 2000, max: 2, g: { k: 'scroll' }, name: 'Свиток рецепта' },
-    { id: 'e_chest', hours: 8, min: 20000, max: 1, g: { k: 'chest', c: 'w' }, name: 'Деревянный сундук' }
+    { id: 'e_basket', hours: 2, min: 3000, max: 3, g: { k: 'ing', n: 4, rare: 0.15 }, name: 'Корзинка трав', d: '4 ингредиента' },
+    { id: 'e_scroll', hours: 1.5, min: 2000, max: 2, g: { k: 'scroll' }, name: 'Свиток рецепта', d: 'Подсказка к рецепту' },
+    { id: 'e_chest', hours: 8, min: 20000, max: 1, g: { k: 'chest', c: 'w' }, name: 'Деревянный сундук', d: 'Диковинка, эссенция, ингредиенты' }
   ];
   const SAY = ['Подходи, не стесняйся! Всё из дальних краёв.', 'Этот товар я вёз через три болота и одну гору.', 'Утром - скидки, пока я не распаковал весь рюкзак!',
     'Сегодня есть кое-что редкое. Глянь!', 'Кристаллы? Беру. Эссенцию? Тоже беру!'];
@@ -88,7 +88,7 @@ const Market = (() => {
     const s = S();
     const top = h('div', { class: 'sheet-top' });
     body.append(top);
-    top.append(h('div', { class: 'brew-head' }, pic('ui/potion_bag', 'brew-head-ico'),
+    top.append(h('div', { class: 'brew-head' }, pic('market/cart', 'brew-head-ico'),
       h('div', { class: 'brew-head-text' }, h('b', null, 'Лавка Варфоломея'), h('small', null, 'Странствующий торговец')),
       h('div', { class: 'ev-candy' }, pic('ui/crystal', 'cr-ico'), h('b', null, Fmt.num(s.cr)))));
     body.append(h('div', { class: 'merchant bart' }, h('div', { class: 'merchant-ico' }, pic(Date.now() < happyT ? 'chars/bartholomew_happy' : 'chars/bartholomew_wait', 'merchant-pic')),
@@ -131,7 +131,7 @@ const Market = (() => {
         if (s.e < price) { Sound.deny(); UI.toast('Не хватает эссенции'); return; }
         if (buy(x.id, price, 'e')) done(Gifts.give(x.g));
       });
-      body.append(row(x.g, x.name, Gifts.label(x.g) + ' · сегодня ещё ' + left, btn));
+      body.append(row(x.g, x.name, x.d + ' · сегодня ещё ' + left, btn));
     });
 
     // сундуки - в диковинках

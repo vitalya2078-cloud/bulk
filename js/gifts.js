@@ -11,6 +11,7 @@
 //    scroll {}        - свиток рецепта (подсказка к рецепту)
 //    spin {}          - ещё одно вращение колеса сегодня
 //    title { id }     - титул (DATA.titles, проверка по s.stat.ttl)
+//    ward { id }      - вещь гардероба (DATA.wardrobe, в s.own.acc)
 // =====================================================================
 
 const Gifts = (() => {
@@ -29,7 +30,8 @@ const Gifts = (() => {
       case 'chest': return 'relics/chest_' + g.c;
       case 'sh': return 'ui/shards';
       case 'egg': return (DATA.eggs[g.t] || DATA.eggs.mystery).img;
-      case 'fx': return DATA.effects[g.id] ? DATA.effects[g.id].img : 'ui/sparkle';
+      case 'fx': return 'market/' + g.id;
+      case 'ward': { const w = DATA.wardrobe.find((x) => x.id === g.id); return w ? w.img || 'wardrobe/' + w.id : 'ui/sparkle'; }
       case 'scroll': return 'ui/scroll';
       case 'spin': return 'r2/ic_wheel';
       case 'title': return 'ui/banner';
@@ -49,6 +51,7 @@ const Gifts = (() => {
       case 'scroll': return 'Свиток рецепта';
       case 'spin': return 'Ещё одно вращение колеса';
       case 'title': { const t = DATA.titles.find((x) => x.id === g.id); return 'Титул «' + (t ? t.name : g.id) + '»'; }
+      case 'ward': { const w = DATA.wardrobe.find((x) => x.id === g.id); return (w ? w.name : g.id) + ' (гардероб)'; }
       default: return '';
     }
   }
@@ -77,6 +80,7 @@ const Gifts = (() => {
       case 'scroll': { Brew.reward('scroll'); return 'Свиток рецепта'; }
       case 'spin': Relics.extraSpin(); return 'Ещё одно вращение колеса';
       case 'title': { s.stat.ttl = Array.isArray(s.stat.ttl) ? s.stat.ttl : []; if (!s.stat.ttl.includes(g.id)) s.stat.ttl.push(g.id); return label(g); }
+      case 'ward': if (!s.own.acc.includes(g.id)) s.own.acc.push(g.id); return label(g);
       default: return '';
     }
   }
