@@ -1,0 +1,79 @@
+# Проверка APK на настоящем Android (эмулятор): установить, запустить, нажать «Начать»,
+# снять экраны и журнал ошибок. Результат - в релизе apk-test (картинки и log.txt).
+# Для установки APK подписывается временным ключом; в RuStore идёт сборка с ключом владельца.
+name: apk-test
+on:
+  push:
+    branches: [ccr-1931aaac-ojah34]
+    paths: ['.github/workflows/apk-test.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Включить KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Скачать сборку
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download game-apk-unsigned -R ${{ github.repository }} -p bulk-unsigned.apk
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          keytool -genkeypair -keystore t.jks -storepass testtest -keypass testtest -alias t -keyalg RSA -keysize 2048 -validity 30 -dname CN=test
+          $BT/apksigner sign --ks t.jks --ks-pass pass:testtest --out bulk-test.apk bulk-unsigned.apk
+          $BT/aapt2 dump badging bulk-test.apk | head -5 > badging.txt || true
+          cat badging.txt
+      - name: Эмулятор
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            adb install -r bulk-test.apk
+            adb logcat -c
+            adb shell am start -n ru.bulk.game/.MainActivity
+            sleep 40
+            adb exec-out screencap -p > 1_start.png
+            adb shell input tap 540 1700
+            sleep 3
+            adb shell input tap 540 1500
+            sleep 20
+            adb exec-out screencap -p > 2_game.png
+            adb shell input tap 540 1250
+            sleep 1
+            adb shell input tap 560 1260
+            sleep 8
+            adb exec-out screencap -p > 3_taps.png
+            adb shell input keyevent KEYCODE_BACK
+            sleep 3
+            adb exec-out screencap -p > 4_back.png
+            adb shell pidof ru.bulk.game > pid.txt || echo "нет процесса" > pid.txt
+            adb logcat -d -v time > logcat_full.txt
+            grep -iE "chromium|AndroidRuntime|FATAL|ru.bulk.game|Console" logcat_full.txt | tail -400 > log.txt || true
+      - name: SDK RuStore - какие есть версии
+        run: |
+          R=https://artifactory-external.vkpartner.ru/artifactory/maven/ru/rustore/sdk
+          for n in bom core review appupdate pushclient pay billingclient; do
+            echo "== $n" >> sdk.txt
+            curl -s -m 30 $R/$n/maven-metadata.xml | grep -oE "<(latest|release|version)>[^<]+" | tail -6 >> sdk.txt || echo "нет" >> sdk.txt
+          done
+          for n in review appupdate; do
+            V=$(curl -s -m 30 $R/$n/maven-metadata.xml | grep -oE "<release>[^<]+" | sed 's/<release>//')
+            echo "== $n $V pom" >> sdk.txt
+            curl -s -m 30 $R/$n/$V/$n-$V.pom | grep -E "artifactId|version|groupId" | head -30 >> sdk.txt || true
+          done
+          cat sdk.txt
+      - name: Результат
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete apk-test -y --cleanup-tag -R ${{ github.repository }} || true
+          gh release create apk-test 1_start.png 2_game.png 3_taps.png 4_back.png log.txt pid.txt badging.txt sdk.txt -R ${{ github.repository }} --target ${{ github.sha }} --title "Проверка APK на эмуляторе" --notes "Сборка ${{ github.run_number }}" --prerelease --latest=false
