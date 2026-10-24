@@ -203,6 +203,10 @@ const Relics = (() => {
   }
   function giveRarity(rar) { return giveRelic(pickOne(ITEMS.filter((x) => x.r === rar)).id); }
 
+  // 0.31: награды гримуара и лавки Варфоломея
+  function addShards(n) { const r = st(); r.sh = (r.sh || 0) + n; }
+  // ещё одно бесплатное вращение колеса сегодня
+  function extraSpin() { const w = st().wh; w.free = Math.max(-5, w.free - 1); refreshButton(); }
   function addChest(k, n) {
     if (!CHEST[k]) return;
     const r = st();
@@ -679,7 +683,7 @@ const Relics = (() => {
   }
 
   return {
-    bonus, open, wheel, refreshButton, addChest, onQuestsDone, onRank, onLevel, onTrip, unlocked,
+    bonus, open, wheel, refreshButton, addChest, addShards, extraSpin, onQuestsDone, onRank, onLevel, onTrip, unlocked,
     // для проверок
     _st: st, _items: ITEMS, _chest: CHEST, _wheel: wheelSet, _open: openChest, _odds: odds
   };

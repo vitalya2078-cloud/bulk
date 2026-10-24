@@ -257,6 +257,8 @@
   Brew.init();
   Brew.refreshButton();
   Pets.init();
+  Pass.init();
+  Market.init();
   const evFinished = Events.init();
   if (evFinished) setTimeout(() => Events.finishedModal(evFinished), 600);
   Econ.checkAchievements();

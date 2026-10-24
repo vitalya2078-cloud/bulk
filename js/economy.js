@@ -4,7 +4,7 @@ const Econ = (() => {
   const CARD = {}; D.cards.forEach((c) => { CARD[c.id] = c; });
   // шаблоны заданий ищутся каждый раз: модули могут добавлять свои задания позже
   const QT = new Proxy({}, { get: (_, id) => D.quests.find((q) => q.id === id) });
-  const hooks = { questReady: null };
+  const hooks = { questReady: null, progress: null };
 
   // ---------- даты по местному времени ----------
   const pad = (n) => (n < 10 ? '0' + n : '' + n);
@@ -86,6 +86,8 @@ const Econ = (() => {
       rel: {},         // 0.28: диковинки, сундуки, осколки, колесо (см. relics.js)
       room: {},        // 0.29: мебель комнаты: { seen: нажатые предметы-кнопки, d, n: капли эссенции за день }
       td: {},          // 0.30: дела по времени суток (timeday.js): огород, звёзды, гости, утренний привоз
+      bp: {},          // 0.31: «Звёздный гримуар» - сезон, чернила, страницы, задания (pass.js)
+      mk: {},          // 0.31: лавка Варфоломея - покупки за день (market.js)
       tut: null        // 0.22: обучение { v: версия, done: true } ; null - не показывалось
     };
   }
@@ -119,7 +121,7 @@ const Econ = (() => {
     for (const k of ['ing', 'bag', 'pa', 'hints']) if (!f[k] || typeof f[k] !== 'object' || Array.isArray(f[k])) f[k] = {};
     if (!Array.isArray(f.book)) f.book = ['power', 'gold'];
     if (!f.shop || !Array.isArray(f.shop.b)) f.shop = { d: '', b: [] };
-    for (const k of ['room', 'td']) if (!f[k] || typeof f[k] !== 'object' || Array.isArray(f[k])) f[k] = {};
+    for (const k of ['room', 'td', 'bp', 'mk']) if (!f[k] || typeof f[k] !== 'object' || Array.isArray(f[k])) f[k] = {};
     s = f;
     invalidate();
   }
@@ -350,6 +352,7 @@ const Econ = (() => {
     s.cr += c;
     addXp(C.xp.daily);
     brewHook('daily');
+    progress('daily', 1);
     return { essence: v, crystals: c };
   }
 
@@ -370,6 +373,8 @@ const Econ = (() => {
 
   // c: 0 - в процессе, 1 - можно забрать, 2 - забрано
   function progress(type, amt) {
+    // 0.31: гримуар и вызов Черниллы считают те же дела
+    if (hooks.progress) hooks.progress(type, amt);
     if (!s.q) return;
     for (const q of s.q.l) {
       const t = QT[q.t];
@@ -389,6 +394,7 @@ const Econ = (() => {
     s.cr += C.crystals.quest;
     addXp(C.xp.quest);
     brewHook('quest');
+    progress('quest', 1);
     if (typeof Relics !== 'undefined' && s.q.l.every((x) => x.c === 2)) Relics.onQuestsDone();
     return v;
   }
