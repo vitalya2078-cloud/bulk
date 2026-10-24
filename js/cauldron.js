@@ -45,8 +45,8 @@ function createCauldron() {
   const STAND = { w: 0.9, aspect: 230 / 420, seat: 0.42, front: 0.3 };
 
   let cv, ctx, W = 300, H = 300, dpr = 1;
-  // 0.29.1: потолок плотности холста; телефон не успевает - снижаем сами (см. perfGuard)
-  let dprCap = 2;
+  // потолок плотности холста: полная чёткость; телефон всерьёз не успевает - снижаем сами (см. perfGuard)
+  let dprCap = 3;
   const g = { cx: 0, cy: 0, r: 80, rimY: 0, pot: null, liq: null };
   let t = 0;
 
@@ -199,7 +199,7 @@ function createCauldron() {
     const rc = cv.getBoundingClientRect();
     W = Math.max(1, rc.width); H = Math.max(1, rc.height);
     // чёткость: до 3× на экранах с высокой плотностью, в режиме слабых эффектов - до 2×
-    dpr = Math.min(window.devicePixelRatio || 1, RenderOpts.lowfx ? 1.5 : dprCap);
+    dpr = Math.min(window.devicePixelRatio || 1, RenderOpts.lowfx ? 2 : dprCap);
     bgDirty = true;
     cv.width = Math.round(W * dpr);
     cv.height = Math.round(H * dpr);
@@ -494,9 +494,16 @@ function createCauldron() {
   // каждый кадр - так он может отозваться на тап. В фон запекаются только коврики и тени.
   let props = [];          // [{ it, cv, R }] в порядке рисования
   let shadowKey = -1;      // сдвинулось время суток - тени пересобираются
-  const SHADOW_STEPS = 48;
+  const SHADOW_STEPS = 16;
   const PROP_TAP = 1.6;    // сколько секунд длится отклик на тап
+  const spriteCache = new Map();
   function propSprite(it, im, R) {
+    const key = it.img + '|' + it.layer + '|' + (it.flip ? 1 : 0) + '|' + Math.round(R.w * dpr) + 'x' + Math.round(R.h * dpr);
+    let c = spriteCache.get(key);
+    if (!c) { c = makePropSprite(it, im, R); if (spriteCache.size > 60) spriteCache.clear(); spriteCache.set(key, c); }
+    return c;
+  }
+  function makePropSprite(it, im, R) {
     const w = Math.max(1, Math.round(R.w * dpr)), hh = Math.max(1, Math.round(R.h * dpr));
     const a = document.createElement('canvas'); a.width = w; a.height = hh;
     const ac = a.getContext('2d'); ac.imageSmoothingQuality = 'high';
@@ -592,15 +599,18 @@ function createCauldron() {
   // 0.29.1: всё неподвижное в комнате - одна готовая картинка (roomCv): фон с тенями, мебель, общий тон
   // и свет суток. Каждый кадр она только копируется. Пересобирается, когда сдвинулись сутки
   // (раз в ~75 с, с плавной сменой за 1,5 с) или когда предмет начал/закончил отзываться на тап.
-  const TINT_STEPS = 96;
+  const TINT_STEPS = 48;
   let roomCv = null, roomPrev = null, roomDirty = true, tintKey = -1, roomFade = 1;
+  let tintMask = null;
   // свет суток поверх готовой картинки (прозрачное окно остаётся прозрачным)
   function dayTint(cv2) {
     if (RenderOpts.lowfx || !bgMeta().room) return;
     const w = DayTime.weights(DayTime.phase());
     const c = cv2.getContext('2d'), cw = cv2.width, chh = cv2.height;
-    const m = document.createElement('canvas'); m.width = cw; m.height = chh;
-    m.getContext('2d').drawImage(cv2, 0, 0);
+    // маска прозрачности (окно) - один холст на все пересборки
+    const m = tintMask || (tintMask = document.createElement('canvas'));
+    if (m.width !== cw || m.height !== chh) { m.width = cw; m.height = chh; }
+    const mc = m.getContext('2d'); mc.globalCompositeOperation = 'copy'; mc.drawImage(cv2, 0, 0);
     c.save(); c.setTransform(1, 0, 0, 1, 0, 0);
     const fill = (op, col, a) => { if (a < 0.01) return; c.globalCompositeOperation = op; c.globalAlpha = a; c.fillStyle = col; c.fillRect(0, 0, cw, chh); };
     fill('multiply', '#6E66B4', 0.38 * w.night);
@@ -752,14 +762,15 @@ function createCauldron() {
       if (room) {
         const tk = Math.floor(DayTime.phase() * TINT_STEPS);
         if (roomDirty || tk !== tintKey) buildRoomCv(tk !== tintKey && tintKey >= 0);
-        roomFade = Math.min(1, roomFade + frameDt / 1.5);
+        roomFade = Math.min(1, roomFade + frameDt / 2.5);
       }
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       if (room && roomCv) {
-        ctx.drawImage(roomCv, -par.x * 5 * dpr, -par.y * 3 * dpr);
-        if (roomFade < 1 && roomPrev) { ctx.globalAlpha = 1 - roomFade; ctx.drawImage(roomPrev, -par.x * 5 * dpr, -par.y * 3 * dpr); ctx.globalAlpha = 1; }
-      } else ctx.drawImage(bgCv, -par.x * 5 * dpr, -par.y * 3 * dpr);
+        const ox = Math.round(-par.x * 5 * dpr), oy = Math.round(-par.y * 3 * dpr);
+        ctx.drawImage(roomCv, ox, oy);
+        if (roomFade < 1 && roomPrev) { ctx.globalAlpha = 1 - roomFade; ctx.drawImage(roomPrev, ox, oy); ctx.globalAlpha = 1; }
+      } else ctx.drawImage(bgCv, Math.round(-par.x * 5 * dpr), Math.round(-par.y * 3 * dpr));
       ctx.restore();
       ctx.save(); ctx.translate(-par.x * 5, -par.y * 3);
       if (room) {
@@ -788,17 +799,22 @@ function createCauldron() {
 
   // ---------- 0.29.1: телефон не успевает - снижаем плотность холста ----------
   // Средний кадр дольше 1/40 с несколько секунд подряд - холст 1.5x вместо 2x (заливка дешевле почти вдвое).
-  // Ступени: 1) холст 1.5x; 2) без тонового слоя котла и питомцев; 3) 30 кадров в секунду.
-  let frameDt = 1 / 60, perfAcc = 0, perfN = 0, perfLvl = 0, lastDraw = 0;
+  // Только если телефон всерьёз не успевает (меньше 28 кадров в секунду 5 секунд подряд, после разгона
+  // игры): 1) холст 2x вместо 3x; 2) без тонового слоя котла и питомцев.
+  let frameDt = 1 / 60, perfAcc = 0, perfN = 0, perfLvl = 0, perfWarm = 0;
   function perfGuard(dt) {
-    if (perfLvl >= 3 || document.hidden || dt > 0.25) return;
+    if (perfLvl >= 2 || document.hidden) return;
+    // загрузка, сворачивание, пересборка комнаты - не в счёт
+    if (dt > 0.2 || perfWarm < 8) { perfWarm += Math.min(dt, 0.2); perfAcc = 0; perfN = 0; return; }
     perfAcc += dt; perfN++;
-    if (perfAcc < 4) return;
+    if (perfAcc < 5) return;
     const avg = perfAcc / perfN;
     perfAcc = 0; perfN = 0;
-    if (avg <= 1 / 40) return;
+    if (avg <= 1 / 28) return;
     perfLvl++;
-    if (perfLvl === 1 && dprCap > 1.5) { dprCap = 1.5; resize(); }
+    perfWarm = 0;
+    if (perfLvl === 1 && dpr > 2) { dprCap = 2; resize(); }
+    else if (perfLvl === 1) perfLvl = 2;
   }
 
   // ---------- 0.29: время суток и погода ----------
@@ -1644,8 +1660,6 @@ function createCauldron() {
     return { W, H, cx: g.cx, cy: g.cy, r: g.r, liq: g.liq, pot: g.pot, ground: bgMeta().room ? footY() : L.y + L.h * 0.86, front: bgMeta().counter && showCounter() ? counterTop() : null, props: frontProps(), night: nightK, t, squash, potBottom: g.pot.y + g.pot.h, liquid };
   }
   function render() {
-    // 3-я ступень: телефон совсем не успевает - рисуем через кадр (~30 в секунду)
-    if (perfLvl >= 3) { const now = performance.now(); if (now - lastDraw < 30) return; lastDraw = now; }
     frontCache = null;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawBg();
