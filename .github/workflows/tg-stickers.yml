@@ -1,0 +1,23 @@
+name: tg-stickers
+
+on:
+  workflow_dispatch:
+    inputs:
+      user_id:
+        description: 'Telegram id владельца набора'
+        default: '1359649020'
+        required: true
+      recreate:
+        description: 'Пересоздать набор, если уже есть'
+        type: boolean
+        default: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Загрузить видеостикеры
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+        run: python3 tools/tg_stickers.py "${{ inputs.user_id }}" ${{ inputs.recreate && 'recreate' || '' }}
