@@ -2835,3 +2835,26 @@ body.in-game .tut { display: none; }
 .top-info b { font-size: 14px; color: #FFF6E8; }
 .lg-help.small { width: 24px; height: 24px; font-size: 13px; border-width: 1.5px; }
 .top-hint { margin: 6px 0 0; padding: 6px 10px; border-radius: 10px; background: rgba(255,255,255,.06); color: #E8DCFF; font-size: 12.5px; text-align: center; }
+/* 0.33.2: медали лиг и пьедестал картинками */
+.lg-medal { --s: 54px; flex: none; width: var(--s); height: var(--s); display: grid; place-items: center; }
+.lg-medal-img { max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 3px 2px rgba(10,4,20,.5)); }
+.lg-step.on .lg-medal { filter: drop-shadow(0 0 8px #FFE38A); }
+.lg-step { gap: 6px; }
+.podium2 { padding-top: 108px; margin: 0 auto 2px; width: min(88%, 290px); }
+.pod-stage { position: relative; width: 100%; aspect-ratio: 360 / 268; }
+.pod-img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pod-who { position: absolute; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 1px; width: 32%; padding: 0; }
+.pod-who.p2 { left: 17%; bottom: calc(56.7% + 2px); }
+.pod-who.p1 { left: 50%; bottom: calc(100% + 2px); }
+.pod-who.p3 { left: 84%; bottom: calc(52.2% + 2px); }
+.pod-who .pod-ava { width: 52px; height: 52px; flex: none; border-width: 3px; }
+.pod-who.p1 .pod-ava { width: 64px; height: 64px; border-color: #FFD23F; box-shadow: 0 0 14px rgba(255,210,63,.6); }
+.pod-who.p2 .pod-ava { border-color: #D9E1EE; }
+.pod-who.p3 .pod-ava { border-color: #E09A5A; }
+.pod-who.empty { opacity: .4; }
+.pod-who.me .pod-name { color: #FFE38A; }
+.pod-gift { position: absolute; transform: translateX(-50%); }
+.pod-gift.p2 { left: 17%; bottom: 9%; }
+.pod-gift.p1 { left: 50%; bottom: 9%; }
+.pod-gift.p3 { left: 84%; bottom: 7%; }
+.pod-gift .top-gift { background: rgba(42,21,48,.82); }

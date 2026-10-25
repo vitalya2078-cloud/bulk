@@ -63,10 +63,10 @@ const Tops = (() => {
   }
   const myPhoto = () => { const s = Econ.s; return s.prof.avatar === 'photo' ? '' : s.prof.avatar; };
   // медальон лиги (рисуется стилями)
+  // медаль лиги (картинки leagues/l0-l4)
   function badge(lg, size) {
-    const L = DATA.leagues[Math.max(0, Math.min(4, lg | 0))];
-    return h('span', { class: 'lg-badge lg' + lg, style: '--c1:' + L.c1 + ';--c2:' + L.c2 + ';--gem:' + L.gem + ';--s:' + (size || 54) + 'px' },
-      h('i', null, ['I', 'II', 'III', 'IV', 'V'][lg] || 'I'));
+    const i = Math.max(0, Math.min(4, lg | 0));
+    return h('span', { class: 'lg-medal', style: '--s:' + (size || 54) + 'px' }, pic('leagues/l' + i, 'lg-medal-img'));
   }
   function giftChips(g) {
     if (!g) return null;
@@ -86,18 +86,17 @@ const Tops = (() => {
   };
 
   // пьедестал: 2 - 1 - 3
+  // пьедестал - картинка leagues/podium (серебро слева, золото с короной в центре, бронза справа);
+  // игроки стоят на своих ступенях, награды - на лицевой стороне ступеней
   function podium(rows, unit, gifts) {
-    const top = [rows[1], rows[0], rows[2]];
-    return h('div', { class: 'podium' }, top.map((r, i) => {
-      const pl = [2, 1, 3][i];
-      if (!r) return h('div', { class: 'pod pod' + pl + ' empty' }, h('div', { class: 'pod-who' }, h('span', { class: 'top-ava pod-ava' }), h('b', null, '...')), h('div', { class: 'pod-base' }, h('b', null, String(pl))));
-      return h('div', { class: 'pod pod' + pl + (r.is_me ? ' me' : '') },
-        h('div', { class: 'pod-who' },
-          avatar(r.photo, 'pod-ava'),
-          h('b', { class: 'pod-name' }, r.name || 'Алхимик'),
-          h('span', { class: 'pod-score' }, Fmt.num(r.score))),
-        h('div', { class: 'pod-base' }, pl === 1 ? pic('ui/crown', 'pod-crown') : null, h('b', null, String(pl)), gifts ? giftChips(gifts[pl - 1]) : null));
-    }));
+    const who = (r, pl) => h('div', { class: 'pod-who p' + pl + (r && r.is_me ? ' me' : '') + (r ? '' : ' empty') },
+      r ? avatar(r.photo, 'pod-ava') : h('span', { class: 'top-ava pod-ava' }),
+      h('b', { class: 'pod-name' }, r ? r.name || 'Алхимик' : '...'),
+      r ? h('span', { class: 'pod-score' }, Fmt.num(r.score)) : null);
+    return h('div', { class: 'podium2' },
+      h('div', { class: 'pod-stage' }, pic('leagues/podium', 'pod-img'),
+        who(rows[1], 2), who(rows[0], 1), who(rows[2], 3),
+        gifts ? [1, 2, 3].map((pl) => h('div', { class: 'pod-gift p' + pl }, giftChips(gifts[pl - 1]))) : null));
   }
   function row(r, extra) {
     return h('div', { class: 'top-row' + (r.is_me ? ' me' : '') + (extra && extra.zone ? ' ' + extra.zone : '') },
