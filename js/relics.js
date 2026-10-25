@@ -214,12 +214,14 @@ const Relics = (() => {
     refreshButton();
   }
 
-  // открыть сундук: список наград
-  function openChest(k) {
+  // Открытие сундука в два шага (0.33.4): roll - сундук забран, редкости решены (по ним сундук светится),
+  // награда ещё не выдана; grant - награда выдаётся, когда сундук открылся на экране.
+  // Неоткрытый сундук хранится в r.pend и ждёт следующего захода в «Диковинки» - ничего не теряется.
+  function rollChest(k) {
     const r = st(), c = CHEST[k];
-    if (!c || !(r.ch[k] > 0)) return null;
+    if (r.pend || !c || !(r.ch[k] > 0)) return null;
     r.ch[k]--;
-    const got = [];
+    const rars = [];
     c.relic.forEach((slot, i) => {
       if (Math.random() >= slot.p) return;
       let rar = pickRarity(slot.w);
@@ -227,14 +229,26 @@ const Relics = (() => {
         if (rar === 'e' || rar === 'l') r.pity = 0;
         else if (++r.pity >= c.pity) { rar = 'e'; r.pity = 0; }
       }
-      got.push(giveRarity(rar));
+      rars.push(rar);
     });
+    r.pend = { k, rars };
+    save(); refreshButton();
+    return r.pend;
+  }
+  function grantChest() {
+    const r = st(), p = r.pend;
+    if (!p || !CHEST[p.k]) { r.pend = null; return null; }
+    const c = CHEST[p.k];
+    r.pend = null;
+    const got = (p.rars || []).map(giveRarity);
     if (c.ess) { const v = Econ.hoursOfIncome(c.ess, 300); Econ.earn(v); got.push({ t: 'ess', v }); }
     if (c.ing) { const l = Brew.give(c.ing, 0.15); got.push({ t: 'ing', l }); }
     if (c.cr) { Econ.addCrystals(c.cr); got.push({ t: 'cr', n: c.cr }); }
     save(); refreshButton();
     return got;
   }
+  // сразу целиком (для проверок)
+  function openChest(k) { return rollChest(k) ? grantChest() : null; }
 
   // шансы для «Что внутри?»
   function odds(k) {
@@ -355,7 +369,7 @@ const Relics = (() => {
   const wheelGive = (set, i) => set[i].give();
 
   // ---------- кнопка на главном ----------
-  const chestsCount = () => { const r = S().rel; return r && r.ch ? CHEST_ORDER.reduce((a, k) => a + (r.ch[k] || 0), 0) : 0; };
+  const chestsCount = () => { const r = S().rel; return r && r.ch ? CHEST_ORDER.reduce((a, k) => a + (r.ch[k] || 0), 0) + (r.pend ? 1 : 0) : 0; };
   function refreshButton() {
     const b = document.getElementById('relic-btn'), w = document.getElementById('wheel-btn');
     const on = unlocked();
@@ -382,6 +396,8 @@ const Relics = (() => {
     const first = welcome();
     if (startTab) tab = startTab;
     sel = null; reveal = null;
+    const pend = st().pend;
+    if (pend && CHEST[pend.k]) { tab = 'chests'; reveal = { k: pend.k, rars: pend.rars || [], stage: 'closed' }; }
     const body = h('div', { class: 'brew relics' });
     const draw = () => UI.keepSeg(body, () => drawInner(body, draw));
     draw();
@@ -406,6 +422,8 @@ const Relics = (() => {
       b.addEventListener('click', () => { tab = id; sel = null; reveal = null; Sound.tap(); redraw(); body.scrollTop = 0; });
       return b;
     })));
+    const pend = r.pend;
+    if (tab === 'chests' && !reveal && pend && CHEST[pend.k]) reveal = { k: pend.k, rars: pend.rars || [], stage: 'closed' };
     if (reveal) drawReveal(body, redraw);
     else if (sel) drawDetail(body, redraw);
     else if (tab === 'shelf') drawShelf(body, redraw);
@@ -499,9 +517,9 @@ const Relics = (() => {
       const c = CHEST[k], n = r.ch[k] || 0;
       const openB = h('button', { type: 'button', class: 'pill-btn', disabled: !n }, n ? 'Открыть' : 'Нет');
       openB.addEventListener('click', () => {
-        const got = openChest(k);
-        if (!got) return;
-        Sound.tap(); reveal = { k, got, stage: 'closed' }; UI.refresh(true); redraw(); body.scrollTop = 0;
+        const p = rollChest(k);
+        if (!p) return;
+        Sound.tap(); reveal = { k, rars: p.rars, stage: 'closed' }; UI.refresh(true); redraw(); body.scrollTop = 0;
       });
       const buy = c.cost ? h('button', { type: 'button', class: 'pill-btn alt', disabled: S().cr < c.cost }, pic('ui/crystal', 'btn-ico'), ' ' + c.cost) : null;
       if (buy) buy.addEventListener('click', () => {
@@ -532,20 +550,21 @@ const Relics = (() => {
   // открытие сундука: закрытый подпрыгивает и ждёт нажатия -> трясётся -> вспышка -> крышка открыта, лучи и награды
   function drawReveal(body, redraw) {
     const c = CHEST[reveal.k];
-    const best = reveal.got.filter((g) => g.t === 'relic').map((g) => RAR[ITEM[g.id].r].i).reduce((a, b) => Math.max(a, b), -1);
+    const best = (reveal.rars || []).map((x) => RAR[x].i).reduce((a, b) => Math.max(a, b), -1);
     const rc = best >= 0 ? RCLS(['c', 'r', 'e', 'l'][best]) : '';
     if (reveal.stage === 'closed') {
       const chest = pic(c.img, 'rel-chest-ico ' + c.cls);
       const stage = h('button', { type: 'button', class: 'rel-burst closed ' + rc }, chest);
       const hint = h('small', { class: 'rel-hint center' }, 'Нажми на сундук, чтобы открыть');
-      let busy = false;
+      const rv = reveal;
       const go = () => {
-        if (busy) return;
-        busy = true; Sound.tap();
+        if (rv.busy) return;
+        rv.busy = true; Sound.tap();
         stage.classList.add('shake');
         hint.textContent = '';
         setTimeout(() => { stage.classList.add('flash'); }, 650);
-        setTimeout(() => { Sound.coin(); reveal.stage = 'open'; redraw(); }, 900);
+        // награда выдаётся сейчас - когда крышка открылась (если окно успели закрыть и открыть заново, сундук ждёт нового нажатия)
+        setTimeout(() => { if (reveal !== rv || rv.stage !== 'closed') return; Sound.coin(); rv.got = grantChest() || []; rv.stage = 'open'; UI.refresh(true); redraw(); }, 900);
       };
       stage.addEventListener('click', go);
       body.append(h('div', { class: 'rel-reveal' }, stage, h('b', { class: 'rel-name' }, c.name), hint));
@@ -559,7 +578,7 @@ const Relics = (() => {
     const more = (st().ch[reveal.k] || 0) > 0;
     const again = h('button', { type: 'button', class: 'btn' }, more ? 'Открыть ещё (' + st().ch[reveal.k] + ')' : 'Готово');
     again.addEventListener('click', () => {
-      if (more) { const got = openChest(reveal.k); if (got) { Sound.tap(); reveal = { k: reveal.k, got, stage: 'closed' }; } }
+      if (more) { const p = rollChest(reveal.k); if (p) { Sound.tap(); reveal = { k: reveal.k, rars: p.rars, stage: 'closed' }; } }
       else reveal = null;
       UI.refresh(true); redraw();
     });
