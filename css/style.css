@@ -2787,8 +2787,10 @@ body.in-game .tut { display: none; }
 .pod1 .pod-ava { width: 68px; height: 68px; border-color: #FFD23F; box-shadow: 0 0 14px rgba(255,210,63,.6); }
 .pod2 .pod-ava { border-color: #D9E1EE; }
 .pod3 .pod-ava { border-color: #E09A5A; }
-.pod-crown { position: absolute; top: -22px; width: 34px; height: 34px; filter: drop-shadow(0 2px 2px rgba(10,4,20,.5)); }
-.pod1 .pod-who { padding-top: 14px; }
+.pod-base { position: relative; }
+.pod-crown { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); width: 36px; height: 36px; filter: drop-shadow(0 2px 2px rgba(10,4,20,.5)); }
+.pod1 .pod-base > b { margin-top: 14px; }
+.pod1 .pod-who { padding-top: 0; padding-bottom: 14px; }
 .pod-name { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; color: #FFF6E8; }
 .pod-score { font-weight: 900; font-size: 14px; color: #FFE48A; text-shadow: 0 1px 0 var(--ink); }
 .pod-base { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 4px; padding-top: 6px; border-radius: 12px 12px 4px 4px;

@@ -93,11 +93,10 @@ const Tops = (() => {
       if (!r) return h('div', { class: 'pod pod' + pl + ' empty' }, h('div', { class: 'pod-who' }, h('span', { class: 'top-ava pod-ava' }), h('b', null, '...')), h('div', { class: 'pod-base' }, h('b', null, String(pl))));
       return h('div', { class: 'pod pod' + pl + (r.is_me ? ' me' : '') },
         h('div', { class: 'pod-who' },
-          pl === 1 ? pic('ui/crown', 'pod-crown') : null,
           avatar(r.photo, 'pod-ava'),
           h('b', { class: 'pod-name' }, r.name || 'Алхимик'),
           h('span', { class: 'pod-score' }, Fmt.num(r.score))),
-        h('div', { class: 'pod-base' }, h('b', null, String(pl)), gifts ? giftChips(gifts[pl - 1]) : null));
+        h('div', { class: 'pod-base' }, pl === 1 ? pic('ui/crown', 'pod-crown') : null, h('b', null, String(pl)), gifts ? giftChips(gifts[pl - 1]) : null));
     }));
   }
   function row(r, extra) {
