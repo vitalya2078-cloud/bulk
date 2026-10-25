@@ -2851,7 +2851,7 @@ body.in-game .tut { display: none; }
 .pod-who.p1 .pod-ava { width: 64px; height: 64px; border-color: #FFD23F; box-shadow: 0 0 14px rgba(255,210,63,.6); }
 .pod-who.p2 .pod-ava { border-color: #D9E1EE; }
 .pod-who.p3 .pod-ava { border-color: #E09A5A; }
-.pod-who.empty { opacity: .4; }
+.pod-free { padding: 3px 9px; border-radius: 10px; border: 1.5px dashed rgba(255,255,255,.35); background: rgba(26,12,40,.55); color: rgba(255,246,232,.7); font-size: 11.5px; font-weight: 800; white-space: nowrap; }
 .pod-who.me .pod-name { color: #FFE38A; }
 .pod-gift { position: absolute; transform: translateX(-50%); }
 .pod-gift.p2 { left: 17%; bottom: 9%; }

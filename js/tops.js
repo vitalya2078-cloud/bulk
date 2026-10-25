@@ -89,10 +89,11 @@ const Tops = (() => {
   // пьедестал - картинка leagues/podium (серебро слева, золото с короной в центре, бронза справа);
   // игроки стоят на своих ступенях, награды - на лицевой стороне ступеней
   function podium(rows, unit, gifts) {
-    const who = (r, pl) => h('div', { class: 'pod-who p' + pl + (r && r.is_me ? ' me' : '') + (r ? '' : ' empty') },
-      r ? avatar(r.photo, 'pod-ava') : h('span', { class: 'top-ava pod-ava' }),
-      h('b', { class: 'pod-name' }, r ? r.name || 'Алхимик' : '...'),
-      r ? h('span', { class: 'pod-score' }, Fmt.num(r.score)) : null);
+    // свободное место - табличка на ступени (класс vacant: общий .empty растягивает блок на полэкрана)
+    const who = (r, pl) => (r
+      ? h('div', { class: 'pod-who p' + pl + (r.is_me ? ' me' : '') },
+        avatar(r.photo, 'pod-ava'), h('b', { class: 'pod-name' }, r.name || 'Алхимик'), h('span', { class: 'pod-score' }, Fmt.num(r.score)))
+      : h('div', { class: 'pod-who p' + pl + ' vacant' }, h('span', { class: 'pod-free' }, 'Свободно')));
     return h('div', { class: 'podium2' },
       h('div', { class: 'pod-stage' }, pic('leagues/podium', 'pod-img'),
         who(rows[1], 2), who(rows[0], 1), who(rows[2], 3),
