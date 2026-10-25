@@ -234,16 +234,23 @@ const Visitors = (() => {
     const tf = ctx.getTransform(), ox = tf.e / tf.a, oy = tf.f / tf.d;
     const top = y - hh;
     vis.hit = { x: x - w / 2 + ox, y: top + oy - hh * 0.5, w, h: Math.min(hh * 1.4, o.counterTop - top + hh * 0.5) };
-    // облачко над головой
-    if (st.phase === 'waiting' || (st.phase === 'leaving' && (st.result === 'happy' || st.result === 'ok'))) drawCloud(ctx, x, top + hh * 0.04, Math.max(74, w * 0.66), o, k, dt);
-    if (st.phase === 'waiting' && st.mode !== 'deliver') drawSpeech(ctx, x, top, w, o, now);
+    // облачко над головой: просьба словами, подсказка «тапни» и полоска времени (0.32.2)
+    if (st.phase === 'waiting' || (st.phase === 'leaving' && (st.result === 'happy' || st.result === 'ok'))) drawBubble(ctx, x, top, w, o, k, dt, now);
   }
 
-  // Слова жителя: пришёл - несколько секунд говорит, зачем пришёл; потом под ним подсказка «тапни».
+  // Слова жителя: первые секунды - его реплика целиком, потом коротко, что нужно.
   function speechText() {
     if (st.mode === 'remind') return Requests.line(st.v.id, 'remind', 'Как там моя просьба? Я загляну попозже!');
     if (st.r && st.r.text) return st.r.text;
     return 'Можно попросить о помощи?';
+  }
+  function shortText() {
+    if (st.mode === 'remind') return 'Как там моя просьба?';
+    const r = st.r;
+    if (!r) return 'Нужна помощь!';
+    if (r.k === 'give') return 'Нужно: ' + Object.keys(r.give).map((id) => Brew.ing(id).name.toLowerCase() + (r.give[id] > 1 ? ' ×' + r.give[id] : '')).join(', ');
+    const pot = DATA.brews.find((x) => x.id === r.brew);
+    return 'Свари: ' + (pot ? pot.name.toLowerCase() : 'зелье');
   }
   function wrap(ctx, text, maxW) {
     const words = String(text).split(' '), lines = [];
@@ -252,93 +259,62 @@ const Visitors = (() => {
     if (cur) lines.push(cur);
     return lines.slice(0, 4);
   }
-  function drawSpeech(ctx, vx, headY, vw, o, now) {
-    const age = (now - vis.enterAt) / 1000;
-    ctx.save();
-    if (age < 6.5) {
-      // облачко с репликой справа от жителя, хвостик к нему
-      const a = Math.min(1, (age - 0.5) * 4, (6.5 - age) * 3);
-      if (a > 0) {
-        const fs = Math.max(12, Math.round(o.size * 0.15));
-        ctx.font = '800 ' + fs + 'px Nunito, system-ui, sans-serif';
-        const maxW = Math.min(o.W * 0.5, 230);
-        const lines = wrap(ctx, speechText(), maxW);
-        const tw = Math.max(...lines.map((l) => ctx.measureText(l).width));
-        const bw = tw + 22, bh = lines.length * fs * 1.22 + 14;
-        const bx = clamp(vx + vw * 0.3, 6, o.W - bw - 6), by = clamp(headY + vw * 0.05, o.H * 0.18, o.H - bh - 10);
-        ctx.globalAlpha = a;
-        ctx.fillStyle = '#FFF6E8'; ctx.strokeStyle = '#1A0E2C'; ctx.lineWidth = 2.5;
-        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 14) : ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
-        // хвостик к жителю (влево-вниз)
-        const ty = by + bh * 0.62;
-        ctx.beginPath(); ctx.moveTo(bx + 1, ty - 8); ctx.lineTo(bx - 10, ty + 6); ctx.lineTo(bx + 1, ty + 6); ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(bx, ty - 8); ctx.lineTo(bx - 10, ty + 6); ctx.lineTo(bx, ty + 6); ctx.stroke();
-        ctx.fillStyle = '#1A0E2C'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        lines.forEach((l, i) => ctx.fillText(l, bx + 11, by + 7 + i * fs * 1.22));
-      }
-    } else {
-      // подсказка под облачком: что делать
-      const fs = Math.max(11, Math.round(o.size * 0.12));
-      ctx.font = '900 ' + fs + 'px Nunito, system-ui, sans-serif';
-      const t = st.mode === 'remind' ? 'Тапни: как дела?' : 'Тапни, помоги!';
-      const tw = ctx.measureText(t).width, bw = tw + 18, bh = fs + 10;
-      const c = vis.cloud || { x: vx - 40, y: headY - 60, w: 80, h: 60 };
-      const bx = clamp(c.x + c.w / 2 - bw / 2, 4, o.W - bw - 4), by = Math.max(4, c.y - bh - 2);
-      ctx.globalAlpha = 0.95;
-      ctx.fillStyle = 'rgba(28,12,48,.86)'; ctx.strokeStyle = '#FFD27A'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, bh / 2) : ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#FFE48A'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(t, bx + bw / 2, by + bh / 2 + 1);
-    }
-    ctx.restore();
-  }
-
-  function drawCloud(ctx, cx, headY, cw, o, k, dt) {
-    const cl = sprite('hud/think');
-    if (!cl) return;
+  const rr = (ctx, x, y, w, h, r) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); };
+  function drawBubble(ctx, vx, headY, vw, o, k, dt, now) {
     vis.pop = Math.max(0, vis.pop - dt * 2.5);
-    const waiting = st.phase === 'waiting' && st.mode !== 'deliver';
-    const bob = waiting ? Math.abs(Math.sin(o.t * 3.2)) * -6 : Math.sin(o.t * 1.6) * 2;
-    const s = (0.6 + 0.4 * k) * (1 + vis.pop * 0.12);
-    const ch = cw * cl.naturalHeight / cl.naturalWidth;
-    const x0 = clamp(cx - cw * 0.22, 4, o.W - cw - 4), y0 = Math.max(o.H * 0.2, headY - ch * 0.95) + bob;
-    vis.cloud = { x: x0, y: y0, w: cw, h: ch };
+    const leaving = st.phase === 'leaving', waiting = !leaving && st.mode !== 'deliver';
+    const age = (now - vis.enterAt) / 1000;
+    const text = leaving ? 'Спасибо!' : st.mode === 'deliver' ? 'Ура, всё готово!' : age < 6.5 ? speechText() : shortText();
+    const hint = waiting ? (st.mode === 'remind' ? 'Тапни: как дела?' : 'Тапни, чтобы помочь') : '';
+    const fs = Math.max(12, Math.round(o.size * 0.14)), hs = Math.max(11, Math.round(fs * 0.86));
     ctx.save();
-    ctx.translate(x0 + cw / 2, y0 + ch / 2); ctx.scale(s, s); ctx.translate(-cw / 2, -ch / 2);
-    // свечение, пока ждёт
+    ctx.font = '800 ' + fs + 'px Nunito, system-ui, sans-serif';
+    const maxW = Math.min(o.W * 0.56, 240);
+    const lines = wrap(ctx, text, maxW);
+    let tw = Math.max(...lines.map((l) => ctx.measureText(l).width));
+    ctx.font = '900 ' + hs + 'px Nunito, system-ui, sans-serif';
+    if (hint) tw = Math.max(tw, ctx.measureText(hint).width);
+    const pad = 12, lh = fs * 1.2;
+    const bw = tw + pad * 2, bh = pad + lines.length * lh + (hint ? hs * 1.35 + 4 : 0) + (waiting ? 8 : 0) + pad * 0.6;
+    const bob = waiting ? Math.sin(o.t * 2.6) * 2.5 : 0;
+    const tail = 12;
+    const bx = clamp(vx - bw * 0.3, 6, o.W - bw - 6);
+    const by = Math.max(o.H * 0.2, headY - bh - tail + vw * 0.08) + bob;
+    const s = (0.7 + 0.3 * k) * (1 + vis.pop * 0.1);
+    vis.cloud = { x: bx, y: by, w: bw, h: bh };
+    ctx.translate(bx + bw / 2, by + bh); ctx.scale(s, s); ctx.translate(-bw / 2, -bh);
+    // мягкое свечение, пока ждёт
+    if (waiting) { ctx.shadowColor = 'rgba(255,210,110,' + (0.35 + 0.25 * Math.sin(o.t * 4)) + ')'; ctx.shadowBlur = 14; }
+    ctx.fillStyle = '#FFF6E8'; ctx.strokeStyle = '#1A0E2C'; ctx.lineWidth = 2.5;
+    rr(ctx, 0, 0, bw, bh, 14); ctx.fill();
+    ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+    ctx.stroke();
+    // хвостик вниз к жителю
+    const tx = clamp(vx - bx, 18, bw - 18);
+    ctx.beginPath(); ctx.moveTo(tx - 9, bh - 1); ctx.lineTo(tx - 2, bh + tail); ctx.lineTo(tx + 9, bh - 1); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(tx - 9, bh); ctx.lineTo(tx - 2, bh + tail); ctx.lineTo(tx + 9, bh); ctx.stroke();
+    // текст
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.font = '800 ' + fs + 'px Nunito, system-ui, sans-serif'; ctx.fillStyle = '#2A1530';
+    lines.forEach((l, i) => ctx.fillText(l, bw / 2, pad * 0.8 + i * lh));
+    let y = pad * 0.8 + lines.length * lh;
+    if (hint) {
+      ctx.font = '900 ' + hs + 'px Nunito, system-ui, sans-serif';
+      ctx.fillStyle = st.mode === 'remind' ? '#C27A10' : '#8E55D8';
+      ctx.fillText(hint, bw / 2, y + 3);
+      y += hs * 1.35 + 4;
+    }
+    // полоска: сколько ещё житель будет ждать
     if (waiting) {
-      const a = 0.35 + 0.25 * Math.sin(o.t * 4);
-      const gr = ctx.createRadialGradient(cw / 2, ch * 0.45, 0, cw / 2, ch * 0.45, cw * 0.75);
-      gr.addColorStop(0, 'rgba(255,215,110,' + a + ')'); gr.addColorStop(1, 'rgba(255,215,110,0)');
-      ctx.fillStyle = gr; ctx.fillRect(-cw * 0.3, -ch * 0.3, cw * 1.6, ch * 1.6);
-    }
-    ctx.drawImage(cl, 0, 0, cw, ch);
-    // круг-таймер и значок
-    const ix = cw * 0.53, iy = ch * 0.33, R = cw * 0.17;
-    const frac = st.phase === 'leaving' ? 1 : clamp(st.left / st.total, 0, 1);
-    const done = st.phase === 'leaving' || st.mode === 'deliver';
-    ctx.lineCap = 'round';
-    ctx.lineWidth = Math.max(3, cw * 0.05);
-    ctx.strokeStyle = 'rgba(90,50,40,.18)';
-    ctx.beginPath(); ctx.arc(ix, iy, R, 0, Math.PI * 2); ctx.stroke();
-    if (st.phase !== 'leaving' && st.mode !== 'deliver') {
-      ctx.strokeStyle = frac < 0.25 ? '#E8484B' : st.mode === 'remind' ? '#F2A925' : '#8E55D8';
-      ctx.beginPath(); ctx.arc(ix, iy, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac); ctx.stroke();
-    }
-    const ic = sprite(done ? 'hud/check' : st.r ? Requests.iconOf(st.r) : 'ui/ladle');
-    if (ic) { const is = R * 1.45; ctx.drawImage(ic, ix - is / 2, iy - is / 2, is, is); }
-    // текст: просьба или прогресс
-    const txt = done ? '' : st.mode === 'remind' ? '?' : st.r && st.r.k === 'give' ? '×' + Requests.size(st.r) : '';
-    if (txt) {
-      ctx.font = '900 ' + Math.round(cw * 0.15) + 'px Nunito, sans-serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#4A2618';
-      ctx.fillText(txt, cw * 0.53, ch * 0.62);
+      const frac = clamp(st.left / st.total, 0, 1), bx2 = pad, bw2 = bw - pad * 2, by2 = bh - pad * 0.6 - 5;
+      ctx.fillStyle = 'rgba(90,50,40,.15)'; rr(ctx, bx2, by2, bw2, 5, 3); ctx.fill();
+      ctx.fillStyle = frac < 0.25 ? '#E8484B' : st.mode === 'remind' ? '#F2A925' : '#8E55D8';
+      rr(ctx, bx2, by2, Math.max(5, bw2 * frac), 5, 3); ctx.fill();
     }
     ctx.restore();
+    // место для тапа: житель + облачко
     const tf = ctx.getTransform(), ox = tf.e / tf.a, oy = tf.f / tf.d;
-    const hb = vis.hit;
-    const cr = { x: x0 + ox, y: y0 + oy, w: cw, h: ch };
+    const hb = vis.hit, cr = { x: bx + ox, y: by + oy, w: bw, h: bh + tail };
     if (hb) { const X = Math.min(hb.x, cr.x), Y = Math.min(hb.y, cr.y); vis.hit = { x: X, y: Y, w: Math.max(hb.x + hb.w, cr.x + cr.w) - X, h: Math.max(hb.y + hb.h, cr.y + cr.h) - Y }; }
   }
 
