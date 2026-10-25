@@ -1,0 +1,52 @@
+ЧТО: пост для рассылки по пиар-группам ВК (и Telegram-чатам) + 2 картинки к нему.
+ФОРМАТ КАРТИНОК: 4:5 (1080x1350) - лучший размер для ленты ВК.
+ПРИКРЕПИТЬ: vk_post_1080x1350.png из Bulk_Promo.zip (чтобы Бульк и котёнок были узнаваемы).
+ТЕКСТ НА КАРТИНКЕ: генератор не пишет, кириллицу он портит. Логотип «Бульк» и подпись кладём сверху потом (Canva).
+
+==================== ТЕКСТ 1: основной пост ====================
+
+🫧 Во ВКонтакте завёлся котёл. Его зовут Бульк.
+
+Он булькает, болтает и варит зелья. А тебе достаётся целая волшебная лавка!
+
+🧪 зелья и рецепт дня, который надо разгадать
+🐱 питомцы: котёнок, ёжик, сова и даже дракон. Отправляй их в походы за добычей
+🎁 сундуки с диковинками, колесо удачи, мини-игры
+🏆 лиги недели: от Медной до Лунной
+🧙 ковены с друзьями и босс выходных
+💤 лавка копит эссенцию, даже когда ты не в игре
+
+Играть бесплатно 👉 vk.com/app54828995
+В Telegram 👉 t.me/bulkgamemagikbot
+
+==================== ТЕКСТ 2: короткий ====================
+
+🫧 Говорящий котёл ищет помощника в лавку зелий!
+Вари зелья, заводи питомцев, открывай сундуки и поднимайся в лигах.
+Бесплатно, прямо в ВК 👉 vk.com/app54828995
+
+==================== ТЕКСТ 3: Telegram-чаты ====================
+
+🫧 Бульк - уютная игра про говорящий котёл и лавку зелий.
+Зелья, питомцы, сундуки, лиги и ковены с друзьями. Играется прямо в Telegram 👉 t.me/bulkgamemagikbot
+
+==================== ПЕРВЫЕ СТРОКИ НА СМЕНУ ====================
+(одинаковый текст в десятках групп быстро примелькается, первую строку лучше менять)
+
+🫧 Кто-нибудь знает, что делать с говорящим котлом?
+🧪 Ищу помощника в лавку зелий. Опыт не нужен, котёл всему научит.
+🐱 Котёнок, ёж и дракон уже работают в лавке. Не хватает только тебя.
+🌙 Есть игра, в которой можно просто отдыхать и варить зелья.
+
+==================== КАРТИНКА 1: «Бульк зовёт в лавку» ====================
+
+ПРОМПТ (копировать целиком):
+
+Match the art style and the characters of the attached reference. Vertical 4:5 poster for a mobile game ad. Close-up hero shot of Bulk: a cute round glossy purple cauldron character with big friendly sparkling eyes and a wide happy smile, standing on a small dark iron tripod, filled to the brim with glowing bright green potion that bubbles over the rim, a wooden ladle sticking out of the potion, big green bubbles and golden sparkles floating up around him. A fluffy ginger kitten peeks over the cauldron rim with its paws on the edge, a small hedgehog sits at the base. Background: a cozy magical potion shop at dusk, a round window with a violet-orange sky, shelves with glowing bottles, an open treasure chest on the floor spilling warm golden light. Warm violet, gold and bright green palette, soft magical rim light, shallow depth of field on the background. Keep the top quarter of the image calm and darker (empty space for a logo), characters in the lower three quarters. Cartoon mobile game style, thick dark outlines, glossy highlights, saturated colors, crisp, high resolution. No text, no letters, no numbers, no logos, no UI.
+
+==================== КАРТИНКА 2: «Бульк вылезает из телефона» ====================
+(вторая картинка для смены, лучше цепляет взгляд в ленте)
+
+ПРОМПТ (копировать целиком):
+
+Match the art style and the characters of the attached reference. Vertical 4:5 poster for a mobile game ad. A smartphone lies on a cozy wooden table at night, and from its glowing screen pops out Bulk: a cute round glossy purple cauldron character with big delighted eyes and an open happy mouth, half inside the screen and half out in the real world, glowing bright green potion splashing out of the screen as bubbles, stars and little golden coins flying into the air. A fluffy ginger kitten on the table reaches for a floating bubble with its paw. Around the phone: a few small potion bottles, a candle, scattered purple crystals. Dark cozy background with a soft violet glow from the screen, warm candle light. Keep the top quarter of the image calm and darker (empty space for a logo). Cartoon mobile game style, thick dark outlines, glossy highlights, saturated colors, crisp, high resolution. No text, no letters, no numbers, no logos, no UI on the phone screen.
