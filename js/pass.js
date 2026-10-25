@@ -157,6 +157,9 @@ const Pass = (() => {
     const b = st(), before = page();
     const v = fromDeeds && night() ? n * 2 : n;
     b.ink += v;
+    // 0.33: те же чернила - очки лиги недели (tops.js)
+    const lg = S().lg || (S().lg = {});
+    lg.pts = (lg.pts || 0) + v;
     if (page() > before) {
       setTimeout(() => { UI.toast('Звёздный гримуар: открыта страница ' + page() + '!'); Sound.fanfare(); refreshButton(); }, 200);
     }

@@ -76,6 +76,18 @@ const Online = (() => {
     if (state.banned) { banScreen(state.reason); return; }
     if (Array.isArray(r.patches)) for (const p of r.patches) await applyPatch(p);
     badge();
+    leaguePut();
+  }
+
+  // 0.33: очки лиги и рекорды мини-игр - отдельным вызовом, только когда изменились
+  let lastLg = '';
+  async function leaguePut(force) {
+    if (!on() || kicked) return null;
+    const s = Econ.s, best = (s.mg && s.mg.best) || {};
+    const body = { lp: Math.floor((s.lg && s.lg.pts) || 0), mg: { match3: Math.floor(best.match3 || 0), memory: Math.floor(best.memory || 0) } };
+    const key = JSON.stringify(body);
+    if (!force && key === lastLg) return null;
+    try { const r = await rpc('league_put', { init_data: initData(), p: body }); lastLg = key; return r; } catch (e) { return null; }
   }
 
   // ---------- бан и техработы ----------
@@ -311,6 +323,7 @@ const Online = (() => {
     const parts = [];
     if (g.cr) parts.push(h('span', null, UI.money(g.cr, 'ui/crystal')));
     if (g.ess_h) parts.push(h('span', null, UI.money(UI.ess(Econ.hoursOfIncome(g.ess_h, 1000)))));
+    if (g.chest) parts.push(h('span', null, pic('relics/chest_' + g.chest, 'money-ico'), { w: 'Деревянный сундук', s: 'Серебряный сундук', g: 'Золотой сундук', t: 'Звёздный сундук' }[g.chest] || 'Сундук'));
     return parts.length ? h('div', { class: 'reward-list mail-gift' }, parts) : null;
   }
   const when = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }); };
@@ -358,6 +371,7 @@ const Online = (() => {
           const got = [];
           if (g.cr) { Econ.addCrystals(g.cr); got.push('+' + g.cr + ' ' + UI.crystalsWord(g.cr)); }
           if (g.ess_h) { const v = Econ.hoursOfIncome(g.ess_h, 1000); Econ.earn(v); got.push('+' + Fmt.num(v) + ' эссенции'); }
+          if (g.chest && /^[wsgt]$/.test(g.chest) && typeof Relics !== 'undefined') { Relics.addChest(g.chest); got.push({ w: 'деревянный', s: 'серебряный', g: 'золотой', t: 'звёздный' }[g.chest] + ' сундук'); }
           Sound.coin(); save(); UI.refresh(true);
           if (got.length) UI.toast('Получено: ' + got.join(', '));
         }
@@ -474,6 +488,6 @@ const Online = (() => {
     setTimeout(show, 2500);
   }
 
-  return { linked: () => linked, boost, call, start, openMail, promoDialog, newsState, setNews, admCode, notifyPush, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid,
+  return { leaguePut, linked: () => linked, boost, call, start, openMail, promoDialog, newsState, setNews, admCode, notifyPush, isAdmin: () => state.admin, hello, loadServer, linkDialog, blocked: () => kicked, on, uid: () => uid,
     appLoginFlow, appLogoutDialog, appWelcome };
 })();

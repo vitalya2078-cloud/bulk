@@ -88,6 +88,7 @@ const Econ = (() => {
       td: {},          // 0.30: дела по времени суток (timeday.js): огород, звёзды, гости, утренний привоз
       bp: {},          // 0.31: «Звёздный гримуар» - сезон, чернила, страницы, задания (pass.js)
       mk: {},          // 0.31: лавка Варфоломея - покупки за день (market.js)
+      lg: {},          // 0.33: лига недели { pts: очки лиги за всё время = звёздные чернила, league: последняя известная лига }
       tut: null        // 0.22: обучение { v: версия, done: true } ; null - не показывалось
     };
   }
@@ -121,7 +122,7 @@ const Econ = (() => {
     for (const k of ['ing', 'bag', 'pa', 'hints']) if (!f[k] || typeof f[k] !== 'object' || Array.isArray(f[k])) f[k] = {};
     if (!Array.isArray(f.book)) f.book = ['power', 'gold'];
     if (!f.shop || !Array.isArray(f.shop.b)) f.shop = { d: '', b: [] };
-    for (const k of ['room', 'td', 'bp', 'mk']) if (!f[k] || typeof f[k] !== 'object' || Array.isArray(f[k])) f[k] = {};
+    for (const k of ['room', 'td', 'bp', 'mk', 'lg']) if (!f[k] || typeof f[k] !== 'object' || Array.isArray(f[k])) f[k] = {};
     s = f;
     invalidate();
   }
@@ -628,7 +629,16 @@ const Econ = (() => {
   }
 
   // Число для рейтинга друзей
-  const mastery = () => Math.floor(Math.log10(s.le + 1) * 100) + derive().levels;
+  // 0.33: мастерство - насколько глубоко пройдена игра (не сколько эссенции): уровень, ранг, рецепты,
+  // диковинки и их звёзды, питомцы и их уровни, достижения, дружба с жителями, уровни карточек
+  function mastery() {
+    const own = (s.rel && s.rel.own) || {}, pets = (s.pets && s.pets.own) || {};
+    let m = s.lvl * 10 + rank() * 40 + (s.book ? s.book.length : 0) * 12 + s.ac.length * 4 + Math.floor(derive().levels / 5);
+    for (const id in own) m += 15 + 5 * ((own[id] && own[id].st) || 1);
+    for (const id in pets) m += 25 + 5 * ((pets[id] && pets[id].lv) || 1);
+    for (const id in s.vis) m += 6 * friendLevel(id);
+    return Math.floor(m);
+  }
 
   return {
     get s() { return s; },
