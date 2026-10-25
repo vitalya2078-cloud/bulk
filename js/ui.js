@@ -109,6 +109,8 @@ const UI = (() => {
     sayT = setTimeout(() => sp.classList.remove('show'), ms || 2800);
   }
   const sinceSay = () => Date.now() - lastSay;
+  // 0.32.3: убрать реплику Булька сразу (пришёл житель - говорит он)
+  function hush() { clearTimeout(sayT); const sp = $('speech'); if (sp) sp.classList.remove('show'); }
 
   // ---------- окна (по одному, очередью) ----------
   const queue = [];
@@ -242,14 +244,19 @@ const UI = (() => {
     const o = queue.shift();
     if (!o) { current = null; if (document.body.classList.contains('has-modal')) { const t = $('toast'); if (t) { t.style.transition = 'none'; requestAnimationFrame(() => { t.style.transition = ''; }); } } document.body.classList.remove('has-modal'); return; }
     current = o;
+    // 0.32.3: на телефоне после касания, открывшего окно, приходит ещё «щелчок» в то же место -
+    // он не должен нажать кнопку окна или закрыть его (житель уходил, не начав разговора)
+    const openedAt = performance.now();
+    const ghost = () => performance.now() - openedAt < 450;
     const body = typeof o.body === 'function' ? o.body() : o.body;
     const box = h('div', { class: 'modal' + (o.sheet ? ' sheet' : '') + (o.cls ? ' ' + o.cls : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': o.title },
-      o.closable === false ? null : h('button', { class: 'x', type: 'button', 'aria-label': 'Закрыть', onclick: closeModal }, '✕'),
+      o.closable === false ? null : h('button', { class: 'x', type: 'button', 'aria-label': 'Закрыть', onclick: () => { if (!ghost()) closeModal(); } }, '✕'),
       o.title ? ribbonTitle(o.title) : null,
       h('div', { class: 'modal-body' }, body),
       o.actions ? h('div', { class: 'actions' }, o.actions.map((a) => {
         const b = h('button', { class: 'btn' + (a.alt ? ' alt' : ''), type: 'button', disabled: a.disabled }, a.label);
         b.addEventListener('click', async () => {
+          if (ghost()) return;
           Sound.tap();
           b.disabled = true;
           const r = a.onClick ? await a.onClick() : undefined;
@@ -260,7 +267,7 @@ const UI = (() => {
       })) : null
     );
     const wrap = h('div', { class: 'modal-wrap' + (o.sheet ? ' bottom' : '') }, box);
-    wrap.addEventListener('click', (e) => { if (e.target === wrap && o.closable !== false) closeModal(); });
+    wrap.addEventListener('click', (e) => { if (e.target === wrap && o.closable !== false && !ghost()) closeModal(); });
     // старое сообщение не переезжает вниз в новое окно
     if (!document.body.classList.contains('has-modal')) dropToast();
     $('modal-root').append(wrap);
@@ -1447,7 +1454,7 @@ const UI = (() => {
   }
 
   return {
-    h, pic, money, setText, init, show, refresh, toast, say, sinceSay, modal, closeModal, isModalOpen, modalClosable,
+    h, pic, money, setText, init, show, refresh, toast, say, hush, sinceSay, modal, closeModal, isModalOpen, modalClosable,
     offlineModal, welcomeModal, showGuard, villagerModal, friendBlock,
     applySettings, applyLook, previewFrame, setPhoto, avatarSrc,
     screen: () => screen, ess, crystalsWord, keepSeg

@@ -25,10 +25,11 @@ const Visitors = (() => {
   }
 
   function show(v, mode, r) {
-    st.phase = 'waiting'; st.mode = mode; st.v = v; st.r = r || null; st.result = '';
+    st.phase = 'waiting'; st.mode = mode; st.v = v; st.r = r || null; st.result = ''; st.say = '';
     st.left = st.total = C.visitorWaitSec;
     vis.v = v; vis.emo = mode === 'deliver' ? 'happy' : 'wait'; vis.enterAt = performance.now(); vis.leaveAt = 0; vis.pop = 1;
     Sound.bell();
+    if (UI.hush) UI.hush();
     UI.refresh && UI.refresh(true);
   }
 
@@ -40,7 +41,6 @@ const Visitors = (() => {
     if (due && (Requests.full() || Math.random() < 0.5)) {
       due.seen = Date.now();
       show(Econ.findVisitor(due.v), 'remind', due);
-      if (UI.sinceSay() > 2500) UI.say('Кажется, к нам заглянули напомнить о просьбе', 2000);
       return;
     }
     // 3) новая просьба - если в журнале есть место
@@ -51,7 +51,6 @@ const Visitors = (() => {
     const ev = Events.pickVisitor();
     const v = (ev && !busy.has(ev.id) && ev) || pick(pool.length && Math.random() < 0.75 ? pool : (all.length ? all : D.visitors));
     show(v, 'new', Requests.make(v));
-    if (UI.sinceSay() > 2500) UI.say(pick(D.phrases.visitor), 1800);
   }
 
   // игрок нажал «Отнести»: идём на экран котла, житель приходит за заказом
@@ -82,7 +81,7 @@ const Visitors = (() => {
       UI.modal({
         title: v.name,
         body: h('div', { class: 'dialog' }, portrait(v),
-          h('div', { class: 'dlg-say' }, '«' + (ready ? Requests.line(v.id, 'ready', 'Ой, у тебя уже всё готово?') : Requests.line(v.id, 'remind', pick(D.remindLines))) + '»'),
+          h('div', { class: 'dlg-say' }, '«' + (ready ? Requests.line(v.id, 'ready', 'Ой, у тебя уже всё готово?') : speechText()) + '»'),
           goalRow(r)),
         actions: ready
           ? [{ label: 'Отдать сейчас', onClick: () => { complete(); } }, { label: 'Потом', alt: true }]
@@ -239,18 +238,11 @@ const Visitors = (() => {
   }
 
   // Слова жителя: первые секунды - его реплика целиком, потом коротко, что нужно.
+  // фраза выбирается один раз за визит (раньше выбиралась заново каждый кадр и мелькала)
   function speechText() {
-    if (st.mode === 'remind') return Requests.line(st.v.id, 'remind', 'Как там моя просьба? Я загляну попозже!');
+    if (st.mode === 'remind') return st.say || (st.say = Requests.line(st.v.id, 'remind', 'Как там моя просьба? Я загляну попозже!'));
     if (st.r && st.r.text) return st.r.text;
     return 'Можно попросить о помощи?';
-  }
-  function shortText() {
-    if (st.mode === 'remind') return 'Как там моя просьба?';
-    const r = st.r;
-    if (!r) return 'Нужна помощь!';
-    if (r.k === 'give') return 'Нужно: ' + Object.keys(r.give).map((id) => Brew.ing(id).name.toLowerCase() + (r.give[id] > 1 ? ' ×' + r.give[id] : '')).join(', ');
-    const pot = DATA.brews.find((x) => x.id === r.brew);
-    return 'Свари: ' + (pot ? pot.name.toLowerCase() : 'зелье');
   }
   function wrap(ctx, text, maxW) {
     const words = String(text).split(' '), lines = [];
@@ -264,27 +256,27 @@ const Visitors = (() => {
     vis.pop = Math.max(0, vis.pop - dt * 2.5);
     const leaving = st.phase === 'leaving', waiting = !leaving && st.mode !== 'deliver';
     const age = (now - vis.enterAt) / 1000;
-    const text = leaving ? 'Спасибо!' : st.mode === 'deliver' ? 'Ура, всё готово!' : age < 6.5 ? speechText() : shortText();
+    // текст не меняется, пока житель ждёт: его реплика с просьбой (коротко - в окне разговора)
+    const text = leaving ? (st.result === 'ok' ? 'Спасибо, буду ждать!' : 'Спасибо!') : st.mode === 'deliver' ? 'Ура, всё готово!' : speechText();
     const hint = waiting ? (st.mode === 'remind' ? 'Тапни: как дела?' : 'Тапни, чтобы помочь') : '';
     const fs = Math.max(12, Math.round(o.size * 0.14)), hs = Math.max(11, Math.round(fs * 0.86));
     ctx.save();
     ctx.font = '800 ' + fs + 'px Nunito, system-ui, sans-serif';
-    const maxW = Math.min(o.W * 0.56, 240);
-    const lines = wrap(ctx, text, maxW);
+    const maxW = Math.min(o.W * 0.6, 250);
+    const lines = wrap(ctx, text, maxW).slice(0, 3);
     let tw = Math.max(...lines.map((l) => ctx.measureText(l).width));
     ctx.font = '900 ' + hs + 'px Nunito, system-ui, sans-serif';
     if (hint) tw = Math.max(tw, ctx.measureText(hint).width);
     const pad = 12, lh = fs * 1.2;
     const bw = tw + pad * 2, bh = pad + lines.length * lh + (hint ? hs * 1.35 + 4 : 0) + (waiting ? 8 : 0) + pad * 0.6;
-    const bob = waiting ? Math.sin(o.t * 2.6) * 2.5 : 0;
     const tail = 12;
     const bx = clamp(vx - bw * 0.3, 6, o.W - bw - 6);
-    const by = Math.max(o.H * 0.2, headY - bh - tail + vw * 0.08) + bob;
-    const s = (0.7 + 0.3 * k) * (1 + vis.pop * 0.1);
+    const by = Math.max(o.H * 0.2, headY - bh - tail + vw * 0.08);
+    const s = 0.7 + 0.3 * k;
     vis.cloud = { x: bx, y: by, w: bw, h: bh };
     ctx.translate(bx + bw / 2, by + bh); ctx.scale(s, s); ctx.translate(-bw / 2, -bh);
     // мягкое свечение, пока ждёт
-    if (waiting) { ctx.shadowColor = 'rgba(255,210,110,' + (0.35 + 0.25 * Math.sin(o.t * 4)) + ')'; ctx.shadowBlur = 14; }
+    if (waiting) { ctx.shadowColor = 'rgba(255,210,110,.45)'; ctx.shadowBlur = 12; }
     ctx.fillStyle = '#FFF6E8'; ctx.strokeStyle = '#1A0E2C'; ctx.lineWidth = 2.5;
     rr(ctx, 0, 0, bw, bh, 14); ctx.fill();
     ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
@@ -329,7 +321,7 @@ const Visitors = (() => {
   }
 
   return {
-    build, update, onTap, draw, hit, deliver, _arrive: () => { if (st.phase === 'none') arrive(); },
+    build, update, onTap, draw, hit, deliver, _hit: () => vis.hit, _arrive: () => { if (st.phase === 'none') arrive(); },
     active: () => st.phase === 'waiting',
     waiting: () => st.phase === 'waiting',
     ordering: () => false,

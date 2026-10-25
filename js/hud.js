@@ -100,7 +100,7 @@ const Hud = (() => {
     });
     // фраза о новой кнопке - по одной, когда игрок на главном экране и ничего не открыто
     const now = Date.now();
-    if (sayQ.length && now > sayAt && UI.screen() === 'main' && !UI.isModalOpen() && !document.querySelector('.tut')) {
+    if (sayQ.length && now > sayAt && UI.screen() === 'main' && !UI.isModalOpen() && !document.querySelector('.tut') && !Visitors.active()) {
       const id = sayQ.shift();
       UI.say(SAY[id], 4200);
       sayAt = now + 6000;

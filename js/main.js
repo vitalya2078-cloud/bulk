@@ -97,7 +97,7 @@
     Events.onTap();
     Brew.onTap(x, y);
     Pets.onPotTap();
-    if (Math.random() < 0.02 && UI.sinceSay() > 6000 && !Visitors.ordering()) {
+    if (Math.random() < 0.02 && UI.sinceSay() > 6000 && !Visitors.active()) {
       UI.say(pick(Cauldron.mood() === 'excited' ? D.phrases.excited : D.phrases.click), 1500);
     }
   }
@@ -309,7 +309,7 @@
       if (bubbleIn <= 0) {
         Cauldron.spawnGolden();
         bubbleIn = rand(C.bubbleMinSec, C.bubbleMaxSec) / (1 + 0.08 * Econ.skill('s1'));
-        if (UI.sinceSay() > 3000) UI.say(pick(D.phrases.bubble), 1800);
+        if (UI.sinceSay() > 3000 && !Visitors.active()) UI.say(pick(D.phrases.bubble), 1800);
       }
     }
 

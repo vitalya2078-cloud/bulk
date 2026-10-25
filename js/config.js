@@ -6,7 +6,7 @@
 
 const CONFIG = {
   name: 'Бульк',
-  version: '0.32.2',
+  version: '0.32.3',
   saveKey: 'bulk_save_v1',
 
   // ВКонтакте: ID мини-приложения (для ссылки-приглашения на стене)
@@ -48,7 +48,7 @@ const CONFIG = {
   // Посетители
   visitorMinSec: 35,
   visitorMaxSec: 80,
-  visitorWaitSec: 40,       // столько ждёт, пока примешь заказ
+  visitorWaitSec: 60,       // столько ждёт, пока примешь заказ
   orderSec: 15,             // на заказ даётся столько секунд
 
   // Волшебный пузырь
