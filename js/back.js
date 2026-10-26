@@ -19,6 +19,7 @@ const Back = (() => {
   // один шаг назад; false - шагать некуда
   function handle() {
     if (typeof Games !== 'undefined' && Games.active()) return Games.back();
+    if (UI.closeConfirm()) { Sound.tap(); return true; }
     if (UI.isModalOpen()) { if (UI.modalClosable()) { Sound.tap(); UI.closeModal(); } return true; }
     if (UI.screen() !== 'main') { Sound.tap(); UI.show('main'); return true; }
     return false;

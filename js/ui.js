@@ -281,6 +281,7 @@ const UI = (() => {
 
   function closeModal() {
     $('modal-root').innerHTML = '';
+    ask = null;
     const o = current;
     current = null;
     if (o && o.onClose) o.onClose();
@@ -289,6 +290,30 @@ const UI = (() => {
   }
   const isModalOpen = () => !!current;
   const modalClosable = () => !!current && current.closable !== false;
+
+  // 0.33.5: «Купить за N?» поверх открытого окна. Очередь окон не трогаем: окно с выбором остаётся под вопросом,
+  // поэтому случайное касание по аватару или вещи больше не тратит кристаллы.
+  let ask = null;
+  function confirmBuy(o) {
+    closeConfirm();
+    const openedAt = performance.now();
+    const ghost = () => performance.now() - openedAt < 450;
+    const yes = h('button', { class: 'btn', type: 'button' }, 'Купить за ', pic('ui/crystal', 'btn-ico'), ' ' + o.price);
+    const no = h('button', { class: 'btn alt', type: 'button' }, 'Отмена');
+    const box = h('div', { class: 'modal buy-ask', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Покупка' },
+      o.pic ? h('div', { class: 'buy-ask-pic' }, o.pic) : null,
+      h('b', { class: 'buy-ask-name' }, o.name),
+      o.text ? h('p', { class: 'small center' }, o.text) : null,
+      h('p', { class: 'small center buy-ask-have' }, 'У тебя ' + S().cr + ' ' + crystalsWord(S().cr)),
+      h('div', { class: 'actions' }, yes, no));
+    const wrap = h('div', { class: 'modal-wrap buy-ask-wrap' }, box);
+    yes.addEventListener('click', () => { if (ghost()) return; closeConfirm(); o.onYes(); });
+    no.addEventListener('click', () => { if (ghost()) return; Sound.tap(); closeConfirm(); });
+    wrap.addEventListener('click', (e) => { if (e.target === wrap && !ghost()) closeConfirm(); });
+    $('modal-root').append(wrap);
+    ask = wrap;
+  }
+  function closeConfirm() { if (!ask) return false; ask.remove(); ask = null; return true; }
 
   // ---------- экраны ----------
   // Активен ровно один экран. Скрытые не рисуются и не обновляются.
@@ -1218,7 +1243,10 @@ const UI = (() => {
           if (owned) { Econ.setAvatar(a.id); Sound.tap(); save(); draw(); refresh(); return; }
           if (a.event) { closeModal(); eventItemClick({ event: a.event, reason: '«' + DATA.eventDefs[a.event].name + '»' }); return; }
           if (s.cr < a.cr) { Sound.deny(); toast('Не хватает кристаллов: нужно ' + a.cr); return; }
-          if (Econ.buyAvatar(a.id)) { Econ.setAvatar(a.id); Sound.coin(); toast('Новый аватар!'); save(); draw(); refresh(); }
+          Sound.tap();
+          confirmBuy({ pic: avatarImg('round', a.id), name: 'Купить этот аватар?', price: a.cr, onYes: () => {
+            if (Econ.buyAvatar(a.id)) { Econ.setAvatar(a.id); Sound.coin(); toast('Новый аватар!'); save(); draw(); refresh(); }
+          } });
         });
         grid.append(b);
       });
@@ -1344,7 +1372,12 @@ const UI = (() => {
             if (st.owned) { Econ.equip(sl, it.id); Sound.tap(); }
             else if (st.price) {
               if (s.cr < st.price) { Sound.deny(); toast('Не хватает кристаллов: нужно ' + st.price); return; }
-              if (Econ.buyItem(it.id)) { Econ.equip(sl, it.id); Sound.coin(); toast(it.name + ': теперь твоё!'); }
+              Sound.tap();
+              confirmBuy({ pic: pic(it.img || 'wardrobe/' + it.id), name: it.name, price: st.price, onYes: () => {
+                if (Econ.buyItem(it.id)) { Econ.equip(sl, it.id); Sound.coin(); toast(it.name + ': теперь твоё!'); }
+                applyLook(Cauldron); save(); rebuild(false);
+              } });
+              return;
             } else if (st.event) { eventItemClick(st); return; } else { Sound.deny(); toast(st.reason); return; }
             applyLook(Cauldron); save(); rebuild(false);
           }));
@@ -1368,7 +1401,12 @@ const UI = (() => {
             if (st.owned) { Econ.equip('pot', pc.id); Sound.tap(); }
             else if (st.price) {
               if (s.cr < st.price) { Sound.deny(); toast('Не хватает кристаллов: нужно ' + st.price); return; }
-              if (Econ.buyItem(pc.id, 'pot')) { Econ.equip('pot', pc.id); Sound.coin(); toast(pc.name + ' котёл: теперь твой!'); }
+              Sound.tap();
+              confirmBuy({ pic: h('span', { class: 'swatch', style: 'background:' + (pc.color || '#3E2F66') }), name: pc.name + ' котёл', price: st.price, onYes: () => {
+                if (Econ.buyItem(pc.id, 'pot')) { Econ.equip('pot', pc.id); Sound.coin(); toast(pc.name + ' котёл: теперь твой!'); }
+                applyLook(Cauldron); save(); rebuild(false);
+              } });
+              return;
             } else if (st.event) { eventItemClick(st); return; }
             applyLook(Cauldron); save(); rebuild(false);
           }, pc.color || '#3E2F66'));
@@ -1380,7 +1418,12 @@ const UI = (() => {
             if (st.owned) { Econ.equip('stand', it.id); Sound.tap(); }
             else if (st.price) {
               if (s.cr < st.price) { Sound.deny(); toast('Не хватает кристаллов: нужно ' + st.price); return; }
-              if (Econ.buyItem(it.id)) { Econ.equip('stand', it.id); Sound.coin(); toast(it.name + ': теперь твоя!'); }
+              Sound.tap();
+              confirmBuy({ pic: pic(it.img), name: it.name, price: st.price, onYes: () => {
+                if (Econ.buyItem(it.id)) { Econ.equip('stand', it.id); Sound.coin(); toast(it.name + ': теперь твоя!'); }
+                applyLook(Cauldron); save(); rebuild(false);
+              } });
+              return;
             } else if (st.event) { eventItemClick(st); return; } else { Sound.deny(); toast(st.reason); return; }
             applyLook(Cauldron); save(); rebuild(false);
           }));
@@ -1454,7 +1497,7 @@ const UI = (() => {
   }
 
   return {
-    h, pic, money, setText, init, show, refresh, toast, say, hush, sinceSay, modal, closeModal, isModalOpen, modalClosable,
+    h, pic, money, setText, init, show, refresh, toast, say, hush, sinceSay, modal, closeModal, isModalOpen, modalClosable, confirmBuy, closeConfirm,
     offlineModal, welcomeModal, showGuard, villagerModal, friendBlock,
     applySettings, applyLook, previewFrame, setPhoto, avatarSrc,
     screen: () => screen, ess, crystalsWord, keepSeg

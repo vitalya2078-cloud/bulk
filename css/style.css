@@ -2858,3 +2858,14 @@ body.in-game .tut { display: none; }
 .pod-gift.p1 { left: 50%; bottom: 9%; }
 .pod-gift.p3 { left: 84%; bottom: 7%; }
 .pod-gift .top-gift { background: rgba(42,21,48,.82); }
+
+/* ===== 0.33.5: вопрос «Купить за N?» поверх окна, яркие кристаллы на ценниках аватаров ===== */
+.modal-wrap.buy-ask-wrap { z-index: 30; align-items: center; }
+.modal.buy-ask { max-width: 320px; text-align: center; }
+.buy-ask-pic { display: flex; justify-content: center; margin: 2px auto 8px; }
+.buy-ask-pic .pic { width: 104px; height: 104px; object-fit: contain; }
+.buy-ask-pic .pic.av-round { border-radius: 50%; object-fit: cover; object-position: 50% 20%; border: 3px solid var(--gold); }
+.buy-ask-pic .swatch { display: block; width: 88px; height: 88px; border-radius: 50%; border: 3px solid var(--ink); }
+.buy-ask-name { display: block; font-size: 18px; line-height: 1.25; }
+.buy-ask-have { opacity: .8; margin-bottom: 0; }
+.av-cell.locked .av-price .pic, .av-cell.locked .av-price img { filter: none; }

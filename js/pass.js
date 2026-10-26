@@ -271,10 +271,11 @@ const Pass = (() => {
       const btn = h('button', { type: 'button', class: 'btn pass-gold-btn', disabled: s.cr < C.goldPrice }, 'Открыть за ', pic('ui/crystal', 'btn-ico'), ' ' + C.goldPrice);
       btn.addEventListener('click', () => {
         if (s.cr < C.goldPrice) { Sound.deny(); UI.toast('Не хватает кристаллов'); return; }
-        UI.modal({ title: 'Золотой гримуар', body: h('div', null,
-          h('p', { class: 'center' }, 'Золотые страницы до конца сезона: кристаллы, золотые и звёздные сундуки, яйцо дракона, очки звездочёта и титул «Хранитель гримуара».'),
-          h('p', { class: 'small center' }, 'Награды золотых страниц, которые ты уже открыл, можно забрать сразу.')),
-          actions: [{ label: 'Открыть за ' + C.goldPrice + ' ' + UI.crystalsWord(C.goldPrice), onClick: () => { if (buyGold()) { Sound.fanfare(); UI.toast('Золотой гримуар открыт!'); UI.refresh(); setTimeout(redraw, 0); } } }, { label: 'Не сейчас', alt: true }] });
+        // 0.33.5: вопрос поверх гримуара (раньше окно вставало в очередь и показывалось только после закрытия гримуара)
+        Sound.tap();
+        UI.confirmBuy({ pic: pic('pass/book', ''), name: 'Открыть Золотой гримуар?', price: C.goldPrice,
+          text: 'Золотые страницы до конца сезона. Награды уже открытых страниц можно забрать сразу.',
+          onYes: () => { if (buyGold()) { Sound.fanfare(); UI.toast('Золотой гримуар открыт!'); UI.refresh(); redraw(); } } });
       });
       body.append(h('div', { class: 'pass-gold' }, h('div', null, h('b', null, 'Золотой гримуар'), h('small', null, 'Вторая дорожка наград: 125 кристаллов, звёздные и золотые сундуки, яйцо дракона, очки звездочёта.')), btn));
     }
