@@ -10,11 +10,11 @@
   <meta name="robots" content="notranslate">
   <title>Бульк</title>
   <!-- Шрифты. Без интернета подставятся системные. -->
-  <link rel="preload" as="image" href="assets/images/ui/splash_book.webp?v=0.33.5">
-  <link rel="preload" as="image" href="assets/images/splash/logo.webp?v=0.33.5">
-  <link rel="icon" type="image/png" href="assets/icon.png?v=0.33.5">
-  <link rel="apple-touch-icon" href="assets/icon.png?v=0.33.5">
-  <link rel="stylesheet" href="css/style.css?v=0.33.5">
+  <link rel="preload" as="image" href="assets/images/ui/splash_book.webp?v=0.33.6">
+  <link rel="preload" as="image" href="assets/images/splash/logo.webp?v=0.33.6">
+  <link rel="icon" type="image/png" href="assets/icon.png?v=0.33.6">
+  <link rel="apple-touch-icon" href="assets/icon.png?v=0.33.6">
+  <link rel="stylesheet" href="css/style.css?v=0.33.6">
 </head>
 <body translate="no" class="notranslate">
   <!-- Экран загрузки: висит, пока не придут картинки главного экрана -->
@@ -23,7 +23,7 @@
     <div class="boot-bottom">
       <div class="boot-tip"><b class="boot-tip-label">Совет</b><span id="boot-tip-text"></span></div>
       <div class="boot-bar">
-        <div id="boot-fill" class="boot-fill"><i class="boot-bubbles"></i><img class="boot-head" src="assets/images/ui/essence.webp?v=0.33.5" alt="" draggable="false"></div>
+        <div id="boot-fill" class="boot-fill"><i class="boot-bubbles"></i><img class="boot-head" src="assets/images/ui/essence.webp?v=0.33.6" alt="" draggable="false"></div>
         <b id="boot-pct" class="boot-pct">0%</b>
       </div>
       <small id="boot-status" class="boot-text">Разогреваем котёл…</small>
@@ -33,21 +33,21 @@
   </div>
   <div id="app">
     <header class="topbar">
-      <div class="avatar-wrap"><button id="btn-profile" class="avatar-btn" type="button" aria-label="Профиль"><img id="avatar-img" class="pic" src="assets/images/avatars/a01.webp?v=0.33.5" alt="" draggable="false" referrerpolicy="no-referrer"><img class="avatar-frame" src="assets/images/r2/ring.webp?v=0.33.5" alt="" draggable="false"></button><button id="lvl-chip" class="lvl-chip" type="button" aria-label="Уровень алхимика и навыки">1</button></div>
+      <div class="avatar-wrap"><button id="btn-profile" class="avatar-btn" type="button" aria-label="Профиль"><img id="avatar-img" class="pic" src="assets/images/avatars/a01.webp?v=0.33.6" alt="" draggable="false" referrerpolicy="no-referrer"><img class="avatar-frame" src="assets/images/r2/ring.webp?v=0.33.6" alt="" draggable="false"></button><button id="lvl-chip" class="lvl-chip" type="button" aria-label="Уровень алхимика и навыки">1</button></div>
       <button id="rank-btn" class="rank" type="button" aria-label="Ранг лавки">
-        <span class="rank-ico" aria-hidden="true"><img id="rank-icon" class="pic" src="assets/images/ranks/1.webp?v=0.33.5" alt="" draggable="false"></span>
+        <span class="rank-ico" aria-hidden="true"><img id="rank-icon" class="pic" src="assets/images/ranks/1.webp?v=0.33.6" alt="" draggable="false"></span>
         <span class="rank-text">
           <b id="rank-name">Лоток травницы</b>
           <i class="rank-bar"><i id="rank-fill"></i></i>
         </span>
       </button>
-      <button id="crystal-pill" class="crystal-pill" type="button" aria-label="Лунные кристаллы"><img class="pic" src="assets/images/ui/crystal.webp?v=0.33.5" alt="" draggable="false"><b id="crystals">0</b></button>
-      <button id="btn-settings" class="round" type="button" aria-label="Настройки"><img class="pic" src="assets/images/ui/gear.webp?v=0.33.5" alt="" draggable="false"></button>
+      <button id="crystal-pill" class="crystal-pill" type="button" aria-label="Лунные кристаллы"><img class="pic" src="assets/images/ui/crystal.webp?v=0.33.6" alt="" draggable="false"><b id="crystals">0</b></button>
+      <button id="btn-settings" class="round" type="button" aria-label="Настройки"><img class="pic" src="assets/images/ui/gear.webp?v=0.33.6" alt="" draggable="false"></button>
     </header>
 
     <div class="wallet">
       <button id="balance-btn" class="balance-btn" type="button" aria-label="Эссенция и доход">
-        <span class="balance"><img class="flask" src="assets/images/ui/essence.webp?v=0.33.5" alt="" draggable="false"><span id="balance">0</span></span>
+        <span class="balance"><img class="flask" src="assets/images/ui/essence.webp?v=0.33.6" alt="" draggable="false"><span id="balance">0</span></span>
         <small class="per-hour"><b id="st-hour-mini">+0</b> в час<i id="st-mul" class="mul" hidden></i></small>
       </button>
       <div id="effects" class="effects"></div>
@@ -59,33 +59,33 @@
           <canvas id="cauldron" aria-label="Котёл Бульк. Тапай, чтобы варить эссенцию"></canvas>
           <div id="speech" class="speech" aria-live="polite"></div>
           <div class="side-btns left-btns">
-          <button id="menu-btn" class="brew-btn menu-btn" type="button" aria-label="Ещё: топ, почта, ковен, лавка, диковинки, гардероб"><img class="pic" src="assets/images/ui/compass.webp?v=0.33.5" alt="" draggable="false"><span>Ещё</span><b hidden></b></button>
+          <button id="menu-btn" class="brew-btn menu-btn" type="button" aria-label="Ещё: топ, почта, ковен, лавка, диковинки, гардероб"><img class="pic" src="assets/images/ui/compass.webp?v=0.33.6" alt="" draggable="false"><span>Ещё</span><b hidden></b></button>
           </div>
           <div class="side-btns">
-          <button id="event-btn" class="event-btn" type="button" aria-label="Праздничное событие" hidden><img class="pic" src="assets/images/events/halloween/candy_bucket.webp?v=0.33.5" alt="" draggable="false"><b>0</b><span class="dot" hidden></span></button>
-          <button id="brew-btn" class="brew-btn" type="button" aria-label="Зельеварня: варка, сумка, рецепты"><img class="pic" src="assets/images/r2/ic_brew.webp?v=0.33.5" alt="" draggable="false"><span>Зелья</span><b hidden></b></button>
-          <button id="pets-btn" class="brew-btn pets-btn" type="button" aria-label="Питомцы, походы и яйца" hidden><img class="pic" src="assets/images/r2/ic_pets.webp?v=0.33.5" alt="" draggable="false"><span>Питомцы</span><b hidden></b></button>
-          <button id="pass-btn" class="brew-btn pass-btn" type="button" aria-label="Звёздный гримуар" hidden><img class="pic" src="assets/images/r2/ic_pass.webp?v=0.33.5" alt="" draggable="false"><span>Гримуар</span><b hidden></b></button>
-          <button id="wheel-btn" class="brew-btn wheel-btn" type="button" aria-label="Колесо Булька" hidden><img class="pic" src="assets/images/r2/ic_wheel.webp?v=0.33.5" alt="" draggable="false"><span>Колесо</span><b hidden></b></button>
-          <button id="games-btn" class="brew-btn games-btn" type="button" aria-label="Мини-игры"><img class="pic" src="assets/images/r2/ic_games.webp?v=0.33.5" alt="" draggable="false"><span>Игры</span><b hidden></b></button>
+          <button id="event-btn" class="event-btn" type="button" aria-label="Праздничное событие" hidden><img class="pic" src="assets/images/events/halloween/candy_bucket.webp?v=0.33.6" alt="" draggable="false"><b>0</b><span class="dot" hidden></span></button>
+          <button id="brew-btn" class="brew-btn" type="button" aria-label="Зельеварня: варка, сумка, рецепты"><img class="pic" src="assets/images/r2/ic_brew.webp?v=0.33.6" alt="" draggable="false"><span>Зелья</span><b hidden></b></button>
+          <button id="pets-btn" class="brew-btn pets-btn" type="button" aria-label="Питомцы, походы и яйца" hidden><img class="pic" src="assets/images/r2/ic_pets.webp?v=0.33.6" alt="" draggable="false"><span>Питомцы</span><b hidden></b></button>
+          <button id="pass-btn" class="brew-btn pass-btn" type="button" aria-label="Звёздный гримуар" hidden><img class="pic" src="assets/images/r2/ic_pass.webp?v=0.33.6" alt="" draggable="false"><span>Гримуар</span><b hidden></b></button>
+          <button id="wheel-btn" class="brew-btn wheel-btn" type="button" aria-label="Колесо Булька" hidden><img class="pic" src="assets/images/r2/ic_wheel.webp?v=0.33.6" alt="" draggable="false"><span>Колесо</span><b hidden></b></button>
+          <button id="games-btn" class="brew-btn games-btn" type="button" aria-label="Мини-игры"><img class="pic" src="assets/images/r2/ic_games.webp?v=0.33.6" alt="" draggable="false"><span>Игры</span><b hidden></b></button>
           </div>
           <!-- 0.32: редкие разделы - в меню «Ещё»; кнопки остаются для модулей (точки, видимость) -->
           <div class="hud-stash" hidden>
-          <button id="tops-btn" class="brew-btn tops-btn" type="button" aria-label="Топ алхимиков"><img class="pic" src="assets/images/r2/ic_tops.webp?v=0.33.5" alt="" draggable="false"><span>Топ</span></button>
-          <button id="coven-btn" class="brew-btn coven-btn" type="button" aria-label="Ковен" hidden><img class="pic" src="assets/images/r2/ic_coven.webp?v=0.33.5" alt="" draggable="false"><span>Ковен</span><b hidden></b></button>
-          <button id="mail-btn" class="brew-btn mail-btn" type="button" aria-label="Почта" hidden><img class="pic" src="assets/images/r2/ic_mail.webp?v=0.33.5" alt="" draggable="false"><span>Почта</span><b hidden></b></button>
-          <button id="market-btn" class="brew-btn market-btn" type="button" aria-label="Лавка Варфоломея" hidden><img class="pic" src="assets/images/r2/ic_market.webp?v=0.33.5" alt="" draggable="false"><span>Лавка</span></button>
-          <button id="relic-btn" class="brew-btn relic-btn" type="button" aria-label="Диковинки и сундуки" hidden><img class="pic" src="assets/images/r2/ic_relics.webp?v=0.33.5" alt="" draggable="false"><span>Диковинки</span><b hidden></b></button>
-          <button id="ward-btn" class="brew-btn ward-btn" type="button" aria-label="Гардероб Булька"><img class="pic" src="assets/images/r2/ic_ward.webp?v=0.33.5" alt="" draggable="false"><span>Гардероб</span></button>
+          <button id="tops-btn" class="brew-btn tops-btn" type="button" aria-label="Топ алхимиков"><img class="pic" src="assets/images/r2/ic_tops.webp?v=0.33.6" alt="" draggable="false"><span>Топ</span></button>
+          <button id="coven-btn" class="brew-btn coven-btn" type="button" aria-label="Ковен" hidden><img class="pic" src="assets/images/r2/ic_coven.webp?v=0.33.6" alt="" draggable="false"><span>Ковен</span><b hidden></b></button>
+          <button id="mail-btn" class="brew-btn mail-btn" type="button" aria-label="Почта" hidden><img class="pic" src="assets/images/r2/ic_mail.webp?v=0.33.6" alt="" draggable="false"><span>Почта</span><b hidden></b></button>
+          <button id="market-btn" class="brew-btn market-btn" type="button" aria-label="Лавка Варфоломея" hidden><img class="pic" src="assets/images/r2/ic_market.webp?v=0.33.6" alt="" draggable="false"><span>Лавка</span></button>
+          <button id="relic-btn" class="brew-btn relic-btn" type="button" aria-label="Диковинки и сундуки" hidden><img class="pic" src="assets/images/r2/ic_relics.webp?v=0.33.6" alt="" draggable="false"><span>Диковинки</span><b hidden></b></button>
+          <button id="ward-btn" class="brew-btn ward-btn" type="button" aria-label="Гардероб Булька"><img class="pic" src="assets/images/r2/ic_ward.webp?v=0.33.6" alt="" draggable="false"><span>Гардероб</span></button>
           </div>
           <button id="goal" class="goal" type="button" hidden></button>
           <div id="visitor" class="visitor" aria-live="polite"></div>
           <div id="guard" class="guard" hidden></div>
         </div>
         <div class="daily-row">
-          <button id="btn-gift" class="daily" type="button"><img class="d-ico" src="assets/images/r2/ic_gift.webp?v=0.33.5" alt="" draggable="false"><span><b>Подарок</b><small id="sub-gift"></small></span><span id="dot-gift" class="dot" hidden></span></button>
-          <button id="btn-recipe" class="daily" type="button"><img class="d-ico" src="assets/images/r2/ic_recipe.webp?v=0.33.5" alt="" draggable="false"><span><b>Рецепт дня</b><small id="sub-recipe"></small></span><span id="dot-recipe" class="dot" hidden></span></button>
-          <button id="btn-rune" class="daily" type="button"><img class="d-ico" src="assets/images/r2/ic_rune.webp?v=0.33.5" alt="" draggable="false"><span><b>Руна дня</b><small id="sub-rune"></small></span><span id="dot-rune" class="dot" hidden></span></button>
+          <button id="btn-gift" class="daily" type="button"><img class="d-ico" src="assets/images/r2/ic_gift.webp?v=0.33.6" alt="" draggable="false"><span><b>Подарок</b><small id="sub-gift"></small></span><span id="dot-gift" class="dot" hidden></span></button>
+          <button id="btn-recipe" class="daily" type="button"><img class="d-ico" src="assets/images/r2/ic_recipe.webp?v=0.33.6" alt="" draggable="false"><span><b>Рецепт дня</b><small id="sub-recipe"></small></span><span id="dot-recipe" class="dot" hidden></span></button>
+          <button id="btn-rune" class="daily" type="button"><img class="d-ico" src="assets/images/r2/ic_rune.webp?v=0.33.6" alt="" draggable="false"><span><b>Руна дня</b><small id="sub-rune"></small></span><span id="dot-rune" class="dot" hidden></span></button>
         </div>
       </section>
 
@@ -141,44 +141,44 @@
     })();
   </script>
 
-  <script src="js/manifest.js?v=0.33.5"></script>
-  <script src="js/format.js?v=0.33.5"></script>
-  <script src="js/config.js?v=0.33.5"></script>
-  <script src="js/clock.js?v=0.33.5"></script>
-  <script src="js/update.js?v=0.33.5"></script>
-  <script src="js/loader.js?v=0.33.5"></script>
-  <script src="js/content.js?v=0.33.5"></script>
-  <script src="js/platform.js?v=0.33.5"></script>
-  <script src="js/audio.js?v=0.33.5"></script>
-  <script src="js/economy.js?v=0.33.5"></script>
-  <script src="js/antibot.js?v=0.33.5"></script>
-  <script src="js/cauldron.js?v=0.33.5"></script>
-  <script src="js/ui.js?v=0.33.5"></script>
-  <script src="js/daily.js?v=0.33.5"></script>
-  <script src="js/events.js?v=0.33.5"></script>
-  <script src="js/scene.js?v=0.33.5"></script>
-  <script src="js/timeday.js?v=0.33.5"></script>
-  <script src="js/skills.js?v=0.33.5"></script>
-  <script src="js/brewing.js?v=0.33.5"></script>
-  <script src="js/pets.js?v=0.33.5"></script>
-  <script src="js/relics.js?v=0.33.5"></script>
-  <script src="js/story.js?v=0.33.5"></script>
-  <script src="js/talk.js?v=0.33.5"></script>
-  <script src="js/requests.js?v=0.33.5"></script>
-  <script src="js/visitors.js?v=0.33.5"></script>
-  <script src="js/games.js?v=0.33.5"></script>
-  <script src="js/gifts.js?v=0.33.5"></script>
-  <script src="js/pass.js?v=0.33.5"></script>
-  <script src="js/market.js?v=0.33.5"></script>
-  <script src="js/hud.js?v=0.33.5"></script>
-  <script src="js/tops.js?v=0.33.5"></script>
-  <script src="js/online.js?v=0.33.5"></script>
-  <script src="js/coven.js?v=0.33.5"></script>
-  <script src="js/support.js?v=0.33.5"></script>
-  <script src="js/changelog.js?v=0.33.5"></script>
-  <script src="js/back.js?v=0.33.5"></script>
-  <script src="js/social.js?v=0.33.5"></script>
-  <script src="js/guide.js?v=0.33.5"></script>
-  <script src="js/main.js?v=0.33.5"></script>
+  <script src="js/manifest.js?v=0.33.6"></script>
+  <script src="js/format.js?v=0.33.6"></script>
+  <script src="js/config.js?v=0.33.6"></script>
+  <script src="js/clock.js?v=0.33.6"></script>
+  <script src="js/update.js?v=0.33.6"></script>
+  <script src="js/loader.js?v=0.33.6"></script>
+  <script src="js/content.js?v=0.33.6"></script>
+  <script src="js/platform.js?v=0.33.6"></script>
+  <script src="js/audio.js?v=0.33.6"></script>
+  <script src="js/economy.js?v=0.33.6"></script>
+  <script src="js/antibot.js?v=0.33.6"></script>
+  <script src="js/cauldron.js?v=0.33.6"></script>
+  <script src="js/ui.js?v=0.33.6"></script>
+  <script src="js/daily.js?v=0.33.6"></script>
+  <script src="js/events.js?v=0.33.6"></script>
+  <script src="js/scene.js?v=0.33.6"></script>
+  <script src="js/timeday.js?v=0.33.6"></script>
+  <script src="js/skills.js?v=0.33.6"></script>
+  <script src="js/brewing.js?v=0.33.6"></script>
+  <script src="js/pets.js?v=0.33.6"></script>
+  <script src="js/relics.js?v=0.33.6"></script>
+  <script src="js/story.js?v=0.33.6"></script>
+  <script src="js/talk.js?v=0.33.6"></script>
+  <script src="js/requests.js?v=0.33.6"></script>
+  <script src="js/visitors.js?v=0.33.6"></script>
+  <script src="js/games.js?v=0.33.6"></script>
+  <script src="js/gifts.js?v=0.33.6"></script>
+  <script src="js/pass.js?v=0.33.6"></script>
+  <script src="js/market.js?v=0.33.6"></script>
+  <script src="js/hud.js?v=0.33.6"></script>
+  <script src="js/tops.js?v=0.33.6"></script>
+  <script src="js/online.js?v=0.33.6"></script>
+  <script src="js/coven.js?v=0.33.6"></script>
+  <script src="js/support.js?v=0.33.6"></script>
+  <script src="js/changelog.js?v=0.33.6"></script>
+  <script src="js/back.js?v=0.33.6"></script>
+  <script src="js/social.js?v=0.33.6"></script>
+  <script src="js/guide.js?v=0.33.6"></script>
+  <script src="js/main.js?v=0.33.6"></script>
 </body>
 </html>

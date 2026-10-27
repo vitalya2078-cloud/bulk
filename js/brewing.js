@@ -41,10 +41,12 @@ DATA.ingr = [
   { id: 'firebird', name: 'Перо жар-птицы', p: 'fire', rare: true },
 
   { id: 'dew', name: 'Роса', p: 'water' },
-  { id: 'snowflake', name: 'Снежинка', p: 'water' },
+  // 0.33.6: снежинка и сосулька - зимние, до Нового года вместо них медуза и морская звезда.
+  // id прежние, чтобы запасы в сумке и выученные рецепты у игроков остались как есть.
+  { id: 'snowflake', name: 'Медуза', p: 'water', img: 'ingredients/jellyfish' },
   { id: 'shell', name: 'Ракушка', p: 'water' },
   { id: 'lily', name: 'Кувшинка', p: 'water' },
-  { id: 'icicle', name: 'Сосулька', p: 'water' },
+  { id: 'icicle', name: 'Морская звезда', p: 'water', img: 'ingredients/seastar' },
   { id: 'seaweed', name: 'Водоросли', p: 'water' },
   { id: 'fishscale', name: 'Рыбья чешуйка', p: 'water' },
   { id: 'pearl', name: 'Жемчуг', p: 'water', rare: true },
@@ -70,7 +72,7 @@ DATA.ingr = [
   { id: 'amber', name: 'Янтарь', p: 'stone', rare: true },
   { id: 'nugget', name: 'Золотой самородок', p: 'stone', rare: true }
 ];
-DATA.ingr.forEach((x) => { x.img = 'ingredients/' + x.id; });
+DATA.ingr.forEach((x) => { x.img = x.img || 'ingredients/' + x.id; });
 
 // ---------- Зелья и рецепты ----------
 // У каждого зелья несколько рецептов (по 3 конкретных ингредиента, порядок не важен).
