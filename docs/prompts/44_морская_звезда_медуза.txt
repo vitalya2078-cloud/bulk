@@ -1,0 +1,10 @@
+ЧТО: 2 новых ингредиента группы «Вода» вместо сосульки и снежинки (они уходят до Нового года).
+  1) Морская звезда - встанет на место «Сосульки».
+  2) Медуза - встанет на место «Снежинки».
+  Рецепты не меняются: у игроков запасы и выученные рецепты перейдут сами.
+ФОРМАТ: 3:2.
+ПРИКРЕПИТЬ: 44_образец_ингредиенты.jpg (роса, ракушка, кувшинка, водоросли, чешуйка, жемчуг - так выглядят ингредиенты в игре).
+
+ПРОМПТ (копировать целиком):
+
+Match the art style of the attached reference exactly: the same cartoon mobile game ingredient icons. A sprite sheet of 2 separate game ingredient icons side by side, same size as each other: 1) a cute five-armed starfish in warm coral-orange with small lighter bumps along the arms, one arm tip slightly curled up, soft glossy highlights; 2) a small cute jellyfish with a round dome bell in soft pink-violet, a lighter rim, a few short wavy ribbon tentacles below, gentle inner glow, fully opaque (not see-through). No faces, no eyes. Each object separate with wide empty space around it, objects never touch, plain flat solid cyan background, no shadows on the background, no frames, no grid lines, no snowflakes, no sparkles around the objects. Cartoon mobile game style, thick dark outlines, warm saturated colors, glossy highlights, crisp edges, high resolution, no text, no letters, no numbers.
