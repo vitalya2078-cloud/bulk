@@ -285,8 +285,16 @@
   let last = performance.now();
   let lastWall = Date.now();
   let uiT = 0, achT = 0, dayT = 0, localT = 0, cloudT = 0;
+  // 0.33.7: не рисуем чаще, чем нужно глазу, - телефон меньше греется и дольше держит заряд.
+  // Экраны 90-120 Гц получают не больше 60 кадров; после касания 3 с - 60, потом 30 (пузыри и питомцы
+  // так же плавные); под открытым окном комната едва видна - 15. Пропущенный кадр не теряет время: dt копится.
+  let lastTouch = performance.now();
+  document.addEventListener('pointerdown', () => { lastTouch = performance.now(); }, { capture: true, passive: true });
 
   function frame(now) {
+    const gapMs = UI.isModalOpen() ? 1000 / 15 : now - lastTouch < 3000 ? 1000 / 60 : 1000 / 30;
+    RenderOpts.frameGap = gapMs / 1000;
+    if (now - last < gapMs - 2) { requestAnimationFrame(frame); return; }
     const wall = Date.now();
     const gap = (wall - lastWall) / 1000;
     lastWall = wall;

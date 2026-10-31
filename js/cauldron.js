@@ -28,7 +28,9 @@ const Sprites = (() => {
 })();
 
 // Общие настройки отрисовки (меньше эффектов - для слабых телефонов)
-const RenderOpts = { lowfx: false };
+// frameGap - на сколько секунд главный цикл сейчас разводит кадры (main.js); по нему perfGuard отличает
+// «телефон не успевает» от «кадры реже нарочно».
+const RenderOpts = { lowfx: false, frameGap: 1 / 60 };
 
 function createCauldron() {
   const TAU = Math.PI * 2;
@@ -419,7 +421,13 @@ function createCauldron() {
       }
       return cv2;
     };
-    Object.keys(m.skies).forEach((k) => { const im = Sprites.get(m.skies[k], () => { bgDirty = true; }); if (im) skies[k] = one(im); });
+    // 0.33.7: колбэк «догрузилось» - только для неба, которого ещё нет. Sprites.get зовёт колбэк сразу, если картинка
+    // уже в кэше, и фон помечался устаревшим прямо во время сборки: комната с тенями и фильтрами пересобиралась
+    // каждый кадр (около 15 лишних заливок экрана за кадр, телефоны грелись).
+    Object.keys(m.skies).forEach((k) => {
+      const im = Sprites.get(m.skies[k]);
+      if (im) skies[k] = one(im); else Sprites.get(m.skies[k], () => { bgDirty = true; });
+    });
     Object.keys(SKY_ALT).forEach((k) => {
       if (skies[k] || m.skies[k]) return;
       const im = Sprites.get(m.skies[SKY_ALT[k][0]]);
@@ -805,16 +813,17 @@ function createCauldron() {
   // Средний кадр дольше 1/40 с несколько секунд подряд - холст 1.5x вместо 2x (заливка дешевле почти вдвое).
   // Только если телефон всерьёз не успевает (меньше 28 кадров в секунду 5 секунд подряд, после разгона
   // игры): 1) холст 2x вместо 3x; 2) без тонового слоя котла и питомцев.
-  let frameDt = 1 / 60, perfAcc = 0, perfN = 0, perfLvl = 0, perfWarm = 0;
+  let frameDt = 1 / 60, perfAcc = 0, perfN = 0, perfLvl = 0, perfWarm = 0, perfGap = 0;
   function perfGuard(dt) {
     if (perfLvl >= 2 || document.hidden) return;
-    // загрузка, сворачивание, пересборка комнаты - не в счёт
+    // загрузка, сворачивание, пересборка комнаты - не в счёт; частота кадров сменилась нарочно - считаем заново
+    if (RenderOpts.frameGap !== perfGap) { perfGap = RenderOpts.frameGap; perfAcc = 0; perfN = 0; }
     if (dt > 0.2 || perfWarm < 8) { perfWarm += Math.min(dt, 0.2); perfAcc = 0; perfN = 0; return; }
     perfAcc += dt; perfN++;
     if (perfAcc < 5) return;
     const avg = perfAcc / perfN;
     perfAcc = 0; perfN = 0;
-    if (avg <= 1 / 28) return;
+    if (avg <= Math.max(1 / 28, RenderOpts.frameGap * 1.25)) return;
     perfLvl++;
     perfWarm = 0;
     if (perfLvl === 1 && dpr > 2) { dprCap = 2; resize(); }
